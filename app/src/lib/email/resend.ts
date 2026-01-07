@@ -55,6 +55,74 @@ export async function sendVerificationEmail(
 }
 
 /**
+ * Send notification when someone joins the waitlist
+ */
+export async function sendWaitlistNotification(
+  email: string
+): Promise<EmailResult> {
+  // Send notification to yourself (or team)
+  const notifyEmail = process.env.WAITLIST_NOTIFY_EMAIL || 'kevin@outrankllm.io';
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `outrankllm <${FROM_EMAIL}>`,
+      to: notifyEmail,
+      subject: `New waitlist signup: ${email}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>New Waitlist Signup</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="100%" style="max-width: 480px; background-color: #141414; border: 1px solid #262626; border-radius: 8px;">
+          <tr>
+            <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid #262626;">
+              <div style="font-family: 'Courier New', monospace; font-size: 24px; font-weight: 500; color: #fafafa;">
+                outrank<span style="color: #22c55e;">llm</span>
+              </div>
+              <div style="font-family: 'Courier New', monospace; font-size: 11px; color: #8a8a8a; margin-top: 4px; letter-spacing: 0.1em;">
+                NEW WAITLIST SIGNUP
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px; text-align: center;">
+              <p style="margin: 0 0 8px; font-size: 14px; color: #8a8a8a;">Someone joined the waitlist:</p>
+              <p style="margin: 0; font-size: 18px; font-weight: 500; color: #22c55e;">${email}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `.trim(),
+      text: `New waitlist signup: ${email}`,
+    });
+
+    if (error) {
+      console.error('[Email] Resend error:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('[Email] Waitlist notification sent:', data?.id);
+    return { success: true, messageId: data?.id };
+  } catch (err) {
+    console.error('[Email] Failed to send waitlist notification:', err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error'
+    };
+  }
+}
+
+/**
  * Send report ready email (after verification, if needed for re-notification)
  */
 export async function sendReportReadyEmail(

@@ -12,9 +12,22 @@ export default function ComingSoonPage() {
     e.preventDefault()
     setStatus('loading')
 
-    // For now, just simulate success - you can connect this to your API later
-    await new Promise(resolve => setTimeout(resolve, 800))
-    setStatus('success')
+    try {
+      const response = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to join waitlist')
+      }
+
+      setStatus('success')
+    } catch (err) {
+      console.error('Waitlist signup error:', err)
+      setStatus('error')
+    }
   }
 
   return (
@@ -86,6 +99,11 @@ export default function ComingSoonPage() {
                   {status === 'loading' ? '...' : 'Notify Me'}
                 </button>
               </div>
+              {status === 'error' && (
+                <p className="font-mono text-xs text-[var(--red)]" style={{ marginTop: '12px' }}>
+                  Something went wrong. Please try again.
+                </p>
+              )}
             </form>
           )}
 

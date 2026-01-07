@@ -68,7 +68,7 @@ export function ScoreGauge({ score, size = 'md' }: ScoreGaugeProps) {
           {animatedScore}
         </span>
         <span className="score-gauge-label" style={{ fontSize: labelSize }}>
-          AI Visibility
+          Reach-Weighted Score
         </span>
       </div>
     </div>

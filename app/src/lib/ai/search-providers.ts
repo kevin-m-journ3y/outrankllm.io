@@ -930,7 +930,32 @@ export async function queryAllPlatformsWithSearch(
 }
 
 /**
+ * Reach-Weighted Scoring System
+ *
+ * Points are assigned based on real-world AI traffic share:
+ * - ChatGPT: ~80% of AI referral traffic → 10 points per mention
+ * - Perplexity: ~12% of AI referral traffic → 4 points per mention
+ * - Gemini: ~5% of AI referral traffic → 2 points per mention
+ * - Claude: ~1% of AI referral traffic → 1 point per mention
+ *
+ * This means showing up in ChatGPT is worth 10x more than Claude,
+ * reflecting the actual user reach of each platform.
+ */
+export const REACH_WEIGHTS: Record<SearchPlatform, number> = {
+  chatgpt: 10,    // ~80% market share - highest impact
+  perplexity: 4,  // ~12% market share - growing fast
+  gemini: 2,      // ~5% market share
+  claude: 1,      // ~1% market share - baseline
+}
+
+// Maximum possible points if mentioned by all platforms
+export const MAX_REACH_POINTS = Object.values(REACH_WEIGHTS).reduce((sum, w) => sum + w, 0) // 17
+
+/**
  * Calculate visibility scores from search results
+ *
+ * Uses reach-weighted scoring: platforms with more users are worth more points.
+ * A 100% score means you're mentioned by all platforms on all queries.
  */
 export function calculateSearchVisibilityScore(
   results: Array<{ promptId: string; results: SearchQueryResult[] }>
@@ -954,6 +979,7 @@ export function calculateSearchVisibilityScore(
     }
   }
 
+  // Calculate per-platform scores (percentage of queries where mentioned)
   const byPlatform: Record<SearchPlatform, { score: number; mentioned: number; total: number }> = {
     chatgpt: {
       ...platformStats.chatgpt,
@@ -981,10 +1007,16 @@ export function calculateSearchVisibilityScore(
     },
   }
 
-  // Overall score
-  const totalMentioned = Object.values(platformStats).reduce((sum, p) => sum + p.mentioned, 0)
-  const totalQueries = Object.values(platformStats).reduce((sum, p) => sum + p.total, 0)
-  const overall = totalQueries > 0 ? Math.round((totalMentioned / totalQueries) * 100) : 0
+  // Reach-weighted overall score
+  // Each platform's contribution = (mention rate 0-1) × reach weight
+  // Normalized to 0-100 scale
+  const reachWeightedSum =
+    (byPlatform.chatgpt.score / 100) * REACH_WEIGHTS.chatgpt +
+    (byPlatform.perplexity.score / 100) * REACH_WEIGHTS.perplexity +
+    (byPlatform.gemini.score / 100) * REACH_WEIGHTS.gemini +
+    (byPlatform.claude.score / 100) * REACH_WEIGHTS.claude
+
+  const overall = Math.round((reachWeightedSum / MAX_REACH_POINTS) * 100)
 
   return { overall, byPlatform }
 }

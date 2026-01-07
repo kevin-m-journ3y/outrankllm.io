@@ -147,12 +147,15 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
-# Vercel AI Gateway
-VERCEL_AI_GATEWAY_KEY=
+# AI APIs (direct, not via Vercel AI Gateway)
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GOOGLE_GENERATIVE_AI_API_KEY=
 
 # Resend Email
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=reports@outrankllm.io
+WAITLIST_NOTIFY_EMAIL=kevin@outrankllm.io  # Who gets waitlist signup notifications
 
 # App
 NEXT_PUBLIC_APP_URL=https://outrankllm.io
@@ -203,6 +206,7 @@ category: "Fundamentals"
 - `POST /api/resend-verification` - Resend verification email
 - `GET /api/feature-flags` - Get feature flags for a tier
 - `POST /api/opt-in` - Handle report opt-in
+- `POST /api/waitlist` - Coming soon page email signup
 
 ## Database Schema
 
@@ -210,6 +214,9 @@ See `supabase/migrations/` for full schema:
 - `001_initial_schema.sql` - Core tables (leads, scan_runs, reports, etc.)
 - `002_email_verification.sql` - Email verification, feature flags, subscriptions
 - `003_brand_awareness.sql` - Brand awareness results table
+- `005_search_queries.sql` - Query research results
+- `008_waitlist.sql` - Coming soon waitlist signups
+- `009_rls_fixes.sql` - RLS policies for query_research_results and waitlist
 
 Key tables:
 - `leads` - User email + domain, verification status, tier
@@ -217,10 +224,12 @@ Key tables:
 - `site_analyses` - Website analysis results
 - `llm_responses` - AI query responses
 - `brand_awareness_results` - Direct brand awareness test results
+- `query_research_results` - LLM-suggested search queries
 - `reports` - Generated reports with scores
 - `feature_flags` - Tiered feature access
 - `email_verification_tokens` - Magic link tokens
 - `subscriptions` - Stripe subscription tracking (future)
+- `waitlist` - Coming soon page email signups
 
 ## Git Workflow
 
@@ -254,6 +263,23 @@ Edit `src/app/pricing/page.tsx` - plans array at top of file
 3. Add conditional render in the tabs content section
 4. Pass any needed props from ReportClient
 
+## Scoring System
+
+The AI Visibility Score uses **reach-weighted scoring** based on real-world AI traffic share:
+
+| Platform   | Weight | Market Share |
+|------------|--------|--------------|
+| ChatGPT    | 10     | ~80%         |
+| Perplexity | 4      | ~12%         |
+| Gemini     | 2      | ~5%          |
+| Claude     | 1      | ~1%          |
+
+Formula: `(chatgpt% × 10 + perplexity% × 4 + gemini% × 2 + claude% × 1) / 17 × 100`
+
+This means a ChatGPT mention is worth 10x more than a Claude mention, reflecting actual user reach.
+
+See `src/lib/ai/search-providers.ts` for implementation (`REACH_WEIGHTS`, `MAX_REACH_POINTS`).
+
 ## Notes
 
 - Ghost mascot on landing page only (removed from report header)
@@ -262,3 +288,4 @@ Edit `src/app/pricing/page.tsx` - plans array at top of file
 - Green (#22c55e) is the primary accent throughout
 - Email verification required to view reports (magic link flow)
 - Feature flags control tier-based access (free/pro/enterprise)
+- AI APIs called directly (not via Vercel AI Gateway) to avoid rate limits

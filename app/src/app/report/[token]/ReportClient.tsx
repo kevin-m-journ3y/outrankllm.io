@@ -7,7 +7,7 @@ import { PlatformResults } from '@/components/report/PlatformResults'
 import { ReportTabs } from '@/components/report/ReportTabs'
 import { VerificationGate } from '@/components/report/VerificationGate'
 import { OptInModal } from '@/components/report/OptInModal'
-import { ArrowLeft, ExternalLink, Sparkles } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Sparkles, Info } from 'lucide-react'
 import Link from 'next/link'
 import type { FeatureFlags } from '@/lib/features/flags'
 
@@ -173,8 +173,19 @@ export function ReportClient({ data }: ReportClientProps) {
             style={{ padding: '40px', marginBottom: '8px' }}
           >
             {/* Score */}
-            <div className="flex justify-center" style={{ marginBottom: '40px' }}>
+            <div className="flex justify-center" style={{ marginBottom: '24px' }}>
               <ScoreGauge score={report.visibility_score} size="lg" />
+            </div>
+
+            {/* Score Explanation */}
+            <div
+              className="flex items-start bg-[var(--surface-elevated)] border border-[var(--border-subtle)]"
+              style={{ padding: '14px 18px', marginBottom: '40px', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto', gap: '12px' }}
+            >
+              <Info size={16} className="text-[var(--text-dim)] flex-shrink-0" style={{ marginTop: '2px' }} />
+              <p className="text-[var(--text-dim)] text-xs" style={{ lineHeight: '1.6' }}>
+                <strong className="text-[var(--text-mid)]">Reach-Weighted Score:</strong> Platforms are weighted by their real-world traffic share. ChatGPT mentions count 10x more than Claude, reflecting actual user reach (~80% vs ~1% of AI referrals).
+              </p>
             </div>
 
             {/* Summary */}
