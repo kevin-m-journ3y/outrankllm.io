@@ -21,6 +21,14 @@ export async function sendVerificationEmail(
 ): Promise<EmailResult> {
   const verificationUrl = `${APP_URL}/api/verify?token=${verificationToken}`;
 
+  console.log('[Email] Sending verification email:', {
+    to: email,
+    domain,
+    from: FROM_EMAIL,
+    appUrl: APP_URL,
+    hasApiKey: !!process.env.RESEND_API_KEY,
+  });
+
   try {
     const { data, error } = await resend.emails.send({
       from: `outrankllm <${FROM_EMAIL}>`,
@@ -31,13 +39,14 @@ export async function sendVerificationEmail(
     });
 
     if (error) {
-      console.error('Resend error:', error);
+      console.error('[Email] Resend error:', error);
       return { success: false, error: error.message };
     }
 
+    console.log('[Email] Success! Message ID:', data?.id);
     return { success: true, messageId: data?.id };
   } catch (err) {
-    console.error('Failed to send verification email:', err);
+    console.error('[Email] Failed to send verification email:', err);
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Unknown error'
