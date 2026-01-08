@@ -3,6 +3,22 @@
  * Crawls a website to extract content for analysis
  */
 
+// Fetch with timeout helper
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 10000): Promise<Response> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    return response
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 interface SchemaData {
   type: string
   name?: string
@@ -62,9 +78,9 @@ async function fetchSitemap(domain: string): Promise<{ urls: string[]; found: bo
 
   for (const url of sitemapUrls) {
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         headers: { 'User-Agent': 'outrankllm-crawler/1.0' },
-      })
+      }, 8000)
 
       if (!response.ok) continue
 
@@ -97,9 +113,9 @@ async function fetchSitemap(domain: string): Promise<{ urls: string[]; found: bo
  */
 async function checkRobotsTxt(domain: string): Promise<boolean> {
   try {
-    const response = await fetch(`https://${domain}/robots.txt`, {
+    const response = await fetchWithTimeout(`https://${domain}/robots.txt`, {
       headers: { 'User-Agent': 'outrankllm-crawler/1.0' },
-    })
+    }, 5000)
     return response.ok
   } catch {
     return false

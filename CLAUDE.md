@@ -1,320 +1,84 @@
-# CLAUDE.md - outrankllm.io Development Guide
+# CLAUDE.md - outrankllm.io
 
-## Project Overview
+## Overview
 
-**outrankllm.io** is a SaaS platform for Generative Engine Optimization (GEO) - helping businesses improve their visibility in AI assistants like ChatGPT, Claude, and Gemini.
-
-### Core Value Proposition
-- Scan websites to analyze AI visibility
-- Track how AI assistants recommend (or don't recommend) your business
-- Test brand awareness across AI platforms
-- Generate ready-to-ship PRDs for AI coding tools (Cursor, Claude Code, Windsurf)
+SaaS platform for Generative Engine Optimization (GEO) - helping businesses improve visibility in AI assistants (ChatGPT, Claude, Gemini).
 
 ## Tech Stack
 
-- **Framework**: Next.js 14+ (App Router)
-- **Styling**: Tailwind CSS v4
-- **Database**: Supabase (PostgreSQL)
-- **Hosting**: Vercel
-- **Domain**: outrankllm.io (Cloudflare DNS)
-- **Email**: Resend
-- **AI Gateway**: Vercel AI SDK (OpenAI, Anthropic, Google)
-
-## Project Structure
-
-```
-outrankllm/
-├── app/                          # Next.js application
-│   ├── content/guides/           # MDX blog/guide content
-│   ├── public/images/            # Static assets
-│   ├── src/
-│   │   ├── app/                  # Next.js App Router pages
-│   │   │   ├── api/              # API routes
-│   │   │   │   ├── scan/         # Initiate scans
-│   │   │   │   ├── process/      # Process scan results
-│   │   │   │   ├── verify/       # Email verification
-│   │   │   │   └── feature-flags/# Feature flag API
-│   │   │   ├── coming-soon/      # Pre-launch landing page
-│   │   │   ├── learn/            # GEO guides & documentation
-│   │   │   ├── pricing/          # Pricing page
-│   │   │   ├── report/[token]/   # Dynamic report pages
-│   │   │   └── page.tsx          # Homepage
-│   │   ├── components/           # React components
-│   │   │   ├── ghost/            # Ghost mascot component
-│   │   │   ├── landing/          # Landing page components
-│   │   │   ├── mdx/              # MDX rendering components
-│   │   │   ├── nav/              # Navigation
-│   │   │   └── report/           # Report components (ReportTabs, etc.)
-│   │   ├── lib/                  # Utilities & services
-│   │   │   ├── ai/               # AI query, analysis, brand-awareness
-│   │   │   ├── email/            # Resend email integration
-│   │   │   ├── geo/              # Geography detection
-│   │   │   ├── features/         # Feature flags
-│   │   │   ├── supabase/         # Database clients
-│   │   │   └── guides.ts         # MDX guide utilities
-│   │   └── middleware.ts         # Preview/coming-soon protection
-│   ├── supabase/migrations/      # Database migrations
-│   ├── .env.local                # Local environment (gitignored)
-│   └── .env.example              # Environment template
-├── reference sources/            # Design references & API examples
-└── CLAUDE.md                     # This file
-```
+Next.js 14+ (App Router) | Tailwind CSS v4 | Supabase | Vercel | Resend | Vercel AI SDK
 
 ## Critical: Tailwind CSS v4 Quirk
 
-**Arbitrary value classes don't compile properly.** Always use inline styles instead:
+**Arbitrary value classes don't compile.** Always use inline styles:
 
 ```tsx
-// ❌ DON'T - These won't work
-<div className="max-w-xl mx-auto">
-<div className="gap-4">
+// ❌ DON'T
+<div className="max-w-xl mx-auto gap-4">
 
-// ✅ DO - Use inline styles
-<div style={{ maxWidth: '576px', marginLeft: 'auto', marginRight: 'auto' }}>
-<div style={{ gap: '16px' }}>
+// ✅ DO
+<div style={{ maxWidth: '576px', marginLeft: 'auto', marginRight: 'auto', gap: '16px' }}>
 ```
 
-This affects: `max-w-*`, `mx-auto`, `gap-*`, `p-*` with custom values, etc.
+Affects: `max-w-*`, `mx-auto`, `gap-*`, `p-*` with custom values.
 
-## Design System
+## Report Tabs
 
-### CSS Variables (defined in globals.css)
-
-```css
-/* Background & Surfaces */
---bg: #0a0a0a;
---surface: #141414;
---surface-elevated: #1a1a1a;
---border: #262626;
---border-subtle: #1f1f1f;
-
-/* Text Hierarchy */
---text: #fafafa;
---text-mid: #d4d4d4;
---text-dim: #8a8a8a;
---text-ghost: #525252;
-
-/* Accent Colors */
---green: #22c55e;        /* Primary accent */
---red: #ef4444;
---blue: #3b82f6;
---amber: #f59e0b;
-```
-
-### Typography
-- **Display font**: Outfit (--font-display)
-- **Mono font**: DM Mono (--font-mono)
-- Monospace used for labels, buttons, technical elements
-
-### Key Components
-- `Ghost` - Animated mascot (eyes blink, fades in/out) - used on landing page
-- `FloatingPixels` - Ambient background particles
-- `EmailForm` - Email + domain capture form
-- `Nav` - Fixed navigation bar
-- `Footer` - Fixed bottom footer
-- `ReportTabs` - Tabbed report interface with multiple sections
-- `VerificationGate` - Email verification wrapper for reports
-
-## Report Tabs Structure
-
-The report page uses a tabbed interface (`ReportTabs.tsx`):
-
-1. **Start Here** - Welcome page with persona selection (Business Owner/Developer/Agency) and tailored guide
-2. **Setup** - Business identity, services, and generated questions (formerly Overview)
-3. **AI Readiness** - Technical SEO/GEO readiness indicators with sticky upsell CTA
-4. **AI Responses** - Questions asked to LLMs and their responses with sticky upsell
-5. **Measurements** - AI Visibility score breakdown with reach-weighted scoring
-6. **Competitors** - Detected competitors (teased/locked for free tier)
-7. **Brand Awareness** - Direct brand recognition tests across AI platforms (premium)
-8. **Actions** - Action plans (locked with preview)
-9. **PRD** - PRD generation (locked with preview)
-
-### Brand Awareness Feature
-
-Tests what AI assistants actually know about a business:
-- **Brand Recall**: "What do you know about [business]?"
-- **Service Check**: Tests if AI knows specific services the business offers
-- **Competitor Compare**: How does AI position the business vs competitors
-
-Different from AI Responses tab - Brand Awareness directly asks about the brand, while AI Responses asks generic questions to see if the brand is mentioned organically.
-
-## Environment Variables
-
-Required in Vercel and `.env.local`:
-
-```bash
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-# AI APIs (direct, not via Vercel AI Gateway)
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
-GOOGLE_GENERATIVE_AI_API_KEY=
-
-# Resend Email
-RESEND_API_KEY=
-RESEND_FROM_EMAIL=reports@outrankllm.io
-WAITLIST_NOTIFY_EMAIL=kevin@outrankllm.io  # Who gets waitlist signup notifications
-
-# App
-NEXT_PUBLIC_APP_URL=https://outrankllm.io
-
-# Preview Mode
-COMING_SOON_ENABLED=true        # Set to 'false' to go live
-PREVIEW_SECRET=your-secret-key  # URL param to bypass coming soon
-```
-
-## Preview/Coming Soon System
-
-The middleware (`src/middleware.ts`) controls access:
-
-- **Public visitors** → Redirected to `/coming-soon`
-- **Preview access** → Add `?preview=SECRET` to any URL, sets 30-day cookie
-- **Go live** → Set `COMING_SOON_ENABLED=false` in Vercel env vars
-
-Share preview link: `https://outrankllm.io?preview=outrankllm-preview-2024`
-
-## MDX Guides System
-
-Guides are stored as MDX files in `content/guides/`:
-
-```mdx
----
-title: "Guide Title"
-description: "SEO description"
-publishedAt: "2025-01-06"
-author: "outrankllm team"
-category: "Fundamentals"
----
-
-# Content here...
-```
-
-### Adding a new guide:
-1. Create MDX file in `content/guides/`
-2. Add frontmatter (title, description, publishedAt, author, category)
-3. Add entry to guides array in `src/app/learn/page.tsx`
-4. Guide auto-renders at `/learn/[slug]`
-
-## API Routes
-
-- `POST /api/scan` - Initiate domain scan (email + domain)
-- `POST /api/process` - Process scan results (crawl, analyze, query LLMs, brand awareness)
-- `GET /api/scan/status` - Poll scan progress
-- `GET /api/verify` - Email verification (magic link)
-- `POST /api/resend-verification` - Resend verification email
-- `GET /api/feature-flags` - Get feature flags for a tier
-- `POST /api/opt-in` - Handle report opt-in
-- `POST /api/waitlist` - Coming soon page email signup
-
-## Database Schema
-
-See `supabase/migrations/` for full schema:
-- `001_initial_schema.sql` - Core tables (leads, scan_runs, reports, etc.)
-- `002_email_verification.sql` - Email verification, feature flags, subscriptions
-- `003_brand_awareness.sql` - Brand awareness results table
-- `005_search_queries.sql` - Query research results
-- `008_waitlist.sql` - Coming soon waitlist signups
-- `009_rls_fixes.sql` - RLS policies for query_research_results and waitlist
-
-Key tables:
-- `leads` - User email + domain, verification status, tier
-- `scan_runs` - Scan requests and status
-- `site_analyses` - Website analysis results
-- `llm_responses` - AI query responses
-- `brand_awareness_results` - Direct brand awareness test results
-- `query_research_results` - LLM-suggested search queries
-- `reports` - Generated reports with scores
-- `feature_flags` - Tiered feature access
-- `email_verification_tokens` - Magic link tokens
-- `subscriptions` - Stripe subscription tracking (future)
-- `waitlist` - Coming soon page email signups
-
-## Git Workflow
-
-```bash
-# Deploy to production (auto-deploys on push to main)
-git add .
-git commit -m "Description"
-git push
-
-# Vercel auto-deploys from GitHub
-# Check deploy status at vercel.com
-```
-
-## Common Tasks
-
-### Update colors/spacing
-Edit `src/app/globals.css` for CSS variables, or component files for specific elements.
-
-### Add new page
-Create folder in `src/app/` with `page.tsx`. Include `<Nav />` and `<Footer />` components.
-
-### Modify navigation
-Edit `src/components/nav/Nav.tsx`
-
-### Update pricing
-Edit `src/app/pricing/page.tsx` - plans array at top of file
-
-### Add new report tab
-1. Add tab to `tabs` array in `ReportTabs.tsx`
-2. Create tab component function
-3. Add conditional render in the tabs content section
-4. Pass any needed props from ReportClient
+1. **Start Here** - Persona selection + tailored guide
+2. **Setup** - Business identity, services, questions
+3. **AI Readiness** - Technical SEO/GEO indicators (sticky upsell)
+4. **AI Responses** - LLM query responses (sticky upsell)
+5. **Measurements** - Visibility score breakdown (sticky upsell)
+6. **Competitors** - Detected competitors (teased/locked)
+7. **Brand Awareness** - Direct brand recognition (premium, locked)
+8. **Actions** - Action plans (locked)
+9. **PRD** - PRD generation (locked)
 
 ## Scoring System
 
-The AI Visibility Score uses **reach-weighted scoring** based on real-world AI traffic share:
+Reach-weighted scoring based on AI traffic share:
 
-| Platform   | Weight | Market Share |
-|------------|--------|--------------|
-| ChatGPT    | 10     | ~80%         |
-| Perplexity | 4      | ~12%         |
-| Gemini     | 2      | ~5%          |
-| Claude     | 1      | ~1%          |
+| Platform   | Weight |
+|------------|--------|
+| ChatGPT    | 10     |
+| Perplexity | 4      |
+| Gemini     | 2      |
+| Claude     | 1      |
 
 Formula: `(chatgpt% × 10 + perplexity% × 4 + gemini% × 2 + claude% × 1) / 17 × 100`
 
-This means a ChatGPT mention is worth 10x more than a Claude mention, reflecting actual user reach.
+See `src/lib/ai/search-providers.ts` for implementation.
 
-See `src/lib/ai/search-providers.ts` for implementation (`REACH_WEIGHTS`, `MAX_REACH_POINTS`).
+## Upsell CTAs
 
-## Upsell & Conversion Flow
+Sticky CTAs on report tabs link to `/pricing?from=report`:
 
-### Sticky Upsell CTAs
-Report tabs (AI Readiness, AI Responses, Measurements) show sticky bottom CTAs that:
-- Appear after minimal scroll (50px)
-- Link to `/pricing?from=report` (query param ensures back button works)
-- Use gold gradient styling for premium feel
-- Contextual messaging based on performance:
+| Condition | CTA Text |
+|-----------|----------|
+| Issues detected | "Get Fixes & Action Plans" |
+| All passing | "Subscribe for Weekly Monitoring" |
 
-| Tab | Condition | CTA Text |
-|-----|-----------|----------|
-| AI Readiness | Issues detected | "Get Fixes & Action Plans" |
-| AI Readiness | All passing | "Subscribe for Weekly Monitoring" |
-| AI Responses | Low mentions (<50%) | "Get Fixes & Action Plans" |
-| Measurements | Low coverage (<50%) | "Get Fixes & Action Plans" |
+Pricing page shows "Back to Report" button when `?from=report` param present.
 
-### Pricing Page
-- Client component (`'use client'`) for navigation handling
-- Shows "Back to Report" button when user came from a report page
-- Detection via `?from=report` query param (primary) or `document.referrer` (fallback)
-- Three tiers: Starter ($49), Pro ($79), Agency ($199)
+## API Routes
 
-### Premium Feature Indicators
-- Gold lock icon on premium tabs (Brand Awareness, Actions, PRD)
-- Frosted glass overlay on locked content previews
-- "Subscribe to add more" buttons on editable sections (Services, Questions)
+- `POST /api/scan` - Initiate scan
+- `POST /api/process` - Process scan (crawl, analyze, query LLMs)
+- `GET /api/scan/status` - Poll progress
+- `GET /api/verify` - Email verification (magic link)
+- `POST /api/waitlist` - Coming soon signup
 
-## Notes
+## Key Files
 
-- Ghost mascot on landing page only (removed from report header)
-- Floating pixels use CSS animations, no JS
-- Forms use monospace font for technical feel
-- Green (#22c55e) is the primary accent throughout
-- Gold (#d4a574) used for premium/subscriber features
-- Email verification required to view reports (magic link flow)
-- Feature flags control tier-based access (free/pro/enterprise)
-- AI APIs called directly (not via Vercel AI Gateway) to avoid rate limits
+- `src/app/globals.css` - CSS variables (colors, fonts)
+- `src/components/report/ReportTabs.tsx` - Main report UI
+- `src/lib/ai/search-providers.ts` - LLM queries + scoring
+- `supabase/migrations/` - Database schema
+- `.env.example` - Required env vars
+
+## Design Notes
+
+- Green (#22c55e) = primary accent
+- Gold (#d4a574) = premium/subscriber features
+- Monospace font for labels, buttons, technical elements
+- Ghost mascot on landing page only

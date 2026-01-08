@@ -760,6 +760,57 @@ async function queryPerplexityWithSearch(
 }
 
 /**
+ * Generate possible spaced versions of a domain name
+ * e.g., "loungelovers" -> ["lounge lovers"]
+ * Uses a dictionary of common word endings to find split points
+ */
+function generateSpacedVersions(domainWithoutTld: string): string[] {
+  const versions: string[] = []
+  const lower = domainWithoutTld.toLowerCase()
+
+  // Common word endings that might indicate a split point
+  const commonEndings = [
+    'lovers', 'works', 'labs', 'hub', 'hq', 'studio', 'studios',
+    'shop', 'store', 'market', 'place', 'space', 'box', 'bay',
+    'cloud', 'tech', 'soft', 'ware', 'app', 'apps', 'io', 'ly',
+    'ify', 'able', 'er', 'ers', 'ing', 'tion', 'sion', 'ment',
+    'ness', 'ful', 'less', 'ous', 'ive', 'al', 'ical', 'ology',
+    'house', 'home', 'land', 'world', 'zone', 'spot', 'point',
+    'direct', 'online', 'digital', 'media', 'group', 'team',
+  ]
+
+  // Common word beginnings
+  const commonBeginnings = [
+    'the', 'my', 'our', 'your', 'get', 'go', 'pro', 'super',
+    'mega', 'ultra', 'smart', 'easy', 'fast', 'quick', 'best',
+    'top', 'prime', 'first', 'new', 'big', 'little', 'red',
+    'blue', 'green', 'black', 'white', 'gold', 'silver',
+  ]
+
+  // Try splitting at common endings
+  for (const ending of commonEndings) {
+    if (lower.endsWith(ending) && lower.length > ending.length + 2) {
+      const prefix = lower.slice(0, -ending.length)
+      if (prefix.length >= 2) {
+        versions.push(`${prefix} ${ending}`)
+      }
+    }
+  }
+
+  // Try splitting at common beginnings
+  for (const beginning of commonBeginnings) {
+    if (lower.startsWith(beginning) && lower.length > beginning.length + 2) {
+      const suffix = lower.slice(beginning.length)
+      if (suffix.length >= 2) {
+        versions.push(`${beginning} ${suffix}`)
+      }
+    }
+  }
+
+  return versions
+}
+
+/**
  * Check if domain is mentioned in response and where
  */
 function checkDomainMention(
@@ -772,9 +823,23 @@ function checkDomainMention(
   // Also check for domain without TLD
   const domainWithoutTld = lowerDomain.split('.')[0]
 
+  // Check for brand name with spaces (e.g., "loungelovers" -> "lounge lovers")
+  // Common patterns: camelCase separation, number separation
+  const brandWithSpaces = domainWithoutTld
+    .replace(/([a-z])([A-Z])/g, '$1 $2') // camelCase
+    .replace(/([a-zA-Z])(\d)/g, '$1 $2') // letters before numbers
+    .replace(/(\d)([a-zA-Z])/g, '$1 $2') // numbers before letters
+    .toLowerCase()
+
+  // Also try inserting space between common word boundaries
+  // e.g., "loungelovers" -> check for "lounge lovers"
+  const possibleSpacedVersions = generateSpacedVersions(domainWithoutTld)
+
   const mentioned =
     lowerResponse.includes(lowerDomain) ||
-    lowerResponse.includes(domainWithoutTld)
+    lowerResponse.includes(domainWithoutTld) ||
+    (brandWithSpaces !== domainWithoutTld && lowerResponse.includes(brandWithSpaces)) ||
+    possibleSpacedVersions.some(v => lowerResponse.includes(v))
 
   if (!mentioned) {
     return { mentioned: false, position: null }
@@ -784,6 +849,18 @@ function checkDomainMention(
   let firstIndex = lowerResponse.indexOf(lowerDomain)
   if (firstIndex === -1) {
     firstIndex = lowerResponse.indexOf(domainWithoutTld)
+  }
+  if (firstIndex === -1 && brandWithSpaces !== domainWithoutTld) {
+    firstIndex = lowerResponse.indexOf(brandWithSpaces)
+  }
+  if (firstIndex === -1) {
+    for (const v of possibleSpacedVersions) {
+      const idx = lowerResponse.indexOf(v)
+      if (idx !== -1) {
+        firstIndex = idx
+        break
+      }
+    }
   }
 
   // Calculate which third of the response
