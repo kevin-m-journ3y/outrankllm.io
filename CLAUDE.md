@@ -119,14 +119,15 @@ This affects: `max-w-*`, `mx-auto`, `gap-*`, `p-*` with custom values, etc.
 
 The report page uses a tabbed interface (`ReportTabs.tsx`):
 
-1. **Overview** - What the site is about (business analysis)
-2. **AI Responses** - Questions asked to LLMs and their responses
-3. **Readiness** - Technical SEO/GEO readiness indicators
-4. **Measurements** - AI Visibility score breakdown
-5. **Competitors** - Detected competitors (teased/locked for free tier)
-6. **Brand Awareness** - Direct brand recognition tests across AI platforms
-7. **Actions** - Action plans (locked)
-8. **PRD** - PRD generation (locked)
+1. **Start Here** - Welcome page with persona selection (Business Owner/Developer/Agency) and tailored guide
+2. **Setup** - Business identity, services, and generated questions (formerly Overview)
+3. **AI Readiness** - Technical SEO/GEO readiness indicators with sticky upsell CTA
+4. **AI Responses** - Questions asked to LLMs and their responses with sticky upsell
+5. **Measurements** - AI Visibility score breakdown with reach-weighted scoring
+6. **Competitors** - Detected competitors (teased/locked for free tier)
+7. **Brand Awareness** - Direct brand recognition tests across AI platforms (premium)
+8. **Actions** - Action plans (locked with preview)
+9. **PRD** - PRD generation (locked with preview)
 
 ### Brand Awareness Feature
 
@@ -280,12 +281,32 @@ This means a ChatGPT mention is worth 10x more than a Claude mention, reflecting
 
 See `src/lib/ai/search-providers.ts` for implementation (`REACH_WEIGHTS`, `MAX_REACH_POINTS`).
 
+## Upsell & Conversion Flow
+
+### Sticky Upsell CTAs
+Report tabs (AI Readiness, AI Responses, Measurements) show sticky bottom CTAs that:
+- Appear after minimal scroll (50px)
+- Link to `/pricing` page
+- Use gold gradient styling for premium feel
+- Show contextual messaging based on tab state (e.g., "Subscribe for Fixes & Action Plans" vs "Subscribe for Weekly Monitoring")
+
+### Pricing Page
+- Client component (`'use client'`) for navigation handling
+- Shows "Back to Report" button when user came from a report page (checks `document.referrer`)
+- Three tiers: Starter ($49), Pro ($79), Agency ($199)
+
+### Premium Feature Indicators
+- Gold lock icon on premium tabs (Brand Awareness, Actions, PRD)
+- Frosted glass overlay on locked content previews
+- "Subscribe to add more" buttons on editable sections (Services, Questions)
+
 ## Notes
 
 - Ghost mascot on landing page only (removed from report header)
 - Floating pixels use CSS animations, no JS
 - Forms use monospace font for technical feel
 - Green (#22c55e) is the primary accent throughout
+- Gold (#d4a574) used for premium/subscriber features
 - Email verification required to view reports (magic link flow)
 - Feature flags control tier-based access (free/pro/enterprise)
 - AI APIs called directly (not via Vercel AI Gateway) to avoid rate limits

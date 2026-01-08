@@ -4,12 +4,18 @@
  */
 
 import { generateText, createGateway } from 'ai'
+import { openai } from '@ai-sdk/openai'
 import { trackCost } from './costs'
 
-// Initialize Vercel AI Gateway
-const gateway = createGateway({
-  apiKey: process.env.VERCEL_AI_GATEWAY_KEY || process.env.AI_GATEWAY_API_KEY || '',
-})
+// Check if gateway API key is available
+const hasGatewayKey = !!(process.env.VERCEL_AI_GATEWAY_KEY || process.env.AI_GATEWAY_API_KEY)
+
+// Initialize Vercel AI Gateway (only used if key is present)
+const gateway = hasGatewayKey
+  ? createGateway({
+      apiKey: process.env.VERCEL_AI_GATEWAY_KEY || process.env.AI_GATEWAY_API_KEY || '',
+    })
+  : null
 
 export interface BusinessAnalysis {
   businessName: string | null
@@ -56,9 +62,12 @@ export async function analyzeWebsite(crawledContent: string, tldCountry: string 
       .replace('{content}', crawledContent.slice(0, 8000))
       .replace('{tldHint}', tldHint)
 
+    // Use gateway if available, otherwise use direct OpenAI SDK
     const modelString = 'openai/gpt-4o'
+    const model = gateway ? gateway(modelString) : openai('gpt-4o')
+
     const result = await generateText({
-      model: gateway(modelString),
+      model,
       prompt,
       maxOutputTokens: 1000,
     })

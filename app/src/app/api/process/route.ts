@@ -13,10 +13,11 @@ import {
   type LocationContext,
 } from '@/lib/ai/search-providers'
 import { extractTopCompetitors } from '@/lib/ai/query'
-import {
-  generateBrandAwarenessQueries,
-  runBrandAwarenessQueries,
-} from '@/lib/ai/brand-awareness'
+// Brand awareness imports - disabled for free reports, will be used in subscriber pipeline
+// import {
+//   generateBrandAwarenessQueries,
+//   runBrandAwarenessQueries,
+// } from '@/lib/ai/brand-awareness'
 import { sendVerificationEmail } from '@/lib/email/resend'
 import { detectGeography, extractTldCountry, countryToIsoCode } from '@/lib/geo/detect'
 import { log } from '@/lib/logger'
@@ -123,14 +124,19 @@ export async function POST(request: NextRequest) {
       country: geoResult.country,
     }
 
+    // Get key phrases for query research
+    const keyPhrases = analysis.keyPhrases || []
+
     let researchedQueryList = await researchQueries(
       analysisWithEnhancedGeo,
       scanId,
-      (platform) => log.platform(scanId, platform, 'researching queries')
+      (platform) => log.platform(scanId, platform, 'researching queries'),
+      keyPhrases
     )
 
     // Dedupe and rank, limit to 7 for free tier
-    let topQueries = dedupeAndRankQueries(researchedQueryList, 7)
+    // Pass keyPhrases to boost queries that contain relevant terms
+    let topQueries = dedupeAndRankQueries(researchedQueryList, 7, keyPhrases)
     log.done(scanId, 'Query research', `${topQueries.length} unique queries`)
 
     // Fallback if research failed
@@ -268,6 +274,10 @@ export async function POST(request: NextRequest) {
     )
 
     // Step 5.5: Brand Awareness Queries
+    // DISABLED for free reports - will be enabled for subscribers in a separate pipeline
+    // This saves API costs since free users can't see the results anyway
+    // TODO: Re-enable when subscription-specific processing is built
+    /*
     await updateScanStatus(supabase, scanId, 'brand_awareness', 88)
     log.step(scanId, 'Brand awareness', 'testing recognition')
 
@@ -311,6 +321,7 @@ export async function POST(request: NextRequest) {
       }
     }
     log.done(scanId, 'Brand awareness', `${brandResults.length} results`)
+    */
 
     // Generate summary
     const summary = generateSummary(analysis, scores, topCompetitors, domain)

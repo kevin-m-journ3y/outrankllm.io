@@ -5,13 +5,21 @@
  */
 
 import { generateText, createGateway } from 'ai'
+import { openai } from '@ai-sdk/openai'
+import { anthropic } from '@ai-sdk/anthropic'
+import { google } from '@ai-sdk/google'
 import { trackCost } from './costs'
 import type { BusinessAnalysis } from './analyze'
 
-// Initialize Vercel AI Gateway
-const gateway = createGateway({
-  apiKey: process.env.VERCEL_AI_GATEWAY_KEY || process.env.AI_GATEWAY_API_KEY || '',
-})
+// Check if gateway API key is available
+const hasGatewayKey = !!(process.env.VERCEL_AI_GATEWAY_KEY || process.env.AI_GATEWAY_API_KEY)
+
+// Initialize Vercel AI Gateway (only used if key is present)
+const gateway = hasGatewayKey
+  ? createGateway({
+      apiKey: process.env.VERCEL_AI_GATEWAY_KEY || process.env.AI_GATEWAY_API_KEY || '',
+    })
+  : null
 
 export type Platform = 'chatgpt' | 'claude' | 'gemini'
 
@@ -38,52 +46,156 @@ export interface RawQuerySuggestion {
   platform: Platform
 }
 
-const RESEARCH_PROMPT = `You're a customer who needs to HIRE or BUY from: {businessType}
+// Prompt for SERVICE businesses (plumbers, dentists, consultants, etc.)
+const SERVICE_RESEARCH_PROMPT = `You're a customer who needs to HIRE from: {businessType}
 
 Location: {location}
-They offer: {services}
-They sell: {products}
+They offer these services: {services}
+Key terms: {keyPhrases}
 
-Generate 10 search queries that would lead to a business being RECOMMENDED or MENTIONED in the response.
+Generate 10 search queries that would lead to THIS SPECIFIC TYPE OF BUSINESS being RECOMMENDED.
+CRITICAL: Every query MUST be relevant to "{businessType}" - do not generate queries for unrelated businesses.
 
 IMPORTANT: Focus on queries where an AI would name specific companies/providers:
 ✅ "who can help me with X" → AI names providers
 ✅ "best X near me" → AI recommends businesses
 ✅ "X company reviews" → AI discusses specific businesses
 ✅ "hire X in [location]" → AI suggests local providers
-✅ "where to buy X" → AI names retailers/sellers
 
 AVOID queries that just get generic advice:
 ❌ "how to do X myself" → AI gives DIY instructions, no businesses
 ❌ "what is X" → AI explains concept, no recommendations
-❌ "X tips" → AI gives advice, doesn't name providers
 
 Think like a real person ready to spend money:
 - Casual language ("need a plumber asap" not "plumbing services required")
 - Include location when relevant for {location}
-- Include specific product/brand names they sell
+- Use the services and key terms provided above
 
-Examples of GOOD queries (would get business recommendations):
+Examples of GOOD queries for service businesses:
 - "plumber near me"
 - "best dentist sydney"
 - "who installs solar panels"
-- "pool shop that sells dolphin robots"
 - "accountant for small business melbourne"
-
-Examples of BAD queries (would just get advice, not recommendations):
-- "how to fix a leaky tap"
-- "what does an accountant do"
-- "solar panel benefits"
+- "seo consultant australia"
 
 Categories:
 - finding_provider: Looking for a business/provider
-- product_specific: Where to buy a specific product
 - service: Need a specific service done
-- comparison: Comparing providers/products (with intent to buy)
+- comparison: Comparing providers (with intent to hire)
 - review: Reviews of businesses/providers
 
 Return ONLY a JSON array:
 [{"query": "example query", "category": "finding_provider"}, ...]`
+
+// Prompt for RETAIL/E-COMMERCE businesses (stores, shops, online retailers)
+const RETAIL_RESEARCH_PROMPT = `You're a customer who wants to BUY from: {businessType}
+
+Location: {location}
+They sell: {products}
+Product categories: {keyPhrases}
+
+Generate 10 search queries that would lead to THIS SPECIFIC TYPE OF STORE being RECOMMENDED.
+CRITICAL: Every query MUST be about buying products this store sells. Use the product categories above.
+DO NOT generate queries about services, tradespeople, or unrelated products.
+
+IMPORTANT: Focus on queries where an AI would name specific stores/retailers:
+✅ "where to buy X" → AI names retailers
+✅ "best X store online" → AI recommends shops
+✅ "X store reviews australia" → AI discusses specific retailers
+✅ "buy X online australia" → AI suggests online stores
+✅ "X vs Y store comparison" → AI compares retailers
+
+AVOID queries that just get product advice:
+❌ "how to choose X" → AI gives buying tips, no store names
+❌ "what is the best X" → AI recommends products, not stores
+❌ "X buying guide" → AI gives advice, doesn't name retailers
+
+Think like a real person ready to buy:
+- Focus on WHERE to buy, not WHAT to buy
+- Include location when relevant for {location}
+- Use the specific product categories provided above
+
+Examples of GOOD queries for retail/e-commerce:
+- "where to buy outdoor furniture australia"
+- "best online furniture store sydney"
+- "buy sofa online australia free delivery"
+- "homewares store reviews australia"
+- "temple and webster vs ikea"
+- "online bedding store australia"
+
+Categories:
+- finding_provider: Looking for a store/retailer
+- product_specific: Where to buy a specific product category
+- comparison: Comparing stores/retailers
+- review: Reviews of stores/retailers
+
+Return ONLY a JSON array:
+[{"query": "example query", "category": "finding_provider"}, ...]`
+
+/**
+ * Detect if business is a retailer/e-commerce vs service provider
+ * SaaS and software businesses are treated as service providers, not retailers
+ */
+function isRetailerBusiness(businessType: string, _products: string[], keyPhrases: string[]): boolean {
+  const businessTypeLower = businessType.toLowerCase()
+
+  // SaaS/software businesses are NOT retailers - they use service-style queries
+  const saasKeywords = [
+    'saas', 'software', 'platform', 'app', 'tool', 'solution', 'crm', 'erp',
+    'cloud', 'subscription', 'b2b', 'enterprise', 'startup', 'tech'
+  ]
+  if (saasKeywords.some(kw => businessTypeLower.includes(kw))) {
+    return false
+  }
+
+  // Keywords that indicate physical goods retail
+  const retailerKeywords = [
+    'store', 'shop', 'retailer', 'e-commerce', 'ecommerce', 'online store',
+    'marketplace', 'seller', 'merchant', 'outlet', 'warehouse', 'furniture',
+    'homewares', 'clothing', 'apparel', 'electronics', 'goods', 'retail'
+  ]
+
+  // Check business type for retail keywords
+  if (retailerKeywords.some(kw => businessTypeLower.includes(kw))) {
+    return true
+  }
+
+  // Check key phrases for physical product terms (not just having products)
+  const physicalProductPhrases = keyPhrases.filter(kp => {
+    const lower = kp.toLowerCase()
+    return retailerKeywords.some(kw => lower.includes(kw)) ||
+           lower.includes('furniture') || lower.includes('decor') ||
+           lower.includes('outdoor') || lower.includes('bedroom') ||
+           lower.includes('living') || lower.includes('kitchen') ||
+           lower.includes('clothing') || lower.includes('shoes') ||
+           lower.includes('jewelry') || lower.includes('home')
+  })
+
+  // Need at least 2 physical product indicators to be classified as retailer
+  return physicalProductPhrases.length >= 2
+}
+
+/**
+ * Use key phrases as fallback when products/services are empty
+ */
+function enrichWithKeyPhrases(
+  services: string[],
+  products: string[],
+  keyPhrases: string[],
+  isRetailer: boolean
+): { services: string[]; products: string[] } {
+  // If products are empty and we have key phrases, use them as product categories
+  if (products.length === 0 && keyPhrases.length > 0 && isRetailer) {
+    products = keyPhrases.slice(0, 5)
+  }
+
+  // If services are empty and we have key phrases (for service businesses)
+  if (services.length === 0 && keyPhrases.length > 0 && !isRetailer) {
+    services = keyPhrases.slice(0, 5)
+  }
+
+  return { services, products }
+}
 
 /**
  * Ask a single LLM for search query suggestions
@@ -92,24 +204,50 @@ Return ONLY a JSON array:
 async function researchQueriesOnPlatform(
   analysis: BusinessAnalysis,
   platform: Platform,
-  runId: string
+  runId: string,
+  keyPhrases: string[]
 ): Promise<RawQuerySuggestion[]> {
-  const prompt = RESEARCH_PROMPT
+  // Detect if this is a retailer
+  const isRetailer = isRetailerBusiness(analysis.businessType, analysis.products, keyPhrases)
+
+  // Enrich products/services with key phrases if empty
+  const enriched = enrichWithKeyPhrases(
+    analysis.services,
+    analysis.products,
+    keyPhrases,
+    isRetailer
+  )
+
+  // Select appropriate prompt template based on business type
+  const promptTemplate = isRetailer ? RETAIL_RESEARCH_PROMPT : SERVICE_RESEARCH_PROMPT
+
+  const prompt = promptTemplate
     .replace(/{businessType}/g, analysis.businessType)
     .replace(/{industry}/g, analysis.industry)
-    .replace(/{services}/g, analysis.services.slice(0, 5).join(', ') || 'Not specified')
-    .replace(/{products}/g, analysis.products.slice(0, 5).join(', ') || 'Not specified')
+    .replace(/{services}/g, enriched.services.slice(0, 5).join(', ') || 'Not specified')
+    .replace(/{products}/g, enriched.products.slice(0, 5).join(', ') || 'Not specified')
     .replace(/{location}/g, analysis.location || 'Not specified')
+    .replace(/{keyPhrases}/g, keyPhrases.slice(0, 8).join(', ') || 'Not specified')
 
   try {
-    // All platforms use gateway for query research
+    // Use gateway if available, otherwise use direct SDK
     const modelMap: Record<Platform, string> = {
       chatgpt: 'openai/gpt-4o',
       claude: 'anthropic/claude-sonnet-4-20250514',
       gemini: 'google/gemini-2.0-flash',
     }
+
+    // Get model - use gateway if available, otherwise direct SDK
+    const model = gateway
+      ? gateway(modelMap[platform])
+      : platform === 'chatgpt'
+        ? openai('gpt-4o')
+        : platform === 'claude'
+          ? anthropic('claude-sonnet-4-20250514')
+          : google('gemini-2.0-flash')
+
     const result = await generateText({
-      model: gateway(modelMap[platform]),
+      model,
       prompt,
       maxOutputTokens: 800,
     })
@@ -219,15 +357,19 @@ function groupSimilarQueries(suggestions: RawQuerySuggestion[]): Map<string, Raw
 export async function researchQueries(
   analysis: BusinessAnalysis,
   runId: string,
-  onProgress?: (platform: Platform) => void
+  onProgress?: (platform: Platform) => void,
+  keyPhrases: string[] = []
 ): Promise<RawQuerySuggestion[]> {
   const platforms: Platform[] = ['chatgpt', 'claude', 'gemini']
   const allSuggestions: RawQuerySuggestion[] = []
 
+  // Use keyPhrases from analysis if not provided separately
+  const phrases = keyPhrases.length > 0 ? keyPhrases : (analysis.keyPhrases || [])
+
   // Query each platform sequentially to avoid rate limits
   for (const platform of platforms) {
     onProgress?.(platform)
-    const suggestions = await researchQueriesOnPlatform(analysis, platform, runId)
+    const suggestions = await researchQueriesOnPlatform(analysis, platform, runId, phrases)
     allSuggestions.push(...suggestions)
 
     // Small delay between platforms
@@ -240,10 +382,12 @@ export async function researchQueries(
 /**
  * Deduplicate and rank queries
  * Queries suggested by multiple platforms rank higher
+ * Queries containing key phrases get bonus points
  */
 export function dedupeAndRankQueries(
   suggestions: RawQuerySuggestion[],
-  limit: number = 7
+  limit: number = 7,
+  keyPhrases: string[] = []
 ): ResearchedQuery[] {
   // Group similar queries
   const groups = groupSimilarQueries(suggestions)
@@ -251,7 +395,7 @@ export function dedupeAndRankQueries(
   // Convert groups to ResearchedQuery objects
   const rankedQueries: ResearchedQuery[] = []
 
-  for (const [representative, group] of groups) {
+  for (const [_representative, group] of groups) {
     // Find the best query in the group (shortest that's still descriptive)
     const bestQuery = group.reduce((best, current) => {
       // Prefer queries between 20-60 chars
@@ -273,11 +417,22 @@ export function dedupeAndRankQueries(
     const mostCommonCategory = [...categoryCount.entries()]
       .sort((a, b) => b[1] - a[1])[0][0]
 
+    // Calculate base score from platform count
+    let relevanceScore = platforms.length * 10 // 10 points per platform
+
+    // Boost score if query contains key phrases
+    const queryLower = bestQuery.query.toLowerCase()
+    for (const phrase of keyPhrases) {
+      if (queryLower.includes(phrase.toLowerCase())) {
+        relevanceScore += 5 // 5 bonus points per key phrase match
+      }
+    }
+
     rankedQueries.push({
       query: bestQuery.query,
       category: mostCommonCategory,
       suggestedBy: platforms,
-      relevanceScore: platforms.length * 10, // 10 points per platform
+      relevanceScore,
     })
   }
 

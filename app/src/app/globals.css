@@ -31,6 +31,11 @@
   --amber: #f59e0b;
   --amber-dim: #d97706;
 
+  /* Premium/Gold - For locked features and upgrade prompts */
+  --gold: #D4AF37;
+  --gold-dim: #B8960C;
+  --gold-glow: rgba(212, 175, 55, 0.15);
+
   /* Spacing Scale */
   --space-xs: 4px;
   --space-sm: 8px;

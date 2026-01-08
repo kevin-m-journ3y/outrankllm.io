@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { FloatingPixels } from '@/components/landing/FloatingPixels'
-import { ScoreGauge } from '@/components/report/ScoreGauge'
-import { PlatformResults } from '@/components/report/PlatformResults'
 import { ReportTabs } from '@/components/report/ReportTabs'
 import { VerificationGate } from '@/components/report/VerificationGate'
 import { OptInModal } from '@/components/report/OptInModal'
-import { ArrowLeft, ExternalLink, Sparkles, Info } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import type { FeatureFlags } from '@/lib/features/flags'
 
@@ -77,7 +75,6 @@ interface ReportClientProps {
 export function ReportClient({ data }: ReportClientProps) {
   const { report, analysis, crawlData, responses, prompts, brandAwareness, email, domain, runId, isVerified } = data
   const [showModal, setShowModal] = useState(false)
-  const [hasSeenModal, setHasSeenModal] = useState(false)
 
   // Show modal after a brief delay on first view
   useEffect(() => {
@@ -87,14 +84,11 @@ export function ReportClient({ data }: ReportClientProps) {
         setShowModal(true)
       }, 8000) // Show after 8 seconds - let them explore first
       return () => clearTimeout(timer)
-    } else {
-      setHasSeenModal(true)
     }
   }, [domain, isVerified])
 
   const handleModalClose = () => {
     setShowModal(false)
-    setHasSeenModal(true)
     localStorage.setItem(`modal_shown_${domain}`, 'true')
   }
 
@@ -103,7 +97,7 @@ export function ReportClient({ data }: ReportClientProps) {
   }
 
   const handleUpgradeClick = () => {
-    setShowModal(true)
+    window.location.href = '/pricing'
   }
 
   // Wrap content in verification gate
@@ -167,55 +161,6 @@ export function ReportClient({ data }: ReportClientProps) {
             )}
           </div>
 
-          {/* Score + Summary + Platform - Always Visible */}
-          <div
-            className="bg-[var(--surface)] border border-[var(--border)]"
-            style={{ padding: '40px', marginBottom: '8px' }}
-          >
-            {/* Score */}
-            <div className="flex justify-center" style={{ marginBottom: '24px' }}>
-              <ScoreGauge score={report.visibility_score} size="lg" />
-            </div>
-
-            {/* Score Explanation */}
-            <div
-              className="flex items-start bg-[var(--surface-elevated)] border border-[var(--border-subtle)]"
-              style={{ padding: '14px 18px', marginBottom: '40px', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto', gap: '12px' }}
-            >
-              <Info size={16} className="text-[var(--text-dim)] flex-shrink-0" style={{ marginTop: '2px' }} />
-              <p className="text-[var(--text-dim)] text-xs" style={{ lineHeight: '1.6' }}>
-                <strong className="text-[var(--text-mid)]">Reach-Weighted Score:</strong> Platforms are weighted by their real-world traffic share. ChatGPT mentions count 10x more than Claude, reflecting actual user reach (~80% vs ~1% of AI referrals).
-              </p>
-            </div>
-
-            {/* Summary */}
-            <div style={{ marginBottom: '40px' }}>
-              <h2
-                className="text-[var(--green)] font-mono uppercase tracking-wider"
-                style={{ fontSize: '11px', marginBottom: '16px', letterSpacing: '0.1em' }}
-              >
-                Summary
-              </h2>
-              <p
-                className="text-[var(--text-mid)]"
-                style={{ fontSize: '15px', lineHeight: '1.7' }}
-              >
-                {report.summary}
-              </p>
-            </div>
-
-            {/* Platform breakdown */}
-            <div>
-              <h2
-                className="text-[var(--green)] font-mono uppercase tracking-wider"
-                style={{ fontSize: '11px', marginBottom: '20px', letterSpacing: '0.1em' }}
-              >
-                Platform Breakdown
-              </h2>
-              <PlatformResults scores={report.platform_scores} />
-            </div>
-          </div>
-
           {/* Tabbed Content */}
           <ReportTabs
             analysis={analysis}
@@ -257,14 +202,14 @@ export function ReportClient({ data }: ReportClientProps) {
               Unlock competitor analysis, personalized action plans, and
               ready-to-ship PRDs for your AI coding tools.
             </p>
-            <button
-              onClick={() => setShowModal(true)}
+            <Link
+              href="/pricing"
               className="form-button inline-flex items-center gap-2"
               style={{ width: 'auto', padding: '18px 32px' }}
             >
               <Sparkles size={16} />
               Upgrade for Full Access
-            </button>
+            </Link>
           </section>
 
           {/* Footer */}

@@ -1,7 +1,10 @@
+'use client'
+
 import { Nav } from '@/components/nav/Nav'
 import { Footer } from '@/components/landing/Footer'
-import { Check } from 'lucide-react'
+import { Check, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
 const plans = [
   {
@@ -55,6 +58,23 @@ const plans = [
 ]
 
 export default function PricingPage() {
+  const [canGoBack, setCanGoBack] = useState(false)
+
+  useEffect(() => {
+    // Check if user came from a report page (has history to go back to)
+    // We check if there's a referrer from our own domain
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      const referrer = document.referrer
+      if (referrer && referrer.includes('/report/')) {
+        setCanGoBack(true)
+      }
+    }
+  }, [])
+
+  const handleBack = () => {
+    window.history.back()
+  }
+
   return (
     <>
       <div className="grid-bg" />
@@ -62,6 +82,21 @@ export default function PricingPage() {
 
       <main className="relative z-10 min-h-screen" style={{ paddingTop: '140px', paddingBottom: '120px' }}>
         <div className="w-full flex flex-col items-center">
+          {/* Back button - only shows when coming from a report */}
+          {canGoBack && (
+            <div className="w-full px-6" style={{ marginBottom: '24px' }}>
+              <div style={{ maxWidth: '1024px', marginLeft: 'auto', marginRight: 'auto' }}>
+                <button
+                  onClick={handleBack}
+                  className="flex items-center gap-2 text-[var(--text-dim)] hover:text-[var(--text)] transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="font-mono text-sm">Back to Report</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="text-center px-6 w-full" style={{ marginBottom: '80px' }}>
             <div style={{ maxWidth: '1024px', marginLeft: 'auto', marginRight: 'auto' }}>
