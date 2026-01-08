@@ -4,7 +4,7 @@ import { Nav } from '@/components/nav/Nav'
 import { Footer } from '@/components/landing/Footer'
 import { Check, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 const plans = [
@@ -58,7 +58,8 @@ const plans = [
   },
 ]
 
-export default function PricingPage() {
+// Back button component that uses useSearchParams (needs Suspense boundary)
+function BackButton() {
   const searchParams = useSearchParams()
   const [canGoBack, setCanGoBack] = useState(false)
 
@@ -80,6 +81,24 @@ export default function PricingPage() {
     window.history.back()
   }
 
+  if (!canGoBack) return null
+
+  return (
+    <div className="w-full px-6" style={{ marginBottom: '24px' }}>
+      <div style={{ maxWidth: '1024px', marginLeft: 'auto', marginRight: 'auto' }}>
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-2 text-[var(--text-dim)] hover:text-[var(--text)] transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="font-mono text-sm">Back to Report</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default function PricingPage() {
   return (
     <>
       <div className="grid-bg" />
@@ -88,19 +107,9 @@ export default function PricingPage() {
       <main className="relative z-10 min-h-screen" style={{ paddingTop: '140px', paddingBottom: '120px' }}>
         <div className="w-full flex flex-col items-center">
           {/* Back button - only shows when coming from a report */}
-          {canGoBack && (
-            <div className="w-full px-6" style={{ marginBottom: '24px' }}>
-              <div style={{ maxWidth: '1024px', marginLeft: 'auto', marginRight: 'auto' }}>
-                <button
-                  onClick={handleBack}
-                  className="flex items-center gap-2 text-[var(--text-dim)] hover:text-[var(--text)] transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span className="font-mono text-sm">Back to Report</span>
-                </button>
-              </div>
-            </div>
-          )}
+          <Suspense fallback={null}>
+            <BackButton />
+          </Suspense>
 
           {/* Header */}
           <div className="text-center px-6 w-full" style={{ marginBottom: '80px' }}>
