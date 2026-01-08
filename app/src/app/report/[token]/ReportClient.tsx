@@ -97,7 +97,7 @@ export function ReportClient({ data }: ReportClientProps) {
   }
 
   const handleUpgradeClick = () => {
-    window.location.href = '/pricing'
+    window.location.href = '/pricing?from=report'
   }
 
   // Wrap content in verification gate
@@ -203,7 +203,7 @@ export function ReportClient({ data }: ReportClientProps) {
               ready-to-ship PRDs for your AI coding tools.
             </p>
             <Link
-              href="/pricing"
+              href="/pricing?from=report"
               className="form-button inline-flex items-center gap-2"
               style={{ width: 'auto', padding: '18px 32px' }}
             >

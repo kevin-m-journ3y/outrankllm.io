@@ -982,7 +982,7 @@ function SetupTab({
             ))}
             {/* Subscribe to add more button */}
             <Link
-              href="/pricing"
+              href="/pricing?from=report"
               className="flex items-center gap-2 transition-all hover:opacity-80"
               style={{
                 padding: '10px 16px',
@@ -1124,7 +1124,7 @@ function SetupTab({
               </div>
             </div>
             <a
-              href="/pricing"
+              href="/pricing?from=report"
               className="flex-shrink-0 font-mono text-xs flex items-center gap-2 transition-all hover:opacity-80"
               style={{
                 padding: '10px 18px',
@@ -1483,7 +1483,7 @@ function AIReadinessTab({
             </div>
 
             <Link
-              href="/pricing"
+              href="/pricing?from=report"
               className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
               style={{
                 padding: '12px 24px',
@@ -1495,7 +1495,7 @@ function AIReadinessTab({
               }}
             >
               <Sparkles size={16} />
-              {failCount > 0 ? 'Subscribe for Fixes & Action Plans' : 'Subscribe for Weekly Monitoring'}
+              {failCount > 0 ? 'Get Fixes & Action Plans' : 'Subscribe for Weekly Monitoring'}
             </Link>
           </div>
         </div>
@@ -2841,7 +2841,7 @@ function ResponsesTab({
                 }}
               >
                 <Sparkles size={16} />
-                Get Action Plans
+                Get Fixes & Action Plans
               </button>
             </div>
           </div>
@@ -3334,7 +3334,7 @@ function MeasurementsTab({
               Subscribers get weekly scans to track how your AI visibility changes over time
             </p>
             <a
-              href="/pricing"
+              href="/pricing?from=report"
               className="font-mono text-sm flex items-center gap-2 transition-all hover:opacity-90"
               style={{
                 padding: '12px 24px',
@@ -3424,7 +3424,7 @@ function MeasurementsTab({
               </div>
 
               <a
-                href="/pricing"
+                href="/pricing?from=report"
                 className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
                 style={{
                   padding: '12px 24px',
@@ -3437,7 +3437,7 @@ function MeasurementsTab({
                 }}
               >
                 <Sparkles size={16} />
-                Get Action Plans
+                Get Fixes & Action Plans
               </a>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { Footer } from '@/components/landing/Footer'
 import { Check, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 const plans = [
   {
@@ -58,18 +59,22 @@ const plans = [
 ]
 
 export default function PricingPage() {
+  const searchParams = useSearchParams()
   const [canGoBack, setCanGoBack] = useState(false)
 
   useEffect(() => {
-    // Check if user came from a report page (has history to go back to)
-    // We check if there's a referrer from our own domain
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      const referrer = document.referrer
-      if (referrer && referrer.includes('/report/')) {
-        setCanGoBack(true)
-      }
+    // Check if user came from a report page via:
+    // 1. Query param ?from=report (most reliable)
+    // 2. Referrer containing /report/ (fallback)
+    const fromReport = searchParams.get('from') === 'report'
+    const referrerFromReport = typeof window !== 'undefined' &&
+      document.referrer &&
+      document.referrer.includes('/report/')
+
+    if ((fromReport || referrerFromReport) && window.history.length > 1) {
+      setCanGoBack(true)
     }
-  }, [])
+  }, [searchParams])
 
   const handleBack = () => {
     window.history.back()

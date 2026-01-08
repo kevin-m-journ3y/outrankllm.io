@@ -286,13 +286,21 @@ See `src/lib/ai/search-providers.ts` for implementation (`REACH_WEIGHTS`, `MAX_R
 ### Sticky Upsell CTAs
 Report tabs (AI Readiness, AI Responses, Measurements) show sticky bottom CTAs that:
 - Appear after minimal scroll (50px)
-- Link to `/pricing` page
+- Link to `/pricing?from=report` (query param ensures back button works)
 - Use gold gradient styling for premium feel
-- Show contextual messaging based on tab state (e.g., "Subscribe for Fixes & Action Plans" vs "Subscribe for Weekly Monitoring")
+- Contextual messaging based on performance:
+
+| Tab | Condition | CTA Text |
+|-----|-----------|----------|
+| AI Readiness | Issues detected | "Get Fixes & Action Plans" |
+| AI Readiness | All passing | "Subscribe for Weekly Monitoring" |
+| AI Responses | Low mentions (<50%) | "Get Fixes & Action Plans" |
+| Measurements | Low coverage (<50%) | "Get Fixes & Action Plans" |
 
 ### Pricing Page
 - Client component (`'use client'`) for navigation handling
-- Shows "Back to Report" button when user came from a report page (checks `document.referrer`)
+- Shows "Back to Report" button when user came from a report page
+- Detection via `?from=report` query param (primary) or `document.referrer` (fallback)
 - Three tiers: Starter ($49), Pro ($79), Agency ($199)
 
 ### Premium Feature Indicators
