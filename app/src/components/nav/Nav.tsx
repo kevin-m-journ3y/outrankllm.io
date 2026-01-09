@@ -1,14 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useSession, logout } from '@/lib/auth-client'
 import { User, LogOut, LayoutDashboard } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
 export function Nav() {
   const pathname = usePathname()
-  const router = useRouter()
   const { session, loading } = useSession()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -16,9 +15,10 @@ export function Nav() {
   const isActive = (path: string) => pathname === path
 
   const handleLogout = async () => {
+    setMenuOpen(false)
     await logout()
-    router.push('/')
-    router.refresh()
+    // Force a full page reload to clear all client-side state
+    window.location.href = '/'
   }
 
   // Close menu when clicking outside
