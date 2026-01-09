@@ -13,7 +13,7 @@ interface Plan {
   name: string
   tier: TierKey
   description: string
-  price: number
+  price: number | null
   highlight: boolean
   features: string[]
   cta: string
@@ -57,11 +57,11 @@ const plans: Plan[] = [
     name: 'Agency',
     tier: 'agency',
     description: 'For Agencies',
-    price: 199,
+    price: null,
     highlight: false,
     features: [
       'Everything in Pro, plus:',
-      'Up to 10 client domains',
+      'Monitor multiple domains',
       'White-label reports',
       'Per-client dashboards',
       'Bulk competitor tracking',
@@ -217,8 +217,14 @@ function PricingCards() {
                   {plan.name}
                 </h2>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-medium">${plan.price}</span>
-                  <span className="text-[var(--text-dim)] font-mono text-sm">/month</span>
+                  {plan.price !== null ? (
+                    <>
+                      <span className="text-5xl font-medium">${plan.price}</span>
+                      <span className="text-[var(--text-dim)] font-mono text-sm">/month</span>
+                    </>
+                  ) : (
+                    <span className="text-4xl font-medium">Custom pricing</span>
+                  )}
                 </div>
               </div>
 
