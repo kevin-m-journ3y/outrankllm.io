@@ -177,6 +177,12 @@ interface ReportData {
     prompt_text: string
     category: string
   }[] | null
+  subscriberQuestions: {
+    id: string
+    prompt_text: string
+    category: string
+    source: 'ai_generated' | 'user_created'
+  }[] | null
   brandAwareness: {
     platform: string
     query_type: string
@@ -204,7 +210,7 @@ interface ReportClientProps {
 }
 
 export function ReportClient({ data, showLockedModal = false }: ReportClientProps) {
-  const { report, analysis, crawlData, responses, prompts, brandAwareness, email, domain, runId, isVerified, featureFlags } = data
+  const { report, analysis, crawlData, responses, prompts, subscriberQuestions, brandAwareness, email, domain, runId, isVerified, featureFlags } = data
   const [showModal, setShowModal] = useState(false)
   const [showLocked, setShowLocked] = useState(showLockedModal)
   const isSubscriber = featureFlags.isSubscriber
@@ -344,7 +350,7 @@ export function ReportClient({ data, showLockedModal = false }: ReportClientProp
           <ReportTabs
             analysis={analysis}
             responses={responses}
-            prompts={prompts}
+            prompts={isSubscriber && subscriberQuestions?.length ? subscriberQuestions : prompts}
             brandAwareness={brandAwareness}
             crawlData={crawlData ?? undefined}
             visibilityScore={report.visibility_score}

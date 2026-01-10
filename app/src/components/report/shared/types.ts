@@ -32,6 +32,7 @@ export interface Prompt {
   id: string
   prompt_text: string
   category: string
+  source?: 'ai_generated' | 'user_created'
 }
 
 export interface Competitor {

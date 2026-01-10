@@ -1,7 +1,7 @@
 # Subscription System Implementation Plan
 
-**Status:** Sprint 3 In Progress (5B Trend Charts Complete)
-**Last Updated:** 2026-01-09
+**Status:** Sprint 4 Complete (Editable Questions), Sprint 5 Ready
+**Last Updated:** 2026-01-10
 
 ## Overview
 
@@ -147,64 +147,43 @@ JWT_SECRET=<openssl rand -base64 32>
 
 ---
 
-## Phase 4: Weekly CRON Updates ⏳ PENDING
+## Phase 4: Weekly CRON Updates ✅ COMPLETE (via Inngest)
 
 **Goal:** Run weekly scans for subscribers with trend tracking.
 
-### Vercel Cron Strategy
-- Vercel Pro plan: 60-second max execution
-- Strategy: Chunk work into small batches
-- Queue system: Store pending work in DB, process in chunks
+### Implementation (Inngest)
 
-### User-Configurable Schedule (TODO)
-Allow subscribers to choose their preferred day and time for weekly report updates:
+Replaced Vercel Cron with Inngest for reliable background job processing. See `docs/INNGEST_PLAN.md` for full details.
+
+**Key Benefits:**
+- Automatic retries per step (if Claude fails, only Claude retries)
+- Full visibility in Inngest dashboard
+- User-configurable schedules (day, time, timezone)
+- No 60-second timeout issues
+
+### User-Configurable Schedule ✅
+Subscribers can choose their preferred day and time for weekly report updates:
 - **Day of week:** Monday through Sunday selection
-- **Time of day:** Dropdown with timezone-aware options (e.g., "9:00 AM", "2:00 PM")
-- **Timezone:** Auto-detect from browser, allow manual override
-- Store in `leads` table: `report_schedule_day`, `report_schedule_hour`, `report_timezone`
-- CRON job checks each subscriber's preferred schedule when processing queue
+- **Time of day:** Hour selection (0-23)
+- **Timezone:** Auto-detect from browser, manual override available
+- Stored in `leads` table: `scan_schedule_day`, `scan_schedule_hour`, `scan_timezone`
+- Hourly CRON dispatcher checks which subscribers are due
 
-### CRON Schedule
-```json
-// vercel.json
-{
-  "crons": [
-    {
-      "path": "/api/cron/weekly-scans",
-      "schedule": "0 6 * * 1"  // Every Monday 6am UTC
-    }
-  ]
-}
-```
+### How It Works
+1. `hourly-scan-dispatcher` runs every hour (`0 * * * *`)
+2. Checks which subscribers' local time matches their configured schedule
+3. Dispatches `scan/process` events to Inngest for due subscribers
+4. Each scan runs the same 10-step process as manual scans
+5. Subscribers receive email when scan completes
 
-### Implementation
-1. Create `scan_queue` table for pending scans
-2. CRON job: Queue all active subscriber scans
-3. CRON job: Process queue in chunks (10 at a time)
-4. Store each scan result as new `scan_run` for trends
-5. Email summary to subscribers
-
-### Data Model
-```sql
--- Each subscriber gets weekly scan runs
-scan_runs (existing table)
-  └── lead_id (subscriber)
-  └── created_at (for trending)
-
--- Queue for pending work
-scan_queue
-  ├── id
-  ├── lead_id
-  ├── scheduled_for
-  ├── status (pending, processing, completed, failed)
-  └── created_at
-```
-
-### Files to Create/Modify
-- `supabase/migrations/XXX_add_scan_queue.sql`
-- `src/app/api/cron/weekly-scans/route.ts`
-- `src/app/api/cron/process-queue/route.ts`
-- `vercel.json` (cron config)
+### Files Created ✅
+- `src/inngest/client.ts` - Inngest client singleton
+- `src/inngest/functions/process-scan.ts` - Main scan processing (10 steps)
+- `src/inngest/functions/hourly-scan-dispatcher.ts` - Hourly CRON scheduler
+- `src/app/api/inngest/route.ts` - Inngest webhook handler
+- `src/app/api/user/schedule/route.ts` - GET/PATCH schedule settings
+- `src/app/dashboard/ScheduleSettings.tsx` - Schedule picker UI
+- `supabase/migrations/020_scan_schedule.sql` - Schedule columns on leads
 
 ---
 
@@ -348,22 +327,22 @@ interface PRDTask {
 
 *Outcome: Full login system, account management, report protection*
 
-### Sprint 3: Subscriber Value ⏳ IN PROGRESS
-4. Phase 5A: Editable Questions ⏳ PENDING
+### Sprint 3: Subscriber Value & Automation ✅ COMPLETE
+4. Phase 4: Weekly CRON Updates ✅ COMPLETE (via Inngest)
 5. Phase 5B: Trend Charts ✅ COMPLETE
 
-*Outcome: Subscribers get ongoing value*
+*Outcome: Subscribers get ongoing value with automated weekly scans*
 
-### Sprint 4: Premium Features
-6. Phase 5C: Action Plans
-7. Phase 5D: PRD Generation
+### Sprint 4: Subscriber Features ✅ COMPLETE
+6. Phase 5A: Editable Questions ✅ COMPLETE
+
+*Outcome: Subscribers can customize their scan questions*
+
+### Sprint 5: Premium Features
+7. Phase 5C: Action Plans
+8. Phase 5D: PRD Generation
 
 *Outcome: Full premium feature set*
-
-### Sprint 5: Automation
-8. Phase 4: Weekly CRON Updates
-
-*Outcome: Fully automated weekly monitoring*
 
 ---
 
@@ -383,11 +362,14 @@ ALTER TABLE leads ADD COLUMN password_set_at TIMESTAMPTZ;
 ALTER TABLE leads ADD COLUMN last_login_at TIMESTAMPTZ;
 CREATE TABLE password_reset_tokens (...);
 
--- Phase 4: CRON (pending)
-CREATE TABLE scan_queue (...);
+-- Phase 4: CRON ✅ (via Inngest)
+ALTER TABLE leads ADD COLUMN scan_schedule_day INTEGER DEFAULT 1;
+ALTER TABLE leads ADD COLUMN scan_schedule_hour INTEGER DEFAULT 9;
+ALTER TABLE leads ADD COLUMN scan_timezone TEXT DEFAULT 'Australia/Sydney';
 
--- Phase 5A: Questions (pending)
+-- Phase 5A: Questions ✅
 CREATE TABLE subscriber_questions (...);
+CREATE TABLE question_history (...);
 
 -- Phase 5B: Trend Charts ✅
 CREATE TABLE score_history (...);
@@ -419,6 +401,10 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_STARTER=price_...
 STRIPE_PRICE_PRO=price_...
 STRIPE_PRICE_AGENCY=price_...
+
+# Inngest (from https://app.inngest.com)
+INNGEST_SIGNING_KEY=signkey-...
+INNGEST_EVENT_KEY=...
 
 # Email
 RESEND_API_KEY=re_...
@@ -460,11 +446,14 @@ NEXT_PUBLIC_APP_URL=https://outrankllm.io
 - [x] Shows "View Your Report" button
 - [x] Agency users can scan new domains
 
-### Weekly Updates (pending)
-- [ ] CRON triggers correctly
-- [ ] Queue processes in chunks
-- [ ] Historical data stored
-- [ ] Trends display correctly
+### Weekly Updates ✅ (via Inngest)
+- [x] Inngest functions deployed and synced
+- [x] Hourly dispatcher runs correctly
+- [x] Scans process with retries per step
+- [x] Historical data stored in score_history
+- [x] Trends display correctly
+- [x] Schedule settings UI in dashboard
+- [x] Admin ad-hoc rescan works via Inngest
 
 ---
 

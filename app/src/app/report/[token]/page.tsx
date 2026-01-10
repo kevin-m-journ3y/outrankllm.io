@@ -51,6 +51,12 @@ interface ReportData {
     prompt_text: string
     category: string
   }[] | null
+  subscriberQuestions: {
+    id: string
+    prompt_text: string
+    category: string
+    source: 'ai_generated' | 'user_created'
+  }[] | null
   brandAwareness: {
     platform: string
     query_type: string
@@ -124,12 +130,27 @@ async function getReport(token: string): Promise<ReportData | null> {
     .eq('run_id', runId)
     .single()
 
-  // Fetch prompts for this scan
+  // Fetch prompts for this scan (used for free users and as fallback)
   const { data: prompts } = await supabase
     .from('scan_prompts')
     .select('id, prompt_text, category')
     .eq('run_id', runId)
     .order('created_at', { ascending: true })
+
+  // For subscribers: fetch their editable subscriber_questions
+  let subscriberQuestions: { id: string; prompt_text: string; category: string; source: 'ai_generated' | 'user_created' }[] | null = null
+  if (featureFlags.isSubscriber) {
+    const { data } = await supabase
+      .from('subscriber_questions')
+      .select('id, prompt_text, category, source')
+      .eq('lead_id', lead.id)
+      .eq('is_active', true)
+      .eq('is_archived', false)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+
+    subscriberQuestions = data as typeof subscriberQuestions
+  }
 
   // Fetch all LLM responses for the AI Responses tab
   const { data: responses } = await supabase
@@ -199,6 +220,7 @@ async function getReport(token: string): Promise<ReportData | null> {
     } : null,
     responses: responses as ReportData['responses'],
     prompts: prompts as ReportData['prompts'],
+    subscriberQuestions,
     brandAwareness: brandAwareness as ReportData['brandAwareness'],
     email: lead.email,
     domain: lead.domain,

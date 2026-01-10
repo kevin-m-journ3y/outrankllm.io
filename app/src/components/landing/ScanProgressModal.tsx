@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { Ghost } from '@/components/ghost/Ghost'
-import { X, Loader2, CheckCircle, AlertCircle, Mail, BookOpen } from 'lucide-react'
+import { X, Loader2, CheckCircle, AlertCircle, Mail } from 'lucide-react'
 import Link from 'next/link'
 
 interface ScanProgressModalProps {
@@ -116,7 +116,7 @@ export function ScanProgressModal({
               domain={domain}
               progress={progress}
               statusMessage={status?.statusMessage || 'Starting scan...'}
-              estimatedTime={status?.estimatedTimeRemaining || 300}
+              estimatedTime={status?.estimatedTimeRemaining || 600}
             />
           )}
         </div>
@@ -153,8 +153,8 @@ function ProgressContent({
       </h2>
 
       <p className="text-[var(--text-mid)] text-sm" style={{ marginBottom: '32px', lineHeight: '1.6' }}>
-        We&apos;re examining your site and querying AI assistants.<br />
-        This usually takes 3-5 minutes.
+        We&apos;re asking ChatGPT, Claude, Gemini, and Perplexity what they know about you... and your competitors.<br /><br />
+        This takes 10-15 minutes. Grab a coffee — we&apos;ll email you when it&apos;s ready.
       </p>
 
       {/* Progress bar */}
@@ -188,19 +188,16 @@ function ProgressContent({
         className="border-t border-[var(--border)]"
         style={{ paddingTop: '24px', marginTop: '8px' }}
       >
-        <p className="text-[var(--text-dim)] text-sm" style={{ marginBottom: '16px', lineHeight: '1.6' }}>
-          You can close this dialog — we&apos;ll email you when your report is ready.
+        <p className="text-[var(--text-dim)] text-sm" style={{ lineHeight: '1.6' }}>
+          You can close this dialog, or{' '}
+          <Link
+            href="/learn"
+            onClick={(e) => e.stopPropagation()}
+            className="text-[var(--green)] hover:text-[var(--text)] transition-colors"
+          >
+            learn about GEO while you wait →
+          </Link>
         </p>
-
-        <Link
-          href="/learn"
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-2 text-[var(--green)] hover:text-[var(--text)] transition-colors"
-          style={{ fontFamily: 'var(--font-mono)', fontSize: '13px' }}
-        >
-          <BookOpen size={16} />
-          <span>Learn about GEO while you wait →</span>
-        </Link>
       </div>
     </>
   )

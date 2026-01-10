@@ -1,7 +1,7 @@
 # Phase 5: Subscriber Features - Implementation Plan
 
-**Status:** 5B Trend Charts Complete
-**Last Updated:** 2026-01-09
+**Status:** 5A Editable Questions Complete, 5B Trend Charts Complete, Weekly CRON via Inngest Complete
+**Last Updated:** 2026-01-10
 
 ---
 
@@ -34,7 +34,7 @@ Phase 5 adds the core subscriber features that differentiate paid tiers. The key
 
 ---
 
-## 5A: Editable Questions
+## 5A: Editable Questions ✅ COMPLETE
 
 ### Requirements
 
@@ -684,10 +684,10 @@ POST /api/prd/generate-all     - Generate PRDs for all actions (batch)
 
 ### Sprint 3: Questions & Trends
 
-1. **5A: Editable Questions** ⏳ PENDING
-   - Migration + API routes
-   - SetupTab editing UI
-   - Question history/revert
+1. **5A: Editable Questions** ✅ COMPLETE
+   - Migration + API routes ✅
+   - SetupTab editing UI ✅
+   - Question history/revert ✅
 
 2. **5B: Trend Charts** ✅ COMPLETE
    - score_history table with platform mentions
@@ -771,14 +771,14 @@ function getFlagsForTier(tier: Tier): FeatureFlags {
 
 ## Testing Checklist
 
-### 5A: Editable Questions
-- [ ] Free user sees questions read-only
-- [ ] Starter can edit + add up to 3 custom
-- [ ] Pro can edit + add up to 20 custom
-- [ ] Question history saves on each edit
-- [ ] Revert to previous version works
-- [ ] Archive/restore works
-- [ ] Custom questions used in next scan
+### 5A: Editable Questions ✅
+- [x] Free user sees questions read-only
+- [x] Starter can edit + add up to 10 custom
+- [x] Pro can edit + add up to 20 custom
+- [x] Question history saves on each edit
+- [x] Revert to previous version works
+- [x] Archive/restore works
+- [x] Custom questions used in next scan
 
 ### 5B: Trend Charts ✅
 - [x] Free users see locked "Subscribers Only" overlay
@@ -810,3 +810,5 @@ function getFlagsForTier(tier: Tier): FeatureFlags {
 - Rate limiting on regenerate buttons to prevent abuse
 - PRD format tested with Claude Code paste workflow
 - Consider adding "Mark as Complete" for actions (future enhancement)
+- **Scans now processed via Inngest** - see `docs/INNGEST_PLAN.md` for background job architecture
+- Weekly CRON scans use stored subscriber questions automatically
