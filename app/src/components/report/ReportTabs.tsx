@@ -104,7 +104,8 @@ export function ReportTabs({
             const Icon = tab.icon
             const isActive = activeTab === tab.id
             const isLast = index === tabs.length - 1
-            const showGoldLock = tab.premium || tab.locked
+            // Only show gold lock for non-subscribers on premium/locked tabs
+            const showGoldLock = !isSubscriber && (tab.premium || tab.locked)
 
             return (
               <button
@@ -207,7 +208,10 @@ export function ReportTabs({
         )}
         {activeTab === 'actions' && (
           isSubscriber ? (
-            <ActionsTab />
+            <ActionsTab
+              runId={currentRunId}
+              enrichmentStatus={enrichmentStatus}
+            />
           ) : (
             <LockedTab
               icon={Lightbulb}

@@ -6,6 +6,14 @@ import {
   generateCompetitiveSummary,
   type BrandAwarenessResult,
 } from "@/lib/ai/brand-awareness"
+import {
+  generateActionPlan,
+  type ActionPlanInput,
+  type CrawledPage,
+  type LLMResponseData,
+  type BrandAwarenessData,
+  type CompetitiveSummaryData,
+} from "@/lib/ai/generate-actions"
 import { log } from "@/lib/logger"
 
 /**
@@ -90,7 +98,8 @@ export const enrichSubscriber = inngest.createFunction(
         competitors = subscriberCompetitors.map((c: { name: string }) => c.name)
         log.info(scanRunId, `Using ${competitors.length} tracked competitors: ${competitors.join(', ')}`)
       } else {
-        // Fallback to top competitor from report (for new subscribers)
+        // Fallback to top competitors from report (for new subscribers)
+        // Use top 3 competitors for comprehensive analysis
         const { data: report } = await supabase
           .from("reports")
           .select("top_competitors")
@@ -98,8 +107,11 @@ export const enrichSubscriber = inngest.createFunction(
           .single()
 
         if (report?.top_competitors && report.top_competitors.length > 0) {
-          competitors = [report.top_competitors[0].name]
-          log.info(scanRunId, `Using fallback top competitor: ${competitors[0]}`)
+          // Take top 3 competitors (or fewer if not available)
+          competitors = report.top_competitors
+            .slice(0, 3)
+            .map((c: { name: string }) => c.name)
+          log.info(scanRunId, `Using ${competitors.length} fallback competitors: ${competitors.join(', ')}`)
         }
       }
 
@@ -243,7 +255,228 @@ export const enrichSubscriber = inngest.createFunction(
       return summary
     })
 
-    // Step 4: Mark enrichment as complete
+    // Step 4: Generate AI-powered action plans
+    const actionPlanResult = await step.run("generate-action-plan", async () => {
+      const supabase = createServiceClient()
+
+      log.step(scanRunId, "Generating AI-powered action plan")
+
+      try {
+        // Gather all input data for comprehensive action plan generation
+
+        // Get crawled pages for page-specific recommendations
+        const { data: crawledPagesData } = await supabase
+          .from("crawled_pages")
+          .select("*")
+          .eq("run_id", scanRunId)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const crawledPages: CrawledPage[] = (crawledPagesData || []).map((p: any) => ({
+          path: p.path,
+          url: p.url,
+          title: p.title,
+          metaDescription: p.meta_description,
+          h1: p.h1,
+          headings: p.headings || [],
+          wordCount: p.word_count || 0,
+          hasMetaDescription: p.has_meta_description || false,
+          schemaTypes: p.schema_types || [],
+          schemaData: p.schema_data || [],
+        }))
+
+        // Get LLM responses for visibility analysis
+        const { data: responsesData } = await supabase
+          .from("llm_responses")
+          .select("platform, response_text, domain_mentioned, competitors_mentioned, prompt:scan_prompts(prompt_text)")
+          .eq("run_id", scanRunId)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const responses: LLMResponseData[] = (responsesData || []).map((r: any) => ({
+          platform: r.platform,
+          promptText: (r.prompt as { prompt_text?: string } | null)?.prompt_text || "",
+          responseText: r.response_text || "",
+          domainMentioned: r.domain_mentioned || false,
+          competitorsMentioned: r.competitors_mentioned || [],
+        }))
+
+        // Get report for scores
+        const { data: report } = await supabase
+          .from("reports")
+          .select("visibility_score, platform_scores")
+          .eq("run_id", scanRunId)
+          .single()
+
+        // Get site analysis for technical data
+        const { data: analysis } = await supabase
+          .from("site_analyses")
+          .select("has_sitemap, has_robots_txt, schema_types, has_meta_descriptions, pages_crawled")
+          .eq("run_id", scanRunId)
+          .single()
+
+        // Transform brand awareness results
+        const brandAwarenessInput: BrandAwarenessData[] = brandResults.rawResults.map((r) => ({
+          platform: r.platform,
+          queryType: r.queryType,
+          entityRecognized: r.recognized,
+          attributeMentioned: r.attributeMentioned,
+          testedAttribute: r.testedAttribute || null,
+          positioning: r.positioning,
+          comparedTo: r.comparedTo,
+        }))
+
+        // Get previously completed action titles to pass to Claude
+        // This tells Claude not to suggest similar actions again
+        const { data: previouslyCompleted } = await supabase
+          .from("action_items_history")
+          .select("title")
+          .eq("lead_id", leadId)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const completedActionTitles = (previouslyCompleted || []).map((h: any) => h.title as string)
+
+        if (completedActionTitles.length > 0) {
+          log.info(scanRunId, `Found ${completedActionTitles.length} previously completed actions to exclude from generation`)
+        }
+
+        // Build action plan input
+        const actionPlanInput: ActionPlanInput = {
+          analysis: {
+            businessName: scanData.analysis.businessName,
+            businessType: scanData.analysis.businessType,
+            services: scanData.analysis.services,
+            location: scanData.analysis.location,
+            locations: scanData.analysis.locations,
+            keyPhrases: scanData.analysis.keyPhrases,
+            industry: scanData.analysis.industry,
+          },
+          crawledPages,
+          crawlData: {
+            hasSitemap: analysis?.has_sitemap || false,
+            hasRobotsTxt: analysis?.has_robots_txt || false,
+            schemaTypes: analysis?.schema_types || [],
+            hasMetaDescriptions: analysis?.has_meta_descriptions || false,
+            pagesCrawled: analysis?.pages_crawled || 0,
+          },
+          responses,
+          brandAwareness: brandAwarenessInput,
+          competitiveSummary: competitiveSummary as CompetitiveSummaryData | null,
+          scores: {
+            overall: report?.visibility_score || 0,
+            byPlatform: buildPlatformScores(report?.platform_scores, responses),
+          },
+          domain: scanData.domain,
+          completedActionTitles, // Pass to Claude to avoid re-suggesting
+        }
+
+        // Generate the action plan
+        const generatedPlan = await generateActionPlan(actionPlanInput, scanRunId)
+
+        // Archive any existing completed/dismissed actions before saving new ones
+        // First get the existing plan for this lead
+        const { data: existingPlan } = await supabase
+          .from("action_plans")
+          .select("id")
+          .eq("lead_id", leadId)
+          .single()
+
+        let existingActions: { id: string; title: string; description: string; category: string | null; status: string }[] | null = null
+        if (existingPlan) {
+          const { data } = await supabase
+            .from("action_items")
+            .select("id, title, description, category, status")
+            .eq("plan_id", existingPlan.id)
+            .in("status", ["completed", "dismissed"])
+          existingActions = data
+        }
+
+        if (existingActions && existingActions.length > 0) {
+          // Move completed actions to history
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const historyInserts = existingActions.map((a: any) => ({
+            lead_id: leadId,
+            original_action_id: a.id,
+            title: a.title,
+            description: a.description,
+            category: a.category,
+            scan_run_id: scanRunId,
+          }))
+
+          await supabase.from("action_items_history").insert(historyInserts)
+          log.info(scanRunId, `Archived ${historyInserts.length} completed actions to history`)
+        }
+
+        // Delete existing action plan for this lead (will recreate fresh)
+        await supabase.from("action_plans").delete().eq("lead_id", leadId)
+
+        // Create new action plan
+        const { data: planData, error: planError } = await supabase
+          .from("action_plans")
+          .insert({
+            lead_id: leadId,
+            run_id: scanRunId,
+            executive_summary: generatedPlan.executiveSummary,
+            page_edits: generatedPlan.pageEdits,
+            content_priorities: generatedPlan.contentPriorities,
+            keyword_map: generatedPlan.keywordMap,
+            key_takeaways: generatedPlan.keyTakeaways,
+            quick_wins_count: generatedPlan.priorityActions.filter((a) => a.effort === "low" && a.impact >= 2).length,
+            strategic_count: generatedPlan.priorityActions.filter((a) => a.effort === "medium").length,
+            backlog_count: generatedPlan.priorityActions.filter((a) => a.effort === "high").length,
+          })
+          .select("id")
+          .single()
+
+        if (planError) {
+          throw new Error(`Failed to create action plan: ${planError.message}`)
+        }
+
+        // Safety net: Also filter at insert time in case Claude still generates similar actions
+        // We already passed completedActionTitles to Claude, but this ensures no duplicates
+        const completedTitlesNormalized = new Set(completedActionTitles.map(t => normalizeTitle(t)))
+
+        // Insert action items (skip if similar action was previously completed)
+        const actionInserts = generatedPlan.priorityActions
+          .filter((action) => !completedTitlesNormalized.has(normalizeTitle(action.title)))
+          .map((action, index) => ({
+            plan_id: planData.id,
+            title: action.title,
+            description: action.description,
+            rationale: action.rationale,
+            priority: action.effort === "low" && action.impact >= 2 ? "quick_win" : action.effort === "high" ? "backlog" : "strategic",
+            category: action.category,
+            estimated_impact: action.impact === 3 ? "high" : action.impact === 2 ? "medium" : "low",
+            estimated_effort: action.effort,
+            target_page: action.targetPage,
+            target_keywords: action.targetKeywords,
+            consensus: action.consensus,
+            implementation_steps: action.implementationSteps,
+            expected_outcome: action.expectedOutcome,
+            sort_order: index,
+            status: "pending",
+          }))
+
+        if (actionInserts.length > 0) {
+          const { error: itemsError } = await supabase.from("action_items").insert(actionInserts)
+          if (itemsError) {
+            log.warn(scanRunId, `Failed to insert action items: ${itemsError.message}`)
+          }
+        }
+
+        log.done(scanRunId, "Action plan", `${actionInserts.length} actions (${generatedPlan.priorityActions.length - actionInserts.length} skipped as previously completed)`)
+
+        return {
+          success: true,
+          actionsGenerated: actionInserts.length,
+          actionsSkipped: generatedPlan.priorityActions.length - actionInserts.length,
+        }
+      } catch (error) {
+        log.error(scanRunId, "Action plan generation failed", error instanceof Error ? error.message : "Unknown error")
+        // Don't fail the enrichment - action plan is supplementary
+        return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
+      }
+    })
+
+    // Step 5: Mark enrichment as complete
     await step.run("finalize-enrichment", async () => {
       const supabase = createServiceClient()
 
@@ -268,7 +501,35 @@ export const enrichSubscriber = inngest.createFunction(
         recognized: brandResults.recognized,
       },
       competitiveSummary: competitiveSummary || undefined,
+      actionPlan: actionPlanResult,
       processingTimeMs: Date.now() - startTime,
     }
   }
 )
+
+// Helper: Build platform scores from report data and responses
+function buildPlatformScores(
+  platformScores: Record<string, number> | null,
+  responses: LLMResponseData[]
+): Record<string, { score: number; mentioned: number; total: number }> {
+  const platforms = ["chatgpt", "claude", "gemini", "perplexity"]
+  const result: Record<string, { score: number; mentioned: number; total: number }> = {}
+
+  for (const platform of platforms) {
+    const platformResponses = responses.filter((r) => r.platform === platform)
+    const mentioned = platformResponses.filter((r) => r.domainMentioned).length
+
+    result[platform] = {
+      score: platformScores?.[platform] || 0,
+      mentioned,
+      total: platformResponses.length,
+    }
+  }
+
+  return result
+}
+
+// Helper: Normalize action title for comparison
+function normalizeTitle(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 50)
+}

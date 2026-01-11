@@ -27,8 +27,8 @@ Affects: `max-w-*`, `mx-auto`, `gap-*`, `p-*` with custom values.
 | Tier | Price | Features |
 |------|-------|----------|
 | Free | $0 | One report, 3-day expiry, limited features |
-| Starter | $49/mo | Full report, no expiry, weekly updates |
-| Pro | $79/mo | + Competitors, Brand Awareness |
+| Starter | $49/mo | Full report, no expiry, weekly updates, Action Plans |
+| Pro | $79/mo | + Competitors, Brand Awareness, Action Plans |
 | Agency | $199/mo | + Multiple domains, Action Plans, PRD |
 
 ## Report Tabs
@@ -40,7 +40,7 @@ Affects: `max-w-*`, `mx-auto`, `gap-*`, `p-*` with custom values.
 5. **Measurements** - Visibility score breakdown (sticky upsell)
 6. **Competitors** - Detected competitors + Competitive Intelligence + Export button (Pro+)
 7. **Brand Awareness** - Direct brand recognition (Pro+)
-8. **Actions** - Action plans (Agency)
+8. **Actions** - Action plans (Subscribers only)
 9. **PRD** - PRD generation (Agency)
 
 ## Markdown Export
@@ -305,6 +305,69 @@ subscriber_questions
 - `src/components/report/tabs/SetupTab.tsx` - Editable UI
 - `supabase/migrations/021_subscriber_questions.sql` - Schema
 
+## AI-Powered Action Plans (Agency Tier)
+
+Agency subscribers get comprehensive, AI-generated action plans with:
+
+### How It Works
+
+1. **Automatic generation**: Action plans are generated during subscriber enrichment (after checkout or weekly scans)
+2. **Extended thinking**: Uses Claude with extended thinking for deep analysis
+3. **Web search**: Searches for current SEO/GEO best practices before generating
+4. **Page-level data**: Recommends specific fixes like "/services missing H1 tag"
+
+### Generated Content
+
+- **Executive Summary**: 2-3 sentence overview of current state and top opportunity
+- **Priority Actions** (10-15): Ranked by impact/effort with implementation steps
+- **Page Edits**: Copy-paste ready meta titles, descriptions, and content
+- **Keyword Map**: Where to add keywords, which pages, priority level
+- **Key Takeaways**: Data-backed insights
+
+### Database Schema
+
+```sql
+crawled_pages
+├── path, url              -- Page identification
+├── title, h1              -- SEO elements
+├── meta_description       -- Meta tag
+├── headings[]             -- H2/H3 structure
+├── word_count             -- Content depth
+├── schema_types[]         -- JSON-LD types found
+└── schema_data            -- Full structured data
+
+action_plans
+├── executive_summary      -- AI-generated summary
+├── page_edits             -- JSONB of page-specific edits
+├── keyword_map            -- JSONB keyword recommendations
+├── key_takeaways          -- JSONB insights
+└── quick_win_count, strategic_count, backlog_count
+
+action_items
+├── title, description     -- Action details
+├── priority               -- 'quick_win' | 'strategic' | 'backlog'
+├── consensus[]            -- Which AI platforms support this
+├── implementation_steps[] -- Step-by-step guide
+├── expected_outcome       -- What improvement this drives
+└── status                 -- 'pending' | 'completed' | 'dismissed'
+
+action_items_history       -- Archive of completed actions (preserved across rescans)
+```
+
+### Key Files
+
+- `src/lib/ai/generate-actions.ts` - AI generation with extended thinking + web search
+- `src/inngest/functions/enrich-subscriber.ts` - Enrichment pipeline (step 4)
+- `src/components/report/tabs/ActionsTab.tsx` - UI with collapsible sections
+
+### Completed Action Archival
+
+When weekly scans regenerate action plans:
+1. Completed/dismissed actions are archived to `action_items_history`
+2. New actions are generated based on current scan data
+3. Similar previously-completed actions are NOT re-added as pending
+4. Users see their progress preserved in a "Completed History" section
+
 ## Report Component Structure
 
 ```
@@ -316,7 +379,8 @@ src/components/report/
 │   ├── types.ts             # Type definitions
 │   ├── constants.ts         # Tab config, platformColors, platformNames
 │   ├── utils.tsx            # formatResponseText, calculateReadinessScore
-│   └── FilterButton.tsx     # Reusable filter button
+│   ├── FilterButton.tsx     # Reusable filter button
+│   └── EnrichmentLoading.tsx # Loading states for async enrichment
 └── tabs/
     ├── StartHereTab.tsx     # Persona selection + guide
     ├── SetupTab.tsx         # Business identity, services
@@ -325,6 +389,7 @@ src/components/report/
     ├── MeasurementsTab.tsx  # Score gauges + trend charts
     ├── CompetitorsTab.tsx   # Competitor analysis
     ├── BrandAwarenessTab.tsx # Brand recognition
+    ├── ActionsTab.tsx       # AI-generated action plans
     └── LockedTab.tsx        # Generic locked state
 ```
 

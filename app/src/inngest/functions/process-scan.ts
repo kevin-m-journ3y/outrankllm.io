@@ -14,10 +14,7 @@ import {
   type PlatformResult,
 } from "@/lib/ai/search-providers"
 import { extractTopCompetitors } from "@/lib/ai/query"
-import {
-  generateBrandAwarenessQueries,
-  runBrandAwarenessQueries,
-} from "@/lib/ai/brand-awareness"
+// Brand awareness is now handled by enrich-subscriber function
 import { sendVerificationEmail, sendScanCompleteEmail } from "@/lib/email/resend"
 import { detectGeography, extractTldCountry, countryToIsoCode } from "@/lib/geo/detect"
 import { log } from "@/lib/logger"
@@ -45,12 +42,31 @@ export const processScan = inngest.createFunction(
   },
   { event: "scan/process" },
   async ({ event, step }) => {
-    const { domain, email, leadId, verificationToken, skipEmail } = event.data
+    const { domain, email, verificationToken, skipEmail } = event.data
     const startTime = Date.now()
 
-    // Step 1: Setup - create or get scan run
-    const scanId = await step.run("setup-scan", async () => {
+    // Step 1: Setup - resolve leadId and create or get scan run
+    const { scanId, leadId } = await step.run("setup-scan", async () => {
       const supabase = createServiceClient()
+
+      // Resolve leadId - either from event data or look up by email
+      let resolvedLeadId = event.data.leadId
+      if (!resolvedLeadId && email) {
+        const { data: lead } = await supabase
+          .from("leads")
+          .select("id")
+          .ilike("email", email.toLowerCase().trim())
+          .limit(1)
+          .single()
+
+        if (lead) {
+          resolvedLeadId = lead.id
+        }
+      }
+
+      if (!resolvedLeadId) {
+        throw new Error("Could not resolve lead ID from event data or email lookup")
+      }
 
       if (event.data.scanId) {
         // Update existing scan status
@@ -58,14 +74,14 @@ export const processScan = inngest.createFunction(
           .from("scan_runs")
           .update({ status: "crawling", progress: 5, started_at: new Date().toISOString() })
           .eq("id", event.data.scanId)
-        return event.data.scanId
+        return { scanId: event.data.scanId, leadId: resolvedLeadId }
       }
 
-      // Create new scan run (for weekly cron scans)
+      // Create new scan run (for weekly cron scans or manual triggers)
       const { data, error } = await supabase
         .from("scan_runs")
         .insert({
-          lead_id: leadId,
+          lead_id: resolvedLeadId,
           status: "crawling",
           progress: 5,
           started_at: new Date().toISOString(),
@@ -74,7 +90,7 @@ export const processScan = inngest.createFunction(
         .single()
 
       if (error) throw new Error(`Failed to create scan run: ${error.message}`)
-      return data.id
+      return { scanId: data.id, leadId: resolvedLeadId }
     })
 
     log.start(scanId, domain)
@@ -87,6 +103,31 @@ export const processScan = inngest.createFunction(
       log.step(scanId, "Crawling", domain)
       const result = await crawlSite(domain)
       log.done(scanId, "Crawl", `${result.totalPages} pages`)
+
+      // Save page-level crawl data for specific, actionable recommendations
+      // This enables PRD-ready actions like "/services missing H1"
+      if (result.pages.length > 0) {
+        const crawlInserts = result.pages.map(page => ({
+          run_id: scanId,
+          url: page.url,
+          path: page.path,
+          title: page.title,
+          meta_description: page.description,
+          h1: page.h1,
+          headings: page.headings,
+          word_count: page.wordCount,
+          has_meta_description: page.hasMetaDescription,
+          schema_types: page.schemaData.map(s => s.type),
+          schema_data: page.schemaData,
+        }))
+
+        const { error: crawlError } = await supabase.from("crawled_pages").insert(crawlInserts)
+        if (crawlError) {
+          log.warn(scanId, `Failed to save crawled pages: ${crawlError.message}`)
+        } else {
+          log.info(scanId, `Saved ${crawlInserts.length} crawled pages to DB`)
+        }
+      }
 
       return result
     })
@@ -524,99 +565,39 @@ export const processScan = inngest.createFunction(
       }
     })
 
-    // Step 10: Brand Awareness Enrichment (subscribers only - before email so report is complete)
+    // Step 10: Trigger subscriber enrichment (subscribers only)
+    // This sends an event to the enrich-subscriber function which handles:
+    // - Brand awareness queries
+    // - Competitive intelligence summary
+    // - AI-powered action plan generation
     const userTier = await getUserTier(leadId)
     const isSubscriberForEnrichment = userTier !== "free"
 
     if (isSubscriberForEnrichment) {
-      await step.run("brand-awareness-enrichment", async () => {
+      await step.run("trigger-enrichment", async () => {
         const supabase = createServiceClient()
 
-        log.step(scanId, "Running brand awareness (subscriber enrichment)")
+        log.step(scanId, "Triggering subscriber enrichment")
 
-        // Mark enrichment as processing
+        // Mark enrichment as pending (will be updated to processing by enrich-subscriber)
         await supabase
           .from("scan_runs")
           .update({
-            enrichment_status: "processing",
-            enrichment_started_at: new Date().toISOString(),
+            enrichment_status: "pending",
           })
           .eq("id", scanId)
 
-        try {
-          // Use top competitor from report we just created
-          const topCompetitor =
-            report.topCompetitors && report.topCompetitors.length > 0
-              ? report.topCompetitors[0].name
-              : undefined
+        // Send event to trigger the enrich-subscriber function
+        await inngest.send({
+          name: "subscriber/enrich",
+          data: {
+            leadId,
+            scanRunId: scanId,
+          },
+        })
 
-          // Generate brand awareness queries
-          const queries = generateBrandAwarenessQueries(
-            analysisResult.analysis,
-            domain,
-            topCompetitor
-          )
-
-          log.info(scanId, `Generated ${queries.length} brand awareness queries`)
-
-          // Run all queries across all platforms
-          const results = await runBrandAwarenessQueries(queries, scanId)
-
-          log.done(scanId, "Brand awareness", `${results.length} results`)
-
-          // Save results to database
-          const inserts = results.map((r) => ({
-            run_id: scanId,
-            platform: r.platform,
-            query_type: r.queryType,
-            tested_entity: r.testedEntity,
-            tested_attribute: r.testedAttribute || null,
-            entity_recognized: r.recognized,
-            attribute_mentioned: r.attributeMentioned,
-            response_text: r.responseText,
-            confidence_score: r.confidenceScore,
-            compared_to: r.comparedTo || null,
-            positioning: r.positioning || null,
-            response_time_ms: r.responseTimeMs,
-          }))
-
-          const { error } = await supabase.from("brand_awareness_results").insert(inserts)
-
-          if (error) {
-            log.error(scanId, "Failed to save brand awareness results", error.message)
-            throw error
-          }
-
-          // Mark enrichment as complete
-          await supabase
-            .from("scan_runs")
-            .update({
-              enrichment_status: "complete",
-              enrichment_completed_at: new Date().toISOString(),
-            })
-            .eq("id", scanId)
-
-          log.done(scanId, "Enrichment complete")
-
-          return {
-            totalQueries: queries.length,
-            totalResults: results.length,
-            recognized: results.filter((r) => r.recognized).length,
-          }
-        } catch (enrichmentError) {
-          // Mark enrichment as failed but don't fail the whole scan
-          await supabase
-            .from("scan_runs")
-            .update({
-              enrichment_status: "failed",
-              enrichment_error: enrichmentError instanceof Error ? enrichmentError.message : "Unknown error",
-            })
-            .eq("id", scanId)
-
-          log.error(scanId, "Enrichment failed", enrichmentError instanceof Error ? enrichmentError.message : "Unknown")
-          // Don't throw - enrichment failure shouldn't fail the scan
-          return { error: true }
-        }
+        log.info(scanId, "Enrichment event sent")
+        return { triggered: true }
       })
     } else {
       // Mark as not applicable for free users
