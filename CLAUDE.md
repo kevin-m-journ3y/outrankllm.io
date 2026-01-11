@@ -209,6 +209,9 @@ Inngest dashboard: http://localhost:8288
 - `PUT /api/questions/[id]` - Update question text/category
 - `DELETE /api/questions/[id]` - Archive question (soft delete)
 
+### Feedback
+- `POST /api/feedback` - Submit bug report or feedback (sends email alert)
+
 ## Key Files
 
 - `src/app/globals.css` - CSS variables (colors, fonts)
@@ -513,6 +516,38 @@ src/components/report/
     ├── ActionsTab.tsx       # AI-generated action plans
     ├── PrdTab.tsx           # Claude Code / Cursor PRDs (Pro/Agency)
     └── LockedTab.tsx        # Generic locked state
+```
+
+## User Feedback System
+
+Help icon (?) in the nav opens a dropdown with options to report bugs or send feedback.
+
+### How It Works
+
+1. User clicks help icon → dropdown with "Report an Issue" / "Give Feedback"
+2. Modal opens with type pre-selected (bug, feature, feedback, other)
+3. User submits message → saved to `feedback` table
+4. Email alert sent to team via Resend
+
+### Key Files
+
+- `src/components/feedback/HelpMenu.tsx` - Nav dropdown
+- `src/components/feedback/FeedbackModal.tsx` - Modal with type selection (uses React Portal)
+- `src/app/api/feedback/route.ts` - POST endpoint (save + send email)
+- `supabase/migrations/029_feedback.sql` - Database schema
+
+### Database Schema
+
+```sql
+feedback
+├── type           -- 'bug' | 'feature' | 'feedback' | 'other'
+├── message        -- User's message
+├── page_url       -- Auto-captured
+├── user_agent     -- Auto-captured
+├── user_email     -- If logged in
+├── user_tier      -- If logged in
+├── status         -- 'new' | 'reviewed' | 'resolved' | 'wont_fix'
+└── created_at
 ```
 
 ## Design Notes

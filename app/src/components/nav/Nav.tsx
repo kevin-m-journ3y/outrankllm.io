@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useSession, logout } from '@/lib/auth-client'
 import { User, LogOut, LayoutDashboard } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
+import { HelpMenu } from '@/components/feedback'
 
 export function Nav() {
   const pathname = usePathname()
@@ -42,13 +43,13 @@ export function Nav() {
         </Link>
 
         {/* Nav Links */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6">
           <Link
             href="/learn"
             className={`font-mono text-sm transition-colors ${
               isActive('/learn')
                 ? 'text-[var(--text)]'
-                : 'text-[var(--text-dim)] hover:text-[var(--text-mid)]'
+                : 'text-[var(--text-mid)] hover:text-[var(--text)]'
             }`}
           >
             Learn
@@ -58,11 +59,14 @@ export function Nav() {
             className={`font-mono text-sm transition-colors ${
               isActive('/pricing')
                 ? 'text-[var(--text)]'
-                : 'text-[var(--text-dim)] hover:text-[var(--text-mid)]'
+                : 'text-[var(--text-mid)] hover:text-[var(--text)]'
             }`}
           >
             Pricing
           </Link>
+
+          {/* Help Menu */}
+          <HelpMenu />
 
           {/* Auth section */}
           {loading ? (
