@@ -24,12 +24,52 @@ Affects: `max-w-*`, `mx-auto`, `gap-*`, `p-*` with custom values.
 
 ## Subscription Tiers
 
-| Tier | Price | Features |
-|------|-------|----------|
-| Free | $0 | One report, 3-day expiry, limited features |
-| Starter | $49/mo | Full report, no expiry, weekly updates, Action Plans |
-| Pro | $79/mo | + Competitors, Brand Awareness, Action Plans |
-| Agency | $199/mo | + Multiple domains, Action Plans, PRD |
+Pricing varies by region (Australian vs International):
+
+| Tier | AU (AUD) | INTL (USD) | Features |
+|------|----------|------------|----------|
+| Free | $0 | $0 | One report, 3-day expiry, limited features |
+| Starter | A$39/mo | $24.99/mo | Full report, no expiry, weekly updates, Action Plans |
+| Pro | A$59/mo | $39.99/mo | + Competitors, Brand Awareness, Action Plans, PRD |
+| Agency | A$199/mo | $139/mo | + Multiple domains, Action Plans, PRD |
+
+## Region-Based Pricing
+
+Australian customers see AUD pricing; all others see USD. Detection uses multiple signals:
+
+### Detection Priority
+1. **Query param override** (`?region=AU` or `?region=US`) - for testing
+2. **Cookie preference** - set when user clicks region toggle
+3. **ABN detected** - Australian Business Number in website content
+4. **Domain TLD** - `.com.au`, `.net.au`, etc.
+5. **Australian phone** - `+61`, `04xx` patterns
+6. **IP geolocation** - Vercel `x-vercel-ip-country` header
+7. **Default** - INTL (USD) in production, AU in development
+
+### Key Files
+- `src/lib/stripe-config.ts` - Client-safe pricing constants (TIER_PRICES, CURRENCY_SYMBOL)
+- `src/lib/stripe.ts` - Server-side Stripe client + price ID mapping
+- `src/lib/geo/pricing-region.ts` - Region detection logic
+- `src/app/api/pricing/region-context/route.ts` - Fetch Australian signals from lead data
+- `src/middleware.ts` - Sets `pricing_region` cookie from Vercel geo headers
+
+### Environment Variables
+```
+# Australian pricing (AUD)
+STRIPE_PRICE_STARTER_AU=price_xxx
+STRIPE_PRICE_PRO_AU=price_xxx
+STRIPE_PRICE_AGENCY_AU=price_xxx
+
+# International pricing (USD)
+STRIPE_PRICE_STARTER_USD=price_xxx
+STRIPE_PRICE_PRO_USD=price_xxx
+STRIPE_PRICE_AGENCY_USD=price_xxx
+```
+
+### Testing
+- `http://localhost:3000/pricing?region=AU` - Force Australian pricing
+- `http://localhost:3000/pricing?region=US` - Force USD pricing
+- Clear `pricing_region` cookie to reset detection
 
 ## Report Tabs
 
@@ -235,9 +275,16 @@ JWT_SECRET=<openssl rand -base64 32>
 # Stripe
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_STARTER=price_...
-STRIPE_PRICE_PRO=price_...
-STRIPE_PRICE_AGENCY=price_...
+
+# Stripe Price IDs - Australian (AUD)
+STRIPE_PRICE_STARTER_AU=price_...
+STRIPE_PRICE_PRO_AU=price_...
+STRIPE_PRICE_AGENCY_AU=price_...
+
+# Stripe Price IDs - International (USD)
+STRIPE_PRICE_STARTER_USD=price_...
+STRIPE_PRICE_PRO_USD=price_...
+STRIPE_PRICE_AGENCY_USD=price_...
 
 # Inngest (from https://app.inngest.com)
 INNGEST_SIGNING_KEY=signkey-...

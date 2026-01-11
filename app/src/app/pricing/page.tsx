@@ -2,18 +2,31 @@
 
 import { Nav } from '@/components/nav/Nav'
 import { Footer } from '@/components/landing/Footer'
-import { Check, ArrowLeft, Loader2 } from 'lucide-react'
+import { Check, ArrowLeft, Loader2, Globe } from 'lucide-react'
 import Link from 'next/link'
 import { Suspense, useEffect, useState, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import {
+  TIER_PRICES,
+  CURRENCY_SYMBOL,
+  CURRENCY_CODE,
+  type PricingRegion,
+  type SubscriptionTier
+} from '@/lib/stripe-config'
+import {
+  detectPricingRegion,
+  parseRegionParam,
+  parseRegionCookie,
+  REGION_COOKIE_NAME,
+  type RegionDetectionContext
+} from '@/lib/geo/pricing-region'
 
-type TierKey = 'starter' | 'pro' | 'agency'
+type TierKey = SubscriptionTier
 
 interface Plan {
   name: string
   tier: TierKey
   description: string
-  price: number | null
   highlight: boolean
   features: string[]
   cta: string
@@ -25,7 +38,6 @@ const plans: Plan[] = [
     name: 'Starter',
     tier: 'starter',
     description: 'For Business Owners',
-    price: 49,
     highlight: false,
     features: [
       '1 domain + 3 competitors',
@@ -40,8 +52,7 @@ const plans: Plan[] = [
   {
     name: 'Pro',
     tier: 'pro',
-    description: 'For Developers',
-    price: 79,
+    description: 'For Developers & Business Owners',
     highlight: true,
     features: [
       'Everything in Starter, plus:',
@@ -57,7 +68,6 @@ const plans: Plan[] = [
     name: 'Agency',
     tier: 'agency',
     description: 'For Agencies',
-    price: null,
     highlight: false,
     features: [
       'Everything in Pro, plus:',
@@ -112,26 +122,101 @@ function BackButton() {
   )
 }
 
+// Region toggle component
+function RegionToggle({
+  region,
+  onToggle
+}: {
+  region: PricingRegion
+  onToggle: () => void
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-mono text-[var(--text-dim)] hover:text-[var(--text)] border border-[var(--border)] hover:border-[var(--green)] transition-all"
+    >
+      <Globe className="w-3 h-3" />
+      <span>
+        {region === 'AU' ? 'Viewing AUD prices' : 'Viewing USD prices'}
+      </span>
+    </button>
+  )
+}
+
 // Pricing cards with checkout functionality
 function PricingCards() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [loadingTier, setLoadingTier] = useState<TierKey | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [region, setRegion] = useState<PricingRegion>('INTL')
   const [checkoutContext, setCheckoutContext] = useState<{
     leadId: string | null
     reportToken: string | null
     fromReport: boolean
   }>({ leadId: null, reportToken: null, fromReport: false })
 
+  // Detect region on mount
   useEffect(() => {
-    // Get checkout context from session storage (set by report page)
+    const detectRegion = async () => {
+      // Check query param first (for testing)
+      const queryRegion = parseRegionParam(searchParams.get('region'))
+
+      // Check cookie preference
+      const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith(`${REGION_COOKIE_NAME}=`))
+        ?.split('=')[1]
+      const cookieRegion = parseRegionCookie(cookieValue)
+
+      // Build detection context
+      const context: RegionDetectionContext = {
+        queryParamRegion: queryRegion,
+        cookieRegion: cookieRegion,
+      }
+
+      // Try to get lead data from session storage
+      const leadId = sessionStorage.getItem('checkout_lead_id')
+      if (leadId) {
+        try {
+          // Fetch lead data to check for Australian signals
+          const response = await fetch(`/api/pricing/region-context?leadId=${leadId}`)
+          if (response.ok) {
+            const leadData = await response.json()
+            context.leadDomain = leadData.domain
+            context.leadLocation = leadData.location
+            context.hasABN = leadData.hasABN
+            context.hasAustralianPhone = leadData.hasAustralianPhone
+          }
+        } catch (e) {
+          // Silently fail - we'll fall back to other detection methods
+        }
+      }
+
+      // Detect region
+      const result = detectPricingRegion(context)
+      setRegion(result.region)
+    }
+
+    detectRegion()
+  }, [searchParams])
+
+  // Get checkout context
+  useEffect(() => {
     const leadId = sessionStorage.getItem('checkout_lead_id')
     const reportToken = sessionStorage.getItem('checkout_report_token')
     const fromReport = searchParams.get('from') === 'report'
 
     setCheckoutContext({ leadId, reportToken, fromReport })
   }, [searchParams])
+
+  const handleToggleRegion = useCallback(() => {
+    const newRegion = region === 'AU' ? 'INTL' : 'AU'
+    setRegion(newRegion)
+
+    // Save preference to cookie (expires in 30 days)
+    document.cookie = `${REGION_COOKIE_NAME}=${newRegion}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`
+  }, [region])
 
   const handleSubscribe = useCallback(async (tier: TierKey) => {
     setError(null)
@@ -153,6 +238,7 @@ function PricingCards() {
           tier,
           leadId: checkoutContext.leadId,
           reportToken: checkoutContext.reportToken,
+          region, // Pass region for correct price selection
         }),
       })
 
@@ -171,11 +257,20 @@ function PricingCards() {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setLoadingTier(null)
     }
-  }, [checkoutContext, router])
+  }, [checkoutContext, router, region])
+
+  const prices = TIER_PRICES[region]
+  const currencySymbol = CURRENCY_SYMBOL[region]
+  const currencyCode = CURRENCY_CODE[region]
 
   return (
-    <div className="px-6 w-full" style={{ marginBottom: '80px' }}>
+    <div className="px-6 w-full" style={{ marginBottom: '48px' }}>
       <div style={{ maxWidth: '1024px', marginLeft: 'auto', marginRight: 'auto' }}>
+        {/* Region toggle */}
+        <div className="flex justify-center" style={{ marginBottom: '32px' }}>
+          <RegionToggle region={region} onToggle={handleToggleRegion} />
+        </div>
+
         {error && (
           <div
             className="border border-red-500/50 bg-red-500/10 text-red-400 font-mono text-sm text-center"
@@ -217,9 +312,11 @@ function PricingCards() {
                   {plan.name}
                 </h2>
                 <div className="flex items-baseline gap-1">
-                  {plan.price !== null ? (
+                  {!plan.contactOnly ? (
                     <>
-                      <span className="text-5xl font-medium">${plan.price}</span>
+                      <span className="text-5xl font-medium">
+                        {currencySymbol}{prices[plan.tier]}
+                      </span>
                       <span className="text-[var(--text-dim)] font-mono text-sm">/month</span>
                     </>
                   ) : (
@@ -272,6 +369,32 @@ function PricingCards() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Currency/Region notice */}
+        <div className="text-center" style={{ marginTop: '32px' }}>
+          <p className="text-[var(--text-dim)] font-mono text-xs">
+            {region === 'AU' ? (
+              <>
+                Prices shown in {currencyCode} (Australian Dollars). GST included.
+                <br />
+                <span className="text-[var(--text-dim)]" style={{ opacity: 0.7 }}>
+                  outrankllm.io is an Australian business. We collect GST from Australian customers.
+                </span>
+              </>
+            ) : (
+              <>
+                Prices shown in {currencyCode} (US Dollars).
+                <br />
+                <button
+                  onClick={handleToggleRegion}
+                  className="text-[var(--green)] hover:underline"
+                >
+                  Australian customer? View AUD pricing with GST
+                </button>
+              </>
+            )}
+          </p>
         </div>
       </div>
     </div>

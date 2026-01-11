@@ -8,6 +8,10 @@ const PREVIEW_COOKIE_NAME = 'outrankllm-preview'
 const SESSION_COOKIE_NAME = 'outrankllm-session'
 const COMING_SOON_ENABLED = process.env.COMING_SOON_ENABLED !== 'false' // Enabled by default
 
+// Region detection for pricing
+const REGION_COOKIE_NAME = 'pricing_region'
+type PricingRegion = 'AU' | 'INTL'
+
 // Paths that should always be accessible (even in coming soon mode)
 const PUBLIC_PATHS = [
   '/coming-soon',
@@ -40,6 +44,57 @@ async function verifySession(token: string): Promise<boolean> {
   }
 }
 
+/**
+ * Detect pricing region from Vercel geo headers
+ * Sets a cookie if not already present (user hasn't manually toggled)
+ */
+function detectRegionFromHeaders(request: NextRequest): PricingRegion | null {
+  // Vercel provides country code in x-vercel-ip-country header
+  const ipCountry = request.headers.get('x-vercel-ip-country')
+
+  if (ipCountry === 'AU') {
+    return 'AU'
+  }
+
+  // Default to international for all other countries
+  if (ipCountry) {
+    return 'INTL'
+  }
+
+  // In local development, default to AU (we're an Australian company)
+  // This can be overridden with ?region=INTL query param
+  if (process.env.NODE_ENV === 'development') {
+    return 'AU'
+  }
+
+  return null // No geo header available
+}
+
+/**
+ * Add region cookie to response if needed
+ */
+function addRegionCookie(response: NextResponse, request: NextRequest): NextResponse {
+  // Don't override if user has already set a preference
+  const existingRegion = request.cookies.get(REGION_COOKIE_NAME)?.value
+  if (existingRegion === 'AU' || existingRegion === 'INTL') {
+    return response
+  }
+
+  // Detect region from headers
+  const detectedRegion = detectRegionFromHeaders(request)
+  if (detectedRegion) {
+    response.cookies.set(REGION_COOKIE_NAME, detectedRegion, {
+      httpOnly: false, // Allow client-side reading
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: '/',
+    })
+  }
+
+  return response
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl
 
@@ -67,17 +122,17 @@ export async function middleware(request: NextRequest) {
     }
 
     // Valid session - allow access
-    return NextResponse.next()
+    return addRegionCookie(NextResponse.next(), request)
   }
 
   // Skip middleware for public paths
   if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
-    return NextResponse.next()
+    return addRegionCookie(NextResponse.next(), request)
   }
 
   // If coming soon mode is disabled, allow all access
   if (!COMING_SOON_ENABLED) {
-    return NextResponse.next()
+    return addRegionCookie(NextResponse.next(), request)
   }
 
   // Check for preview secret in URL (sets cookie for future visits)
@@ -90,13 +145,13 @@ export async function middleware(request: NextRequest) {
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 30, // 30 days
     })
-    return response
+    return addRegionCookie(response, request)
   }
 
   // Check for existing preview cookie
   const hasPreviewAccess = request.cookies.get(PREVIEW_COOKIE_NAME)?.value === 'true'
   if (hasPreviewAccess) {
-    return NextResponse.next()
+    return addRegionCookie(NextResponse.next(), request)
   }
 
   // No preview access - redirect to coming soon page
@@ -104,7 +159,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/coming-soon', request.url))
   }
 
-  return NextResponse.next()
+  return addRegionCookie(NextResponse.next(), request)
 }
 
 export const config = {

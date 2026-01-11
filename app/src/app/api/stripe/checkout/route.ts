@@ -1,20 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe, STRIPE_PRICES, type SubscriptionTier } from '@/lib/stripe'
+import { stripe, getPriceId, type SubscriptionTier, type PricingRegion } from '@/lib/stripe'
 import { createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { tier, leadId, reportToken } = body as {
+    const { tier, leadId, reportToken, region = 'INTL' } = body as {
       tier: SubscriptionTier
       leadId: string
       reportToken?: string
+      region?: PricingRegion
     }
 
     // Validate tier
-    if (!tier || !STRIPE_PRICES[tier]) {
+    const validTiers: SubscriptionTier[] = ['starter', 'pro', 'agency']
+    if (!tier || !validTiers.includes(tier)) {
       return NextResponse.json(
         { error: 'Invalid subscription tier' },
+        { status: 400 }
+      )
+    }
+
+    // Validate region
+    const validRegions: PricingRegion[] = ['AU', 'INTL']
+    if (!validRegions.includes(region)) {
+      return NextResponse.json(
+        { error: 'Invalid pricing region' },
         { status: 400 }
       )
     }
@@ -69,6 +80,9 @@ export async function POST(request: NextRequest) {
       ? `${baseUrl}/pricing?from=report&cancelled=true`
       : `${baseUrl}/pricing?cancelled=true`
 
+    // Get the correct price ID for this tier and region
+    const priceId = getPriceId(tier, region)
+
     // Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -76,7 +90,7 @@ export async function POST(request: NextRequest) {
       payment_method_types: ['card'],
       line_items: [
         {
-          price: STRIPE_PRICES[tier],
+          price: priceId,
           quantity: 1,
         },
       ],
@@ -85,12 +99,14 @@ export async function POST(request: NextRequest) {
       metadata: {
         lead_id: lead.id,
         tier: tier,
+        region: region,
         report_token: reportToken || '',
       },
       subscription_data: {
         metadata: {
           lead_id: lead.id,
           tier: tier,
+          region: region,
         },
       },
       // Enable automatic tax calculation if needed in future

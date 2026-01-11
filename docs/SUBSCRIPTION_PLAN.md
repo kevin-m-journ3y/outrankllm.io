@@ -16,7 +16,7 @@ Transform outrankLLM from a free report tool into a full SaaS with subscriptions
 | Authentication | Password-based (after Stripe checkout) |
 | CRON hosting | Vercel Cron (with chunking strategy) |
 | AI generation | Hybrid (generate once, allow regenerate) |
-| Currency | AUD |
+| Currency | Region-based (AUD for Australia, USD for international) |
 
 ---
 
