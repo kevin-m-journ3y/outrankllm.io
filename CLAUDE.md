@@ -203,9 +203,41 @@ Inngest handles all background job processing with retries, monitoring, and reli
 
 ### How Scans Work
 1. `/api/scan` or `/api/admin/rescan` sends `scan/process` event to Inngest
-2. `process-scan` function runs 8 sequential steps (crawl, analyze, query each platform, finalize)
-3. Each step retries independently - if Claude fails, only Claude retries
+2. `process-scan` function runs steps with **parallel platform queries** (DAG pattern)
+3. Each platform runs as its own step with independent retry/timeout
 4. Progress updates written to `scan_runs` table for polling
+
+### Parallel Processing Architecture
+
+Both `process-scan` and `enrich-subscriber` use Inngest's DAG pattern for parallel execution:
+
+```
+process-scan (10m timeout):
+  setup → crawl → analyze → research-queries (per platform) → save-prompts
+    ↓
+  ┌─ query-platform-chatgpt ─┐
+  ├─ query-platform-claude   ├─ ALL RUN IN PARALLEL (~4x faster)
+  ├─ query-platform-gemini   │
+  └─ query-platform-perplexity┘
+    ↓
+  update-progress → finalize-report → trigger-enrichment → send-email
+
+enrich-subscriber (15m timeout):
+  setup-enrichment → brand-awareness-setup
+    ↓
+  ┌─ brand-awareness-chatgpt ─┐
+  ├─ brand-awareness-claude   ├─ ALL RUN IN PARALLEL
+  ├─ brand-awareness-gemini   │
+  └─ brand-awareness-perplexity┘
+    ↓
+  brand-awareness-save → competitive-summary → generate-action-plan → generate-prd → finalize
+```
+
+**Benefits**:
+- ~4x faster scan times (parallel vs sequential platform queries)
+- Independent retries per platform (if Gemini fails, only Gemini retries)
+- Better observability in Inngest dashboard
+- Each step has its own timeout budget
 
 ### Weekly CRON Scans
 - `hourly-scan-dispatcher` runs every hour (`0 * * * *`)
@@ -427,6 +459,12 @@ action_items
 └── status                 -- 'pending' | 'completed' | 'dismissed'
 
 action_items_history       -- Archive of completed actions (preserved across rescans)
+├── original_action_id     -- Reference to original action (for deduplication)
+├── lead_id                -- Owner
+├── domain_subscription_id -- For multi-domain isolation
+├── title, description     -- Action details (for display)
+├── category               -- Action category
+└── completed_at           -- When action was completed
 ```
 
 ### Key Files
@@ -435,13 +473,34 @@ action_items_history       -- Archive of completed actions (preserved across res
 - `src/inngest/functions/enrich-subscriber.ts` - Enrichment pipeline (step 4)
 - `src/components/report/tabs/ActionsTab.tsx` - UI with collapsible sections
 
-### Completed Action Archival
+### Completed Action Tracking
 
-When weekly scans regenerate action plans:
-1. Completed/dismissed actions are archived to `action_items_history`
+Users can tick actions as complete, and their progress is preserved:
+
+**UI Behavior**:
+1. User ticks checkbox → action marked complete + immediately added to "Completed Actions" section
+2. User unticks → action reverted to pending + removed from history
+3. Progress persists across page refreshes
+
+**Backend Flow** (PATCH `/api/actions/[id]`):
+- `status: 'completed'` → Insert to `action_items_history` (check-then-insert to avoid duplicates)
+- `status: 'pending'` → Delete from `action_items_history`
+
+**Frontend Flow** (ActionsTab.tsx):
+- Optimistically update local state for immediate UI feedback
+- Track both `id` and `original_action_id` to handle DB vs locally-added items
+- Deduplication: `prev.some(h => h.id === actionId || h.original_action_id === actionId)`
+
+**GET /api/actions Merging**:
+- Fetches from `action_items_history` table
+- Also merges any completed actions from current plan not in history (handles edge cases)
+- Uses `original_action_id` (not history table's `id`) for deduplication
+
+**Weekly Scan Regeneration**:
+1. Completed/dismissed actions are preserved in `action_items_history`
 2. New actions are generated based on current scan data
 3. Similar previously-completed actions are NOT re-added as pending
-4. Users see their progress preserved in a "Completed History" section
+4. Users see their progress preserved in "Completed Actions" section
 
 ## PRD Generation (Pro/Agency)
 

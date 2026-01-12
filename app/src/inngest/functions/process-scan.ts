@@ -33,6 +33,10 @@ export const processScan = inngest.createFunction(
   {
     id: "process-scan",
     retries: 3,
+    // Total function timeout: 10 minutes (parallel platform queries + finalization)
+    timeouts: {
+      finish: "10m",
+    },
     // Cancel any existing runs for the same scan when a new one starts
     cancelOn: [
       {
@@ -384,84 +388,86 @@ export const processScan = inngest.createFunction(
       countryCode: countryToIsoCode(analysisResult.geoResult.country) || undefined,
     }
 
-    // Query each platform with individual steps per query
-    // This ensures each API call is independently retryable and stays under timeout
-    // With 7 queries × 4 platforms = 28 steps, each ~30-60s max
+    // Query all platforms IN PARALLEL, each platform as its own step
+    // This is a DAG pattern - all 4 platforms run concurrently
+    // Each platform step runs its queries sequentially to avoid rate limits
+    // With 4 parallel steps (one per platform), total time ≈ slowest platform time
+    // Instead of sequential: 7 queries × 4 platforms × ~20s = ~10 min
+    // Parallel: 7 queries × ~20s = ~2-3 min (4x faster)
+
+    const platformResultsMap = await Promise.all(
+      PLATFORMS.map((platform) =>
+        step.run(`query-platform-${platform}`, async () => {
+          const db = createServiceClient()
+          log.platform(scanId, platform, "querying")
+
+          const results: Array<{ promptId: string; result: PlatformResult }> = []
+
+          // Run queries sequentially within each platform to avoid rate limits
+          for (let i = 0; i < savedPrompts.length; i++) {
+            const prompt = savedPrompts[i]
+
+            try {
+              const queryResult = await queryPlatformWithSearch(
+                platform,
+                prompt.prompt_text,
+                domain,
+                locationContext
+              )
+
+              // Save result immediately
+              await saveResponseToDb(db, scanId, prompt.id, queryResult)
+              results.push({ promptId: prompt.id, result: queryResult })
+            } catch (error) {
+              // Create error result
+              const errorResult: PlatformResult = {
+                platform,
+                query: prompt.prompt_text,
+                response: "",
+                domainMentioned: false,
+                mentionPosition: null,
+                competitorsMentioned: [],
+                responseTimeMs: 0,
+                error: error instanceof Error ? error.message : "Unknown error",
+                searchEnabled: true,
+                sources: [],
+              }
+
+              // Save error result
+              await saveResponseToDb(db, scanId, prompt.id, errorResult)
+              results.push({ promptId: prompt.id, result: errorResult })
+            }
+          }
+
+          log.done(scanId, platform, `${savedPrompts.length} responses`)
+          return results
+        })
+      )
+    )
+
+    // Update progress after all platforms complete
+    await step.run("update-query-progress", async () => {
+      const db = createServiceClient()
+      await updateScanStatus(db, scanId, "querying", 90)
+    })
+
+    // Combine results from all platforms into the expected format
+    const resultsByPrompt = new Map<string, PlatformResult[]>()
+    savedPrompts.forEach((p: { id: string; prompt_text: string; category: string }) => resultsByPrompt.set(p.id, []))
+
+    for (const platformResults of platformResultsMap) {
+      for (const { promptId, result } of platformResults) {
+        const existing = resultsByPrompt.get(promptId) || []
+        existing.push(result)
+        resultsByPrompt.set(promptId, existing)
+      }
+    }
 
     const allPlatformResults: Array<{
       promptId: string
       results: PlatformResult[]
     }> = []
 
-    // Initialize structure for accumulating results across platforms
-    const resultsByPrompt = new Map<string, PlatformResult[]>()
-    savedPrompts.forEach((p: { id: string; prompt_text: string; category: string }) => resultsByPrompt.set(p.id, []))
-
-    // Calculate progress increments: queries span from 50% to 90%
-    // 4 platforms × N queries, spread across 40% progress
-    const totalQueries = savedPrompts.length * 4
-    const progressPerQuery = 40 / totalQueries
-    let currentProgress = 50
-
-    // Query each platform, one query at a time as separate steps
-    for (const platform of PLATFORMS) {
-      log.platform(scanId, platform, "querying")
-
-      for (let i = 0; i < savedPrompts.length; i++) {
-        const prompt = savedPrompts[i]
-        const stepName = `query-${platform}-${i}`
-
-        const result = await step.run(stepName, async () => {
-          const db = createServiceClient()
-
-          // Update progress
-          currentProgress += progressPerQuery
-          await updateScanStatus(db, scanId, "querying", Math.round(currentProgress))
-
-          try {
-            const queryResult = await queryPlatformWithSearch(
-              platform,
-              prompt.prompt_text,
-              domain,
-              locationContext
-            )
-
-            // Save result immediately
-            await saveResponseToDb(db, scanId, prompt.id, queryResult)
-
-            return { promptId: prompt.id, result: queryResult }
-          } catch (error) {
-            // Create error result
-            const errorResult: PlatformResult = {
-              platform,
-              query: prompt.prompt_text,
-              response: "",
-              domainMentioned: false,
-              mentionPosition: null,
-              competitorsMentioned: [],
-              responseTimeMs: 0,
-              error: error instanceof Error ? error.message : "Unknown error",
-              searchEnabled: true,
-              sources: [],
-            }
-
-            // Save error result
-            await saveResponseToDb(db, scanId, prompt.id, errorResult)
-
-            return { promptId: prompt.id, result: errorResult }
-          }
-        })
-
-        // Accumulate result
-        const existing = resultsByPrompt.get(result.promptId) || []
-        existing.push(result.result)
-        resultsByPrompt.set(result.promptId, existing)
-      }
-
-      log.done(scanId, platform, `${savedPrompts.length} responses`)
-    }
-
-    // Convert to array format expected by scoring
     for (const [promptId, results] of resultsByPrompt.entries()) {
       allPlatformResults.push({ promptId, results })
     }

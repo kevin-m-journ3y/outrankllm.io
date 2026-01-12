@@ -2,9 +2,11 @@ import { inngest } from "../client"
 import { createServiceClient } from "@/lib/supabase/server"
 import {
   generateBrandAwarenessQueries,
-  runBrandAwarenessQueries,
+  runBrandAwarenessQueriesForPlatform,
   generateCompetitiveSummary,
   type BrandAwarenessResult,
+  type BrandAwarenessQuery,
+  type Platform,
 } from "@/lib/ai/brand-awareness"
 import {
   generateActionPlan,
@@ -38,6 +40,11 @@ export const enrichSubscriber = inngest.createFunction(
   {
     id: "enrich-subscriber",
     retries: 3,
+    // Increase total function timeout for LLM-heavy steps
+    // Action plans and PRD use extended thinking which can be slow
+    timeouts: {
+      finish: "15m",
+    },
     // Cancel any existing enrichment for the same scan
     cancelOn: [
       {
@@ -181,11 +188,11 @@ export const enrichSubscriber = inngest.createFunction(
       }
     })
 
-    // Step 2: Run brand awareness queries
-    const brandResults = await step.run("brand-awareness-queries", async () => {
+    // Step 2a: Generate brand awareness queries and clean up old results
+    const brandQueries = await step.run("brand-awareness-setup", async () => {
       const supabase = createServiceClient()
 
-      log.step(scanRunId, "Running brand awareness queries")
+      log.step(scanRunId, "Setting up brand awareness queries")
 
       // Delete any existing brand awareness results for this run (in case of re-enrichment)
       const { error: deleteError } = await supabase
@@ -207,13 +214,38 @@ export const enrichSubscriber = inngest.createFunction(
 
       log.info(scanRunId, `Generated ${queries.length} brand awareness queries`)
 
-      // Run all queries across all platforms
-      const results = await runBrandAwarenessQueries(queries, scanRunId)
+      return queries
+    })
 
-      log.done(scanRunId, "Brand awareness", `${results.length} results`)
+    // Step 2b-2e: Run brand awareness queries on each platform IN PARALLEL
+    // Each platform runs as its own step with independent retry/timeout
+    // This is a DAG pattern - all 4 platforms run concurrently
+    const platforms: Platform[] = ["chatgpt", "claude", "gemini", "perplexity"]
+
+    const platformResults = await Promise.all(
+      platforms.map((platform) =>
+        step.run(`brand-awareness-${platform}`, async () => {
+          const results = await runBrandAwarenessQueriesForPlatform(
+            brandQueries as BrandAwarenessQuery[],
+            platform,
+            scanRunId
+          )
+          return results
+        })
+      )
+    )
+
+    // Step 2f: Save all brand awareness results to database
+    const brandResults = await step.run("brand-awareness-save", async () => {
+      const supabase = createServiceClient()
+
+      // Combine all platform results
+      const allResults: BrandAwarenessResult[] = platformResults.flat()
+
+      log.done(scanRunId, "Brand awareness", `${allResults.length} results`)
 
       // Save results to database
-      const inserts = results.map((r) => ({
+      const inserts = allResults.map((r) => ({
         run_id: scanRunId,
         platform: r.platform,
         query_type: r.queryType,
@@ -236,11 +268,11 @@ export const enrichSubscriber = inngest.createFunction(
       }
 
       return {
-        totalQueries: queries.length,
-        totalResults: results.length,
-        recognized: results.filter((r) => r.recognized).length,
+        totalQueries: (brandQueries as BrandAwarenessQuery[]).length,
+        totalResults: allResults.length,
+        recognized: allResults.filter((r) => r.recognized).length,
         // Return raw results for competitive summary generation
-        rawResults: results,
+        rawResults: allResults,
       }
     })
 

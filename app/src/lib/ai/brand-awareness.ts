@@ -913,6 +913,72 @@ function parseBatchCompetitorResponse(
 }
 
 /**
+ * Run brand awareness queries for a SINGLE platform
+ * Used by Inngest to split work into parallel steps with independent retries
+ *
+ * @param queries - Brand awareness queries to run
+ * @param platform - Single platform to query
+ * @param runId - Scan run ID for logging
+ * @returns Array of results for this platform only
+ */
+export async function runBrandAwarenessQueriesForPlatform(
+  queries: BrandAwarenessQuery[],
+  platform: Platform,
+  runId: string
+): Promise<BrandAwarenessResult[]> {
+  log.platform(runId, platform, `Starting ${queries.length} brand awareness queries`)
+
+  const results = await Promise.all(
+    queries.map(async (query) => {
+      const result = await runQueryOnPlatform(query, platform, runId)
+
+      // For batch competitor queries, expand the single result into multiple per-competitor results
+      if (query.isBatchQuery && query.competitors && query.competitors.length > 0) {
+        const responseLength = result.responseText?.length || 0
+
+        // If we got an error or very short response, still create results for each competitor
+        if (responseLength < 50 || result.confidenceScore === 0) {
+          return query.competitors.map(comp => ({
+            ...result,
+            comparedTo: comp,
+            positioning: 'not_compared' as const,
+          }))
+        }
+
+        const batchResults = parseBatchCompetitorResponse(
+          result.responseText,
+          query.competitors,
+          query.testedEntity
+        )
+
+        if (batchResults.length > 0) {
+          return batchResults.map(br => ({
+            ...result,
+            comparedTo: br.competitor,
+            positioning: br.positioning,
+            responseText: br.summary || result.responseText,
+          }))
+        }
+
+        // Fallback if parsing failed
+        return query.competitors.map(comp => ({
+          ...result,
+          comparedTo: comp,
+          positioning: 'equal' as const,
+        }))
+      }
+
+      return [result]
+    })
+  )
+
+  const flatResults = results.flat()
+  log.done(runId, `Brand ${platform}`, `${flatResults.length} results`)
+
+  return flatResults
+}
+
+/**
  * Run all brand awareness queries across all platforms
  * Now fully parallelized - all queries run simultaneously grouped by platform
  *
