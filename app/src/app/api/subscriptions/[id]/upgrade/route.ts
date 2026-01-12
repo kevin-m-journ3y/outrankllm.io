@@ -1,22 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { getSession } from '@/lib/auth'
-import { stripe, getPriceId, type PricingRegion } from '@/lib/stripe'
+import {
+  stripe,
+  getPriceId,
+  STRIPE_PRICES,
+  TIER_PRICES,
+  CURRENCY_SYMBOL,
+  type PricingRegion,
+} from '@/lib/stripe'
 import { getSubscriptionById, updateDomainSubscription } from '@/lib/subscriptions'
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-const UpgradeSchema = z.object({
-  region: z.enum(['AU', 'INTL']).optional().default('INTL'),
-})
+/**
+ * Determine the pricing region from a Stripe price ID
+ */
+function getRegionFromPriceId(priceId: string): PricingRegion {
+  // Check if this price ID belongs to AU pricing
+  const auPrices = Object.values(STRIPE_PRICES.AU)
+  if (auPrices.includes(priceId)) {
+    return 'AU'
+  }
+  return 'INTL'
+}
 
 /**
  * POST /api/subscriptions/[id]/upgrade
  * Upgrade a subscription from Starter to Pro
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(_request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getSession()
     if (!session) {
@@ -58,13 +72,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const body = await request.json()
-    const result = UpgradeSchema.safeParse(body)
-    const region = result.success ? result.data.region : 'INTL'
-
-    // Get the Stripe subscription to find the current item
+    // Get the Stripe subscription to find the current item and currency
     const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id)
-    const subscriptionItemId = stripeSubscription.items.data[0]?.id
+    const subscriptionItem = stripeSubscription.items.data[0]
+    const subscriptionItemId = subscriptionItem?.id
+    const currentPriceId = subscriptionItem?.price?.id
 
     if (!subscriptionItemId) {
       return NextResponse.json(
@@ -73,8 +85,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Get the new price ID for Pro tier
-    const newPriceId = getPriceId('pro', region as PricingRegion)
+    // Determine region from current price to maintain currency consistency
+    const region = currentPriceId ? getRegionFromPriceId(currentPriceId) : 'INTL'
+
+    // Get the new price ID for Pro tier in the same region/currency
+    const newPriceId = getPriceId('pro', region)
 
     // Update the Stripe subscription (prorates automatically)
     await stripe.subscriptions.update(subscription.stripe_subscription_id, {
@@ -101,9 +116,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Failed to update subscription' }, { status: 500 })
     }
 
+    // Get pricing info for the response
+    const currencySymbol = CURRENCY_SYMBOL[region]
+    const oldPrice = TIER_PRICES[region].starter
+    const newPrice = TIER_PRICES[region].pro
+
     return NextResponse.json({
       subscription: updated,
       message: 'Subscription upgraded to Pro! Your card will be charged a prorated amount.',
+      pricing: {
+        oldTier: 'Starter',
+        newTier: 'Pro',
+        oldPrice: `${currencySymbol}${oldPrice}/mo`,
+        newPrice: `${currencySymbol}${newPrice}/mo`,
+      },
     })
   } catch (error) {
     console.error('Error upgrading subscription:', error)

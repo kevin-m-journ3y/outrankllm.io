@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, CreditCard, FileText, Crown, ExternalLink } from 'lucide-react'
+import { Plus, CreditCard, FileText, Crown, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { DomainCard } from './DomainCard'
 import { DomainDetails } from './DomainDetails'
@@ -23,6 +23,7 @@ export function DashboardClient({ initialSubscriptions, email, region }: Dashboa
   const [selectedReports, setSelectedReports] = useState<SubscriptionReport[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
   const [loadingReports, setLoadingReports] = useState(false)
+  const [loadingPortal, setLoadingPortal] = useState(false)
 
   const selectedSubscription = subscriptions.find((s) => s.id === selectedId)
   const hasSubscriptions = subscriptions.length > 0
@@ -51,6 +52,25 @@ export function DashboardClient({ initialSubscriptions, email, region }: Dashboa
 
     fetchReports()
   }, [selectedId])
+
+  // Open Stripe billing portal
+  const handleManageBilling = async () => {
+    setLoadingPortal(true)
+    try {
+      const response = await fetch('/api/stripe/portal', { method: 'POST' })
+      const data = await response.json()
+
+      if (data.url) {
+        window.location.href = data.url
+      } else if (data.redirectUrl) {
+        window.location.href = data.redirectUrl
+      }
+    } catch (error) {
+      console.error('Error opening billing portal:', error)
+    } finally {
+      setLoadingPortal(false)
+    }
+  }
 
   // Refresh subscriptions list
   const refreshSubscriptions = async () => {
@@ -114,6 +134,7 @@ export function DashboardClient({ initialSubscriptions, email, region }: Dashboa
               subscription={selectedSubscription}
               reports={selectedReports}
               onUpdate={refreshSubscriptions}
+              region={region}
             />
           )}
         </>
@@ -144,21 +165,26 @@ export function DashboardClient({ initialSubscriptions, email, region }: Dashboa
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2" style={{ marginTop: '32px' }}>
         {/* Manage Billing */}
-        <form action="/api/stripe/portal" method="POST">
-          <button
-            type="submit"
-            className="w-full flex items-center gap-4 border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--green)] transition-colors text-left"
-            style={{ padding: '20px' }}
-          >
-            <div className="w-10 h-10 rounded-full bg-[var(--gold)]/10 flex items-center justify-center flex-shrink-0">
+        <button
+          onClick={handleManageBilling}
+          disabled={loadingPortal}
+          className="w-full flex items-center gap-4 border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--green)] transition-colors text-left disabled:opacity-50"
+          style={{ padding: '20px' }}
+        >
+          <div className="w-10 h-10 rounded-full bg-[var(--gold)]/10 flex items-center justify-center flex-shrink-0">
+            {loadingPortal ? (
+              <Loader2 className="w-5 h-5 text-[var(--gold)] animate-spin" />
+            ) : (
               <CreditCard className="w-5 h-5 text-[var(--gold)]" />
+            )}
+          </div>
+          <div>
+            <div className="font-medium" style={{ marginBottom: '2px' }}>
+              {loadingPortal ? 'Opening...' : 'Manage Billing'}
             </div>
-            <div>
-              <div className="font-medium" style={{ marginBottom: '2px' }}>Manage Billing</div>
-              <div className="text-sm text-[var(--text-dim)]">Invoices, payment methods & cancel subscriptions</div>
-            </div>
-          </button>
-        </form>
+            <div className="text-sm text-[var(--text-dim)]">Invoices, payment methods & cancel subscriptions</div>
+          </div>
+        </button>
 
         {/* View Pricing */}
         <Link

@@ -13,11 +13,13 @@ import { ScheduleSettings } from './ScheduleSettings'
 import { ReportHistory } from './ReportHistory'
 import { SubscriptionActions } from './SubscriptionActions'
 import type { DomainSubscriptionWithReports, SubscriptionReport } from '@/lib/subscriptions'
+import type { PricingRegion } from '@/lib/stripe-config'
 
 interface DomainDetailsProps {
   subscription: DomainSubscriptionWithReports
   reports: SubscriptionReport[]
   onUpdate: () => void
+  region: PricingRegion
 }
 
 // Platform display config
@@ -30,7 +32,7 @@ const platformConfig: Record<string, { name: string; color: string }> = {
 
 const QUESTIONS_PER_PLATFORM = 7
 
-export function DomainDetails({ subscription, reports, onUpdate }: DomainDetailsProps) {
+export function DomainDetails({ subscription, reports, onUpdate, region }: DomainDetailsProps) {
   const [expandedSections, setExpandedSections] = useState({
     latestReport: true,
     schedule: false,
@@ -161,7 +163,7 @@ export function DomainDetails({ subscription, reports, onUpdate }: DomainDetails
         onToggle={() => toggleSection('subscription')}
         noBorder
       >
-        <SubscriptionActions subscription={subscription} onUpdate={onUpdate} />
+        <SubscriptionActions subscription={subscription} onUpdate={onUpdate} region={region} />
       </CollapsibleSection>
     </div>
   )

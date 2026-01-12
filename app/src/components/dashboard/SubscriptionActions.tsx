@@ -1,12 +1,21 @@
 'use client'
 
-import { useState } from 'react'
-import { Crown, AlertCircle, Loader2, ArrowUp, ArrowDown, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Crown, AlertCircle, Loader2, ArrowUp, ArrowDown, X, CheckCircle } from 'lucide-react'
 import type { DomainSubscription } from '@/lib/subscriptions'
+import { TIER_PRICES, CURRENCY_SYMBOL, type PricingRegion } from '@/lib/stripe-config'
 
 interface SubscriptionActionsProps {
   subscription: DomainSubscription
   onUpdate: () => void
+  region: PricingRegion
+}
+
+interface PricingInfo {
+  oldTier: string
+  newTier: string
+  oldPrice: string
+  newPrice: string
 }
 
 const tierLabels: Record<string, string> = {
@@ -14,20 +23,32 @@ const tierLabels: Record<string, string> = {
   pro: 'Pro',
 }
 
-export function SubscriptionActions({ subscription, onUpdate }: SubscriptionActionsProps) {
+export function SubscriptionActions({ subscription, onUpdate, region }: SubscriptionActionsProps) {
   const [upgrading, setUpgrading] = useState(false)
   const [downgrading, setDowngrading] = useState(false)
   const [canceling, setCanceling] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successInfo, setSuccessInfo] = useState<{ message: string; pricing?: PricingInfo } | null>(null)
 
   const isActive = subscription.status === 'active'
   const isCanceling = subscription.cancel_at_period_end
   const hasStripeSubscription = !!subscription.stripe_subscription_id
 
+  // Get current price for display
+  const currentPrice = TIER_PRICES[region][subscription.tier as keyof typeof TIER_PRICES.AU]
+  const currencySymbol = CURRENCY_SYMBOL[region]
+
+  // Clear success/error messages when switching subscriptions
+  useEffect(() => {
+    setSuccessInfo(null)
+    setError(null)
+  }, [subscription.id])
+
   const handleUpgrade = async () => {
     setUpgrading(true)
     setError(null)
+    setSuccessInfo(null)
 
     try {
       const response = await fetch(`/api/subscriptions/${subscription.id}/upgrade`, {
@@ -36,11 +57,16 @@ export function SubscriptionActions({ subscription, onUpdate }: SubscriptionActi
         body: JSON.stringify({}),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.error || 'Failed to upgrade')
       }
 
+      setSuccessInfo({
+        message: data.message,
+        pricing: data.pricing,
+      })
       onUpdate()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upgrade')
@@ -52,6 +78,7 @@ export function SubscriptionActions({ subscription, onUpdate }: SubscriptionActi
   const handleDowngrade = async () => {
     setDowngrading(true)
     setError(null)
+    setSuccessInfo(null)
 
     try {
       const response = await fetch(`/api/subscriptions/${subscription.id}/downgrade`, {
@@ -60,11 +87,16 @@ export function SubscriptionActions({ subscription, onUpdate }: SubscriptionActi
         body: JSON.stringify({}),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.error || 'Failed to downgrade')
       }
 
+      setSuccessInfo({
+        message: data.message,
+        pricing: data.pricing,
+      })
       onUpdate()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to downgrade')
@@ -113,6 +145,9 @@ export function SubscriptionActions({ subscription, onUpdate }: SubscriptionActi
       <div className="flex items-center gap-3" style={{ marginBottom: '16px' }}>
         <Crown className="w-5 h-5 text-[var(--gold)]" />
         <span className="text-lg font-medium">{tierLabels[subscription.tier]} Plan</span>
+        <span className="font-mono text-sm text-[var(--text-mid)]">
+          {currencySymbol}{currentPrice}/mo
+        </span>
         {isCanceling ? (
           <span className="font-mono text-xs text-orange-500 uppercase">Canceling</span>
         ) : isActive ? (
@@ -139,6 +174,31 @@ export function SubscriptionActions({ subscription, onUpdate }: SubscriptionActi
         >
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           {error}
+        </div>
+      )}
+
+      {/* Success Message */}
+      {successInfo && successInfo.pricing && (
+        <div
+          className="text-sm bg-[var(--green)]/10 border border-[var(--green)]/20"
+          style={{ padding: '12px', marginBottom: '16px' }}
+        >
+          <div className="flex items-center gap-2 text-[var(--green)]" style={{ marginBottom: '8px' }}>
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="font-medium">
+              {successInfo.pricing.newTier === 'Pro' ? 'Upgrade' : 'Downgrade'} confirmed
+            </span>
+          </div>
+          <div className="text-[var(--text-mid)]" style={{ marginLeft: '24px' }}>
+            <span className="line-through text-[var(--text-dim)]">{successInfo.pricing.oldPrice}</span>
+            {' → '}
+            <span className="font-medium text-[var(--green)]">{successInfo.pricing.newPrice}</span>
+            <span className="text-[var(--text-dim)]">
+              {successInfo.pricing.newTier === 'Pro'
+                ? ' (prorated charge applied)'
+                : ' starting next billing cycle'}
+            </span>
+          </div>
         </div>
       )}
 

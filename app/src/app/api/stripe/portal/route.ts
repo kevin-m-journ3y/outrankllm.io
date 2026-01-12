@@ -14,7 +14,7 @@ export async function POST() {
     const session = await getSession()
 
     if (!session) {
-      return NextResponse.redirect(new URL('/login', APP_URL))
+      return NextResponse.json({ error: 'Unauthorized', redirectUrl: '/login' }, { status: 401 })
     }
 
     const supabase = createServiceClient()
@@ -28,7 +28,7 @@ export async function POST() {
 
     if (error || !lead?.stripe_customer_id) {
       // No Stripe customer - redirect to pricing
-      return NextResponse.redirect(new URL('/pricing', APP_URL))
+      return NextResponse.json({ error: 'No subscription found', redirectUrl: '/pricing' }, { status: 400 })
     }
 
     // Create a portal session
@@ -37,9 +37,9 @@ export async function POST() {
       return_url: `${APP_URL}/dashboard`,
     })
 
-    return NextResponse.redirect(portalSession.url)
+    return NextResponse.json({ url: portalSession.url })
   } catch (error) {
     console.error('Portal error:', error)
-    return NextResponse.redirect(new URL('/dashboard?error=portal', APP_URL))
+    return NextResponse.json({ error: 'Failed to create portal session' }, { status: 500 })
   }
 }
