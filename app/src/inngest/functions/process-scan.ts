@@ -1,4 +1,4 @@
-import { inngest, type ScanProcessEvent } from "../client"
+import { inngest } from "../client"
 import { createServiceClient } from "@/lib/supabase/server"
 import { crawlSite, combineCrawledContent } from "@/lib/ai/crawl"
 import { analyzeWebsite } from "@/lib/ai/analyze"
@@ -26,7 +26,6 @@ const FREE_REPORT_EXPIRY_DAYS = parseInt(process.env.FREE_REPORT_EXPIRY_DAYS || 
 
 // Platform weights for scoring (from CLAUDE.md)
 const PLATFORMS = ["chatgpt", "claude", "gemini", "perplexity"] as const
-type Platform = (typeof PLATFORMS)[number]
 
 export const processScan = inngest.createFunction(
   {
@@ -361,9 +360,9 @@ export const processScan = inngest.createFunction(
       countryCode: countryToIsoCode(analysisResult.geoResult.country) || undefined,
     }
 
-    // Steps 5-8: Query each platform sequentially
-    // This keeps us on Inngest free tier (5 concurrent steps)
-    // Each platform query is a separate step for retry resilience
+    // Query each platform with individual steps per query
+    // This ensures each API call is independently retryable and stays under timeout
+    // With 7 queries × 4 platforms = 28 steps, each ~30-60s max
 
     const allPlatformResults: Array<{
       promptId: string
@@ -374,93 +373,68 @@ export const processScan = inngest.createFunction(
     const resultsByPrompt = new Map<string, PlatformResult[]>()
     savedPrompts.forEach((p) => resultsByPrompt.set(p.id, []))
 
-    // Step 5: Query ChatGPT
-    const chatgptResults = await step.run("query-chatgpt", async () => {
-      const supabase = createServiceClient()
-      await updateScanStatus(supabase, scanId, "querying", 50)
-      log.platform(scanId, "chatgpt", "querying")
+    // Calculate progress increments: queries span from 50% to 90%
+    // 4 platforms × N queries, spread across 40% progress
+    const totalQueries = savedPrompts.length * 4
+    const progressPerQuery = 40 / totalQueries
+    let currentProgress = 50
 
-      const results = await queryPlatformSequentially(
-        "chatgpt",
-        savedPrompts,
-        domain,
-        scanId,
-        locationContext
-      )
+    // Query each platform, one query at a time as separate steps
+    for (const platform of PLATFORMS) {
+      log.platform(scanId, platform, "querying")
 
-      // Save results immediately
-      await saveResponsesToDb(supabase, scanId, results)
-      log.done(scanId, "ChatGPT", `${results.length} responses`)
+      for (let i = 0; i < savedPrompts.length; i++) {
+        const prompt = savedPrompts[i]
+        const stepName = `query-${platform}-${i}`
 
-      return results
-    })
+        const result = await step.run(stepName, async () => {
+          const db = createServiceClient()
 
-    // Step 6: Query Claude
-    const claudeResults = await step.run("query-claude", async () => {
-      const supabase = createServiceClient()
-      await updateScanStatus(supabase, scanId, "querying", 62)
-      log.platform(scanId, "claude", "querying")
+          // Update progress
+          currentProgress += progressPerQuery
+          await updateScanStatus(db, scanId, "querying", Math.round(currentProgress))
 
-      const results = await queryPlatformSequentially(
-        "claude",
-        savedPrompts,
-        domain,
-        scanId,
-        locationContext
-      )
+          try {
+            const queryResult = await queryPlatformWithSearch(
+              platform,
+              prompt.prompt_text,
+              domain,
+              locationContext
+            )
 
-      await saveResponsesToDb(supabase, scanId, results)
-      log.done(scanId, "Claude", `${results.length} responses`)
+            // Save result immediately
+            await saveResponseToDb(db, scanId, prompt.id, queryResult)
 
-      return results
-    })
+            return { promptId: prompt.id, result: queryResult }
+          } catch (error) {
+            // Create error result
+            const errorResult: PlatformResult = {
+              platform,
+              query: prompt.prompt_text,
+              response: "",
+              domainMentioned: false,
+              mentionPosition: null,
+              competitorsMentioned: [],
+              responseTimeMs: 0,
+              error: error instanceof Error ? error.message : "Unknown error",
+              searchEnabled: true,
+              sources: [],
+            }
 
-    // Step 7: Query Gemini
-    const geminiResults = await step.run("query-gemini", async () => {
-      const supabase = createServiceClient()
-      await updateScanStatus(supabase, scanId, "querying", 75)
-      log.platform(scanId, "gemini", "querying")
+            // Save error result
+            await saveResponseToDb(db, scanId, prompt.id, errorResult)
 
-      const results = await queryPlatformSequentially(
-        "gemini",
-        savedPrompts,
-        domain,
-        scanId,
-        locationContext
-      )
+            return { promptId: prompt.id, result: errorResult }
+          }
+        })
 
-      await saveResponsesToDb(supabase, scanId, results)
-      log.done(scanId, "Gemini", `${results.length} responses`)
+        // Accumulate result
+        const existing = resultsByPrompt.get(result.promptId) || []
+        existing.push(result.result)
+        resultsByPrompt.set(result.promptId, existing)
+      }
 
-      return results
-    })
-
-    // Step 8: Query Perplexity
-    const perplexityResults = await step.run("query-perplexity", async () => {
-      const supabase = createServiceClient()
-      await updateScanStatus(supabase, scanId, "querying", 87)
-      log.platform(scanId, "perplexity", "querying")
-
-      const results = await queryPlatformSequentially(
-        "perplexity",
-        savedPrompts,
-        domain,
-        scanId,
-        locationContext
-      )
-
-      await saveResponsesToDb(supabase, scanId, results)
-      log.done(scanId, "Perplexity", `${results.length} responses`)
-
-      return results
-    })
-
-    // Combine all results by prompt
-    const allResults = [...chatgptResults, ...claudeResults, ...geminiResults, ...perplexityResults]
-    for (const result of allResults) {
-      const existing = resultsByPrompt.get(result.promptId) || []
-      existing.push(result.result)
-      resultsByPrompt.set(result.promptId, existing)
+      log.done(scanId, platform, `${savedPrompts.length} responses`)
     }
 
     // Convert to array format expected by scoring
@@ -753,55 +727,14 @@ async function updateScanStatus(
     .eq("id", scanId)
 }
 
-// Helper: Query a single platform for all prompts
-async function queryPlatformSequentially(
-  platform: Platform,
-  prompts: { id: string; prompt_text: string; category: string }[],
-  domain: string,
-  scanId: string,
-  locationContext: LocationContext
-): Promise<Array<{ promptId: string; result: PlatformResult }>> {
-  const results: Array<{ promptId: string; result: PlatformResult }> = []
-
-  for (const prompt of prompts) {
-    try {
-      const result = await queryPlatformWithSearch(
-        platform,
-        prompt.prompt_text,
-        domain,
-        locationContext
-      )
-      results.push({ promptId: prompt.id, result })
-    } catch (error) {
-      // Create error result
-      results.push({
-        promptId: prompt.id,
-        result: {
-          platform,
-          query: prompt.prompt_text,
-          response: "",
-          domainMentioned: false,
-          mentionPosition: null,
-          competitorsMentioned: [],
-          responseTimeMs: 0,
-          error: error instanceof Error ? error.message : "Unknown error",
-          searchEnabled: true,
-          sources: [],
-        },
-      })
-    }
-  }
-
-  return results
-}
-
-// Helper: Save LLM responses to database
-async function saveResponsesToDb(
+// Helper: Save a single LLM response to database
+async function saveResponseToDb(
   supabase: ReturnType<typeof createServiceClient>,
   scanId: string,
-  results: Array<{ promptId: string; result: PlatformResult }>
+  promptId: string,
+  result: PlatformResult
 ) {
-  const inserts = results.map(({ promptId, result }) => ({
+  const { error } = await supabase.from("llm_responses").insert({
     run_id: scanId,
     prompt_id: promptId,
     platform: result.platform,
@@ -813,11 +746,10 @@ async function saveResponsesToDb(
     error_message: result.error,
     search_enabled: result.searchEnabled,
     sources: result.sources,
-  }))
+  })
 
-  const { error } = await supabase.from("llm_responses").insert(inserts)
   if (error) {
-    console.error("Failed to insert LLM responses:", error)
+    console.error("Failed to insert LLM response:", error)
   }
 }
 
