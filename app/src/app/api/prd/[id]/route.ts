@@ -86,23 +86,49 @@ export async function PATCH(
     }
 
     // If completing, also add to history for preservation across regenerations
-    // Use upsert to prevent duplicate entries if task was already in history
     if (status === 'completed') {
-      await supabase
+      // First check if already in history to avoid duplicates
+      const { data: existing } = await supabase
         .from('prd_tasks_history')
-        .upsert(
-          {
-            lead_id: session.lead_id,
-            domain_subscription_id: prdDoc.domain_subscription_id,
-            original_task_id: taskId,
-            title: task.title,
-            description: task.description,
-            section: task.section,
-            category: task.category,
-            scan_run_id: prdDoc.run_id,
-          },
-          { onConflict: 'lead_id,original_task_id', ignoreDuplicates: true }
-        )
+        .select('id')
+        .eq('lead_id', session.lead_id)
+        .eq('original_task_id', taskId)
+        .single()
+
+      if (!existing) {
+        // Not in history yet, insert it
+        const historyData = {
+          lead_id: session.lead_id,
+          domain_subscription_id: prdDoc.domain_subscription_id,
+          original_task_id: taskId,
+          title: task.title,
+          description: task.description,
+          section: task.section,
+          category: task.category,
+          scan_run_id: prdDoc.run_id,
+        }
+
+        const { error: historyError } = await supabase
+          .from('prd_tasks_history')
+          .insert(historyData)
+
+        if (historyError) {
+          console.error('Error adding PRD task to history:', historyError)
+          // Don't fail the request - task status was updated successfully
+        }
+      }
+    } else if (status === 'pending') {
+      // If un-completing (reverting to pending), remove from history
+      const { error: deleteError } = await supabase
+        .from('prd_tasks_history')
+        .delete()
+        .eq('lead_id', session.lead_id)
+        .eq('original_task_id', taskId)
+
+      if (deleteError) {
+        console.error('Error removing PRD task from history:', deleteError)
+        // Don't fail the request - task status was updated successfully
+      }
     }
 
     return NextResponse.json({

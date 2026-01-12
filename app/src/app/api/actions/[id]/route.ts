@@ -35,10 +35,10 @@ export async function PATCH(
       )
     }
 
-    // Verify the action item belongs to this user's plan
+    // Verify the action item belongs to this user's plan (include fields for history)
     const { data: item, error: fetchError } = await supabase
       .from('action_items')
-      .select('id, plan_id, action_plans!inner(lead_id)')
+      .select('id, plan_id, title, description, category, action_plans!inner(lead_id, domain_subscription_id)')
       .eq('id', id)
       .single()
 
@@ -50,8 +50,8 @@ export async function PATCH(
     }
 
     // Check ownership via the plan
-    const planLeadId = (item as { action_plans: { lead_id: string } }).action_plans.lead_id
-    if (planLeadId !== session.lead_id) {
+    const actionPlan = item.action_plans as { lead_id: string; domain_subscription_id: string | null }
+    if (actionPlan.lead_id !== session.lead_id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -79,6 +79,50 @@ export async function PATCH(
         { error: 'Failed to update action item' },
         { status: 500 }
       )
+    }
+
+    // If completing, also add to history for preservation across regenerations
+    if (status === 'completed') {
+      // First check if already in history to avoid duplicates
+      const { data: existing } = await supabase
+        .from('action_items_history')
+        .select('id')
+        .eq('lead_id', session.lead_id)
+        .eq('original_action_id', id)
+        .single()
+
+      if (!existing) {
+        // Not in history yet, insert it
+        const historyData = {
+          lead_id: session.lead_id,
+          domain_subscription_id: actionPlan.domain_subscription_id,
+          original_action_id: id,
+          title: item.title,
+          description: item.description,
+          category: item.category,
+        }
+
+        const { error: historyError } = await supabase
+          .from('action_items_history')
+          .insert(historyData)
+
+        if (historyError) {
+          console.error('Error adding action to history:', historyError)
+          // Don't fail the request - action status was updated successfully
+        }
+      }
+    } else if (status === 'pending') {
+      // If un-completing (reverting to pending), remove from history
+      const { error: deleteError } = await supabase
+        .from('action_items_history')
+        .delete()
+        .eq('lead_id', session.lead_id)
+        .eq('original_action_id', id)
+
+      if (deleteError) {
+        console.error('Error removing action from history:', deleteError)
+        // Don't fail the request - action status was updated successfully
+      }
     }
 
     return NextResponse.json({ item: updated })

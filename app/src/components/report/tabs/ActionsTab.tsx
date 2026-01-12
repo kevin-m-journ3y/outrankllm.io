@@ -76,6 +76,7 @@ interface ActionPlan {
 
 interface ActionHistoryItem {
   id: string
+  original_action_id?: string | null  // The actual action ID this history entry refers to
   title: string
   description: string
   category: string | null
@@ -141,6 +142,9 @@ export function ActionsTab({ runId, domainSubscriptionId, enrichmentStatus = 'no
   }
 
   const updateActionStatus = async (actionId: string, status: ActionItem['status']) => {
+    // Get action details before updating for history
+    const action = plan?.actions.find(a => a.id === actionId)
+
     // Optimistically update UI first
     setPlan(prev => {
       if (!prev) return null
@@ -151,6 +155,29 @@ export function ActionsTab({ runId, domainSubscriptionId, enrichmentStatus = 'no
         ),
       }
     })
+
+    // If completing, add to history for immediate UI feedback
+    if (status === 'completed' && action) {
+      setHistory(prev => {
+        // Don't add if already in history - check both id and original_action_id
+        // (id matches locally-added items, original_action_id matches DB-fetched items)
+        if (prev.some(h => h.id === actionId || h.original_action_id === actionId)) return prev
+        return [
+          {
+            id: actionId,
+            original_action_id: actionId,  // Set this so future checks work
+            title: action.title,
+            description: action.description,
+            category: action.category,
+            completed_at: new Date().toISOString(),
+          },
+          ...prev,
+        ]
+      })
+    } else if (status === 'pending') {
+      // If un-completing, remove from history - check both id and original_action_id
+      setHistory(prev => prev.filter(h => h.id !== actionId && h.original_action_id !== actionId))
+    }
 
     try {
       const res = await fetch(`/api/actions/${actionId}`, {
@@ -174,7 +201,10 @@ export function ActionsTab({ runId, domainSubscriptionId, enrichmentStatus = 'no
           ),
         }
       })
-      // Could add toast notification here
+      // Also revert history if we added to it
+      if (status === 'completed') {
+        setHistory(prev => prev.filter(h => h.id !== actionId))
+      }
     }
   }
 
@@ -644,7 +674,7 @@ export function ActionsTab({ runId, domainSubscriptionId, enrichmentStatus = 'no
             style={{ marginBottom: '20px', padding: '12px 16px' }}
           >
             <p className="text-[var(--text-mid)] text-sm" style={{ lineHeight: '1.6' }}>
-              These are actions you've completed in previous scans. We remember your progress so you won't see the same recommendations again.
+              Actions you've completed are tracked here. Similar recommendations won't be regenerated in future scans.
             </p>
           </div>
 

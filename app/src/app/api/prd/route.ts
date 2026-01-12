@@ -105,25 +105,59 @@ export async function GET(request: Request) {
       )
     }
 
-    // Get completed task history
-    // Use domain_subscription_id if provided for multi-domain isolation
+    // Get completed task history from history table
+    // IMPORTANT: Use the domain_subscription_id from the PRD document we just fetched,
+    // not from the query params. This ensures consistency because history entries are
+    // created with prd_documents.domain_subscription_id when tasks are marked complete.
     let historyQuery = supabase
       .from('prd_tasks_history')
-      .select('id, title, description, section, category, completed_at')
+      .select('id, original_task_id, title, description, section, category, completed_at')
 
-    if (domainSubscriptionId) {
-      historyQuery = historyQuery.eq('domain_subscription_id', domainSubscriptionId)
+    // Use the PRD's domain_subscription_id for consistency with how history is created
+    const prdDomainSubId = prd.domain_subscription_id
+    if (prdDomainSubId) {
+      historyQuery = historyQuery.eq('domain_subscription_id', prdDomainSubId)
     } else {
+      // Fallback to lead_id for legacy PRDs without domain_subscription_id
       historyQuery = historyQuery.eq('lead_id', session.lead_id)
     }
 
-    const { data: history, error: historyError } = await historyQuery
+    const { data: historyFromTable, error: historyError } = await historyQuery
       .order('completed_at', { ascending: false })
 
     if (historyError) {
       console.error('Error fetching PRD task history:', historyError)
       // Don't fail - history is supplementary
     }
+
+    // Also include any tasks from current PRD that are marked completed but not in history
+    // This handles edge cases where history insert failed or data was migrated
+    const completedTasks = (tasks || [])
+      .filter((t: { status?: string }) => t.status === 'completed')
+      .map((t: { id: string; title: string; description: string; section: string; category: string | null; completed_at: string | null }) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        section: t.section,
+        category: t.category,
+        completed_at: t.completed_at,
+      }))
+
+    // Merge: history table + completed tasks not already in history
+    // Use original_task_id to match against current task IDs
+    const historyOriginalIds = new Set((historyFromTable || []).map((h: { original_task_id: string | null }) => h.original_task_id).filter(Boolean))
+    const historyTitles = new Set((historyFromTable || []).map((h: { title: string }) => h.title))
+
+    const additionalFromTasks = completedTasks.filter(
+      (t: { id: string; title: string }) => !historyOriginalIds.has(t.id) && !historyTitles.has(t.title)
+    )
+
+    const history = [...(historyFromTable || []), ...additionalFromTasks]
+      .sort((a, b) => {
+        const dateA = a.completed_at ? new Date(a.completed_at).getTime() : 0
+        const dateB = b.completed_at ? new Date(b.completed_at).getTime() : 0
+        return dateB - dateA // Most recent first
+      })
 
     return NextResponse.json({
       prd: {
@@ -499,21 +533,39 @@ export async function PUT(request: Request) {
       const { data: tasks } = await tasksQuery
 
       if (tasks && tasks.length > 0) {
-        const historyEntries = tasks.map((task: { id: string; title: string; description: string; section: string; category: string | null }) => ({
-          lead_id: session.lead_id,
-          domain_subscription_id: prd.domain_subscription_id,
-          original_task_id: task.id,
-          title: task.title,
-          description: task.description,
-          section: task.section,
-          category: task.category,
-          scan_run_id: prd.run_id,
-        }))
-
-        // Use upsert to prevent duplicate entries if tasks were already in history
-        await supabase
+        // Get existing history entries to avoid duplicates
+        const taskIds = tasks.map((t: { id: string }) => t.id)
+        const { data: existingHistory } = await supabase
           .from('prd_tasks_history')
-          .upsert(historyEntries, { onConflict: 'lead_id,original_task_id', ignoreDuplicates: true })
+          .select('original_task_id')
+          .eq('lead_id', session.lead_id)
+          .in('original_task_id', taskIds)
+
+        const existingTaskIds = new Set((existingHistory || []).map((h: { original_task_id: string }) => h.original_task_id))
+
+        // Filter out tasks already in history
+        const newTasks = tasks.filter((t: { id: string }) => !existingTaskIds.has(t.id))
+
+        if (newTasks.length > 0) {
+          const historyEntries = newTasks.map((task: { id: string; title: string; description: string; section: string; category: string | null }) => ({
+            lead_id: session.lead_id,
+            domain_subscription_id: prd.domain_subscription_id,
+            original_task_id: task.id,
+            title: task.title,
+            description: task.description,
+            section: task.section,
+            category: task.category,
+            scan_run_id: prd.run_id,
+          }))
+
+          const { error: historyError } = await supabase
+            .from('prd_tasks_history')
+            .insert(historyEntries)
+
+          if (historyError) {
+            console.error('Error adding PRD tasks to history:', historyError)
+          }
+        }
       }
     }
 

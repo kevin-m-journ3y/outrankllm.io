@@ -124,11 +124,11 @@ export async function GET(request: Request) {
       )
     }
 
-    // Get completed action history
+    // Get completed action history from history table
     // Use domain_subscription_id if provided for multi-domain isolation
     let historyQuery = supabase
       .from('action_items_history')
-      .select('id, title, description, category, completed_at')
+      .select('id, original_action_id, title, description, category, completed_at')
 
     if (domainSubscriptionId) {
       historyQuery = historyQuery.eq('domain_subscription_id', domainSubscriptionId)
@@ -136,7 +136,7 @@ export async function GET(request: Request) {
       historyQuery = historyQuery.eq('lead_id', session.lead_id)
     }
 
-    const { data: history, error: historyError } = await historyQuery
+    const { data: historyFromTable, error: historyError } = await historyQuery
       .order('completed_at', { ascending: false })
 
     if (historyError) {
@@ -144,13 +144,41 @@ export async function GET(request: Request) {
       // Don't fail - history is supplementary
     }
 
+    // Also include any actions from current plan that are marked completed but not in history
+    // This handles edge cases where history insert failed or data was migrated
+    const completedActions = (actions || [])
+      .filter((a: { status?: string }) => a.status === 'completed')
+      .map((a: { id: string; title: string; description: string; category: string | null; completed_at: string | null }) => ({
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        category: a.category,
+        completed_at: a.completed_at,
+      }))
+
+    // Merge: history table + completed actions not already in history
+    // Use original_action_id to match against current action IDs
+    const historyOriginalIds = new Set((historyFromTable || []).map((h: { original_action_id: string | null }) => h.original_action_id).filter(Boolean))
+    const historyTitles = new Set((historyFromTable || []).map((h: { title: string }) => h.title))
+
+    const additionalFromActions = completedActions.filter(
+      (a: { id: string; title: string }) => !historyOriginalIds.has(a.id) && !historyTitles.has(a.title)
+    )
+
+    const history = [...(historyFromTable || []), ...additionalFromActions]
+      .sort((a, b) => {
+        const dateA = a.completed_at ? new Date(a.completed_at).getTime() : 0
+        const dateB = b.completed_at ? new Date(b.completed_at).getTime() : 0
+        return dateB - dateA // Most recent first
+      })
+
     return NextResponse.json({
       plan: {
         ...plan,
         actions: actions || [],
       },
       hasActions: (actions?.length || 0) > 0,
-      history: history || [],
+      history,
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {

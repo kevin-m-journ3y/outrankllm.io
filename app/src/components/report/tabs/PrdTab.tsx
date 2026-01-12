@@ -65,6 +65,7 @@ interface PrdDocument {
 
 interface PrdHistoryItem {
   id: string
+  original_task_id?: string | null  // The actual task ID this history entry refers to
   title: string
   description: string
   section: string
@@ -318,6 +319,10 @@ export function PrdTab({ runId, domainSubscriptionId, enrichmentStatus = 'not_ap
   const updateTaskStatus = async (taskId: string, status: 'pending' | 'completed' | 'dismissed') => {
     if (!prd) return
 
+    // Find the task to get its details for history
+    const task = prd.tasks.find(t => t.id === taskId)
+    if (!task) return
+
     setUpdatingTasks(prev => new Set(prev).add(taskId))
     try {
       const res = await fetch(`/api/prd/${taskId}`, {
@@ -330,7 +335,7 @@ export function PrdTab({ runId, domainSubscriptionId, enrichmentStatus = 'not_ap
         throw new Error('Failed to update task')
       }
 
-      // Update local state
+      // Update local prd state
       setPrd({
         ...prd,
         tasks: prd.tasks.map(t =>
@@ -339,6 +344,31 @@ export function PrdTab({ runId, domainSubscriptionId, enrichmentStatus = 'not_ap
             : t
         ),
       })
+
+      // If marking as completed, add to local history for immediate feedback
+      // (The API also adds it to the database)
+      if (status === 'completed') {
+        setHistory(prev => {
+          // Check if already in history - check both id and original_task_id
+          // (id matches locally-added items, original_task_id matches DB-fetched items)
+          if (prev.some(h => h.id === taskId || h.original_task_id === taskId)) return prev
+          return [
+            {
+              id: taskId,
+              original_task_id: taskId,  // Set this so future checks work
+              title: task.title,
+              description: task.description,
+              section: task.section,
+              category: task.category,
+              completed_at: new Date().toISOString(),
+            },
+            ...prev,
+          ]
+        })
+      } else if (status === 'pending') {
+        // If reopening a task, remove from local history - check both id and original_task_id
+        setHistory(prev => prev.filter(h => h.id !== taskId && h.original_task_id !== taskId))
+      }
     } catch (err) {
       console.error('Failed to update task:', err)
     } finally {
@@ -368,15 +398,36 @@ export function PrdTab({ runId, domainSubscriptionId, enrichmentStatus = 'not_ap
         throw new Error('Failed to mark all complete')
       }
 
-      // Update local state
+      const completedAt = new Date().toISOString()
+
+      // Update local prd state
       setPrd({
         ...prd,
         tasks: prd.tasks.map(t => ({
           ...t,
           status: 'completed',
-          completed_at: new Date().toISOString(),
+          completed_at: completedAt,
         })),
       })
+
+      // Add all tasks to local history for immediate feedback
+      const newHistoryItems = prd.tasks
+        .filter(t => t.status !== 'completed') // Only add tasks that weren't already completed
+        .filter(t => !history.some(h => h.id === t.id || h.original_task_id === t.id)) // Skip if already in history
+        .map(t => ({
+          id: t.id,
+          original_task_id: t.id,  // Set this so future checks work
+          title: t.title,
+          description: t.description,
+          section: t.section,
+          category: t.category,
+          completed_at: completedAt,
+        }))
+
+      if (newHistoryItems.length > 0) {
+        setHistory(prev => [...newHistoryItems, ...prev])
+      }
+
       setShowExportOptions(false)
     } catch (err) {
       console.error('Failed to mark all complete:', err)
@@ -520,7 +571,6 @@ export function PrdTab({ runId, domainSubscriptionId, enrichmentStatus = 'not_ap
   // Calculate totals
   const totalHours = prd.tasks.reduce((sum, t) => sum + (t.estimated_hours || 0), 0)
   const completedCount = prd.tasks.filter(t => t.status === 'completed').length
-  const pendingCount = prd.tasks.filter(t => (t.status || 'pending') === 'pending').length
 
   return (
     <div style={{ display: 'grid', gap: '32px' }}>
@@ -846,7 +896,7 @@ export function PrdTab({ runId, domainSubscriptionId, enrichmentStatus = 'not_ap
                 style={{ marginBottom: '20px', padding: '12px 16px' }}
               >
                 <p className="text-[var(--text-mid)] text-sm" style={{ lineHeight: '1.6' }}>
-                  These tasks have been completed in previous scans. We remember your progress so similar tasks won't be regenerated.
+                  Tasks you've completed are tracked here. Similar tasks won't be regenerated in future scans.
                 </p>
               </div>
 
