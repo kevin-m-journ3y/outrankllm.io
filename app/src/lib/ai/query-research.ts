@@ -208,7 +208,7 @@ function enrichWithKeyPhrases(
  * Ask a single LLM for search query suggestions
  * All platforms use gateway for standard generation
  */
-async function researchQueriesOnPlatform(
+export async function researchQueriesOnPlatform(
   analysis: BusinessAnalysis,
   platform: Platform,
   runId: string,

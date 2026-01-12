@@ -3,9 +3,11 @@ import { createServiceClient } from "@/lib/supabase/server"
 import { crawlSite, combineCrawledContent } from "@/lib/ai/crawl"
 import { analyzeWebsite } from "@/lib/ai/analyze"
 import {
-  researchQueries,
+  researchQueriesOnPlatform,
   dedupeAndRankQueries,
   generateFallbackQueries,
+  type Platform as ResearchPlatform,
+  type RawQuerySuggestion,
 } from "@/lib/ai/query-research"
 import {
   queryPlatformWithSearch,
@@ -198,158 +200,178 @@ export const processScan = inngest.createFunction(
       }
     })
 
-    // Step 4: Research queries
-    const savedPrompts = await step.run("research-queries", async () => {
+    // Step 4a: Check for existing subscriber questions (fast DB check)
+    const subscriberQuestionsResult = await step.run("check-subscriber-questions", async () => {
       const supabase = createServiceClient()
       await updateScanStatus(supabase, scanId, "researching", 35)
 
-      const { analysis, geoResult, finalLocation } = analysisResult
-      const analysisWithEnhancedGeo = {
-        ...analysis,
-        location: finalLocation,
-        geoConfidence: geoResult.confidence,
-        city: geoResult.city,
-        country: geoResult.country,
-      }
-
-      log.step(scanId, "Getting queries", analysis.businessType)
-
-      // Check if this lead has subscriber questions
-      let prompts: { id: string; prompt_text: string; category: string }[] = []
-      let usedSubscriberQuestions = false
-
       const userTier = await getUserTier(leadId)
 
-      if (userTier !== "free") {
-        // Check for existing subscriber questions - use domain_subscription_id if available
-        let questionsQuery = supabase
-          .from("subscriber_questions")
-          .select("id, prompt_text, category")
-
-        if (domainSubscriptionId) {
-          questionsQuery = questionsQuery.eq("domain_subscription_id", domainSubscriptionId)
-        } else {
-          questionsQuery = questionsQuery.eq("lead_id", leadId)
-        }
-
-        const { data: subscriberQuestions } = await questionsQuery
-          .eq("is_active", true)
-          .eq("is_archived", false)
-          .order("sort_order", { ascending: true })
-
-        if (subscriberQuestions && subscriberQuestions.length > 0) {
-          log.info(scanId, `Using ${subscriberQuestions.length} subscriber questions`)
-
-          const { data: insertedPrompts, error } = await supabase
-            .from("scan_prompts")
-            .insert(
-              subscriberQuestions.map((q: { id: string; prompt_text: string; category: string }) => ({
-                run_id: scanId,
-                prompt_text: q.prompt_text,
-                category: q.category,
-                source: "subscriber",
-              }))
-            )
-            .select("id, prompt_text, category")
-
-          if (!error && insertedPrompts && insertedPrompts.length > 0) {
-            prompts = insertedPrompts
-            usedSubscriberQuestions = true
-          }
-        }
+      if (userTier === "free") {
+        return { hasSubscriberQuestions: false, prompts: [], userTier }
       }
 
-      // If no subscriber questions, research new ones
-      if (!usedSubscriberQuestions) {
-        const keyPhrases = analysis.keyPhrases || []
+      // Check for existing subscriber questions
+      let questionsQuery = supabase
+        .from("subscriber_questions")
+        .select("id, prompt_text, category")
 
-        let researchedQueryList = await researchQueries(
-          analysisWithEnhancedGeo,
-          scanId,
-          (platform) => log.platform(scanId, platform, "researching queries"),
-          keyPhrases
-        )
+      if (domainSubscriptionId) {
+        questionsQuery = questionsQuery.eq("domain_subscription_id", domainSubscriptionId)
+      } else {
+        questionsQuery = questionsQuery.eq("lead_id", leadId)
+      }
 
-        let topQueries = dedupeAndRankQueries(researchedQueryList, 7, keyPhrases)
-        log.done(scanId, "Query research", `${topQueries.length} unique queries`)
+      const { data: subscriberQuestions } = await questionsQuery
+        .eq("is_active", true)
+        .eq("is_archived", false)
+        .order("sort_order", { ascending: true })
 
-        if (topQueries.length === 0) {
-          log.warn(scanId, "Research failed, using fallback queries")
-          topQueries = generateFallbackQueries(analysisWithEnhancedGeo)
-        }
+      if (subscriberQuestions && subscriberQuestions.length > 0) {
+        log.info(scanId, `Using ${subscriberQuestions.length} subscriber questions`)
 
-        // Save research results
-        const researchInserts = researchedQueryList.map((q) => ({
-          run_id: scanId,
-          platform: q.platform,
-          suggested_query: q.query,
-          category: q.category,
-          selected_for_scan: topQueries.some((t) => t.query === q.query),
-        }))
-
-        if (researchInserts.length > 0) {
-          await supabase.from("query_research_results").insert(researchInserts)
-        }
-
-        await updateScanStatus(supabase, scanId, "generating", 45)
-
-        // Save selected queries as prompts
-        const { data: insertedPrompts } = await supabase
+        const { data: insertedPrompts, error } = await supabase
           .from("scan_prompts")
           .insert(
-            topQueries.map((q) => ({
+            subscriberQuestions.map((q: { id: string; prompt_text: string; category: string }) => ({
               run_id: scanId,
-              prompt_text: q.query,
+              prompt_text: q.prompt_text,
               category: q.category,
-              source: "researched",
+              source: "subscriber",
             }))
           )
           .select("id, prompt_text, category")
 
-        if (insertedPrompts && insertedPrompts.length > 0) {
-          prompts = insertedPrompts
-
-          // Seed subscriber_questions for first-time subscribers
-          if (userTier !== "free") {
-            // Check for existing questions - use domain_subscription_id if available
-            let countQuery = supabase
-              .from("subscriber_questions")
-              .select("id", { count: "exact", head: true })
-
-            if (domainSubscriptionId) {
-              countQuery = countQuery.eq("domain_subscription_id", domainSubscriptionId)
-            } else {
-              countQuery = countQuery.eq("lead_id", leadId)
-            }
-
-            const { count } = await countQuery
-
-            if (!count || count === 0) {
-              log.info(scanId, "Seeding subscriber questions for first-time subscriber")
-              await supabase.from("subscriber_questions").insert(
-                insertedPrompts.map((p: { id: string; prompt_text: string; category: string }, index: number) => ({
-                  lead_id: leadId,
-                  domain_subscription_id: domainSubscriptionId || null,
-                  prompt_text: p.prompt_text,
-                  category: p.category,
-                  source: "ai_generated",
-                  is_active: true,
-                  is_archived: false,
-                  sort_order: index,
-                  original_prompt_id: p.id,
-                  source_run_id: scanId,
-                }))
-              )
-            }
-          }
+        if (!error && insertedPrompts && insertedPrompts.length > 0) {
+          return { hasSubscriberQuestions: true, prompts: insertedPrompts, userTier }
         }
       }
 
-      if (!prompts || prompts.length === 0) {
-        throw new Error("Failed to save prompts")
+      return { hasSubscriberQuestions: false, prompts: [], userTier }
+    })
+
+    // Build analysis context for research (used by multiple steps)
+    const { analysis, geoResult, finalLocation } = analysisResult
+    const analysisWithEnhancedGeo = {
+      ...analysis,
+      location: finalLocation,
+      geoConfidence: geoResult.confidence,
+      city: geoResult.city,
+      country: geoResult.country,
+    }
+    const keyPhrases = analysis.keyPhrases || []
+
+    // Steps 4b-4d: Research queries on each platform (only if no subscriber questions)
+    let researchedQueryList: RawQuerySuggestion[] = []
+
+    if (!subscriberQuestionsResult.hasSubscriberQuestions) {
+      log.step(scanId, "Getting queries", analysis.businessType)
+
+      const researchPlatforms: ResearchPlatform[] = ["chatgpt", "claude", "gemini"]
+
+      for (const platform of researchPlatforms) {
+        const platformResults = await step.run(`research-queries-${platform}`, async () => {
+          log.platform(scanId, platform, "researching queries")
+
+          const suggestions = await researchQueriesOnPlatform(
+            analysisWithEnhancedGeo,
+            platform,
+            scanId,
+            keyPhrases
+          )
+
+          log.done(scanId, `Research ${platform}`, `${suggestions.length} suggestions`)
+          return suggestions
+        })
+
+        researchedQueryList.push(...platformResults)
+      }
+    }
+
+    // Step 4e: Save prompts (dedupe, rank, and save to DB)
+    const savedPrompts = await step.run("save-prompts", async () => {
+      const supabase = createServiceClient()
+
+      // If we already have subscriber questions, return them
+      if (subscriberQuestionsResult.hasSubscriberQuestions) {
+        return subscriberQuestionsResult.prompts
       }
 
-      return prompts
+      // Dedupe and rank researched queries
+      let topQueries = dedupeAndRankQueries(researchedQueryList, 7, keyPhrases)
+      log.done(scanId, "Query research", `${topQueries.length} unique queries`)
+
+      if (topQueries.length === 0) {
+        log.warn(scanId, "Research failed, using fallback queries")
+        topQueries = generateFallbackQueries(analysisWithEnhancedGeo)
+      }
+
+      // Save research results
+      const researchInserts = researchedQueryList.map((q: RawQuerySuggestion) => ({
+        run_id: scanId,
+        platform: q.platform,
+        suggested_query: q.query,
+        category: q.category,
+        selected_for_scan: topQueries.some((t) => t.query === q.query),
+      }))
+
+      if (researchInserts.length > 0) {
+        await supabase.from("query_research_results").insert(researchInserts)
+      }
+
+      await updateScanStatus(supabase, scanId, "generating", 45)
+
+      // Save selected queries as prompts
+      const { data: insertedPrompts } = await supabase
+        .from("scan_prompts")
+        .insert(
+          topQueries.map((q) => ({
+            run_id: scanId,
+            prompt_text: q.query,
+            category: q.category,
+            source: "researched",
+          }))
+        )
+        .select("id, prompt_text, category")
+
+      if (insertedPrompts && insertedPrompts.length > 0) {
+        // Seed subscriber_questions for first-time subscribers
+        if (subscriberQuestionsResult.userTier !== "free") {
+          let countQuery = supabase
+            .from("subscriber_questions")
+            .select("id", { count: "exact", head: true })
+
+          if (domainSubscriptionId) {
+            countQuery = countQuery.eq("domain_subscription_id", domainSubscriptionId)
+          } else {
+            countQuery = countQuery.eq("lead_id", leadId)
+          }
+
+          const { count } = await countQuery
+
+          if (!count || count === 0) {
+            log.info(scanId, "Seeding subscriber questions for first-time subscriber")
+            await supabase.from("subscriber_questions").insert(
+              insertedPrompts.map((p: { id: string; prompt_text: string; category: string }, index: number) => ({
+                lead_id: leadId,
+                domain_subscription_id: domainSubscriptionId || null,
+                prompt_text: p.prompt_text,
+                category: p.category,
+                source: "ai_generated",
+                is_active: true,
+                is_archived: false,
+                sort_order: index,
+                original_prompt_id: p.id,
+                source_run_id: scanId,
+              }))
+            )
+          }
+        }
+
+        return insertedPrompts
+      }
+
+      throw new Error("Failed to save prompts")
     })
 
     // Build location context for LLM queries
@@ -371,7 +393,7 @@ export const processScan = inngest.createFunction(
 
     // Initialize structure for accumulating results across platforms
     const resultsByPrompt = new Map<string, PlatformResult[]>()
-    savedPrompts.forEach((p) => resultsByPrompt.set(p.id, []))
+    savedPrompts.forEach((p: { id: string; prompt_text: string; category: string }) => resultsByPrompt.set(p.id, []))
 
     // Calculate progress increments: queries span from 50% to 90%
     // 4 platforms × N queries, spread across 40% progress
