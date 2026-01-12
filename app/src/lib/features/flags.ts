@@ -141,12 +141,30 @@ export function isFeatureEnabled(
 
 /**
  * Get user tier from lead ID (checks for active subscription)
+ *
+ * Checks both domain_subscriptions (new multi-domain flow) and
+ * legacy subscriptions table, returning the highest active tier.
  */
 export async function getUserTier(leadId: string): Promise<Tier> {
   try {
     const supabase = createServiceClient()
 
-    // Check for active subscription first
+    // Check domain_subscriptions FIRST (new multi-domain flow)
+    // This is critical for second+ domain subscriptions
+    const { data: domainSubs } = await supabase
+      .from('domain_subscriptions')
+      .select('tier')
+      .eq('lead_id', leadId)
+      .eq('status', 'active')
+
+    if (domainSubs && domainSubs.length > 0) {
+      // Return highest tier among active domain subscriptions
+      const tiers = domainSubs.map((d: { tier: string }) => d.tier)
+      if (tiers.includes('pro')) return 'pro'
+      if (tiers.includes('starter')) return 'starter'
+    }
+
+    // Legacy: Check old subscriptions table for backward compatibility
     const { data: subscription } = await supabase
       .from('subscriptions')
       .select('tier, status')
@@ -158,7 +176,7 @@ export async function getUserTier(leadId: string): Promise<Tier> {
       return subscription.tier as Tier
     }
 
-    // Fall back to lead's tier field
+    // Final fallback to lead's tier field
     const { data: lead } = await supabase
       .from('leads')
       .select('tier')

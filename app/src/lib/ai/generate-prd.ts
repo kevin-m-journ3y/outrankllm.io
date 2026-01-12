@@ -458,30 +458,60 @@ export async function generatePrd(
 
 /**
  * Parse and validate PRD JSON response
+ * Uses multiple strategies to extract JSON from potentially malformed responses
  */
 function parsePrdResponse(
   text: string,
   runId: string,
   siteContext: SiteContext
 ): GeneratedPrd {
-  // Try to extract JSON from response (may be wrapped in markdown code blocks)
-  let jsonStr = text
+  let jsonStr = text.trim()
 
-  // Check for markdown code blocks
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (jsonMatch) {
-    jsonStr = jsonMatch[1].trim()
+  // Strategy 1: Extract from markdown code blocks (most common)
+  const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (codeBlockMatch) {
+    jsonStr = codeBlockMatch[1].trim()
   }
 
-  // Try to find JSON object
-  const objectMatch = jsonStr.match(/\{[\s\S]*\}/)
-  if (objectMatch) {
-    jsonStr = objectMatch[0]
+  // Strategy 2: Find JSON object boundaries more carefully
+  // This handles cases where there's text before or after the JSON
+  const firstBrace = jsonStr.indexOf('{')
+  const lastBrace = jsonStr.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    jsonStr = jsonStr.slice(firstBrace, lastBrace + 1)
   }
 
-  try {
-    const parsed = JSON.parse(jsonStr) as GeneratedPrd
+  // Strategy 3: Try to fix common JSON issues before parsing
+  // Remove trailing commas before } or ]
+  jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1')
 
+  // Try to parse with multiple strategies
+  const parseAttempts = [
+    // Attempt 1: Parse as-is
+    () => JSON.parse(jsonStr),
+    // Attempt 2: Try relaxed JSON parsing (handle unescaped newlines in strings)
+    () => {
+      // Replace unescaped newlines inside strings with \\n
+      const relaxed = jsonStr.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, (match) => {
+        return match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')
+      })
+      return JSON.parse(relaxed)
+    },
+  ]
+
+  let parsed: GeneratedPrd | null = null
+  let lastError: Error | null = null
+
+  for (const attempt of parseAttempts) {
+    try {
+      parsed = attempt() as GeneratedPrd
+      break
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error('Parse error')
+    }
+  }
+
+  if (parsed) {
     // Validate required fields
     if (!parsed.title) {
       parsed.title = `AI Visibility PRD: ${siteContext.businessName || siteContext.domain}`
@@ -519,24 +549,25 @@ function parsePrdResponse(
       contentPrompts: Array.isArray(task.contentPrompts) ? task.contentPrompts : null,
     }))
 
+    log.info(runId, `PRD parsed successfully: ${parsed.tasks.length} tasks`)
     return parsed
+  }
 
-  } catch (parseError) {
-    log.error(runId, 'Failed to parse PRD JSON', parseError instanceof Error ? parseError.message : 'Parse error')
-    // Log start and end of the response to help debug
-    log.error(runId, 'Response START (500 chars)', jsonStr.slice(0, 500))
-    log.error(runId, 'Response END (500 chars)', jsonStr.slice(-500))
-    log.error(runId, 'Total response length', String(jsonStr.length))
+  // All parsing attempts failed - log detailed debug info
+  log.error(runId, 'Failed to parse PRD JSON after all attempts', lastError?.message || 'Unknown error')
+  log.error(runId, 'Original response length', String(text.length))
+  log.error(runId, 'Processed JSON length', String(jsonStr.length))
+  log.error(runId, 'Response preview (first 1000 chars)', text.slice(0, 1000))
+  log.error(runId, 'Response preview (last 500 chars)', text.slice(-500))
 
-    // Return minimal valid structure
-    return {
-      title: `AI Visibility PRD: ${siteContext.businessName || siteContext.domain}`,
-      overview: 'PRD generation encountered an error. Please try regenerating.',
-      goals: ['Generation encountered a parsing error - please regenerate'],
-      techStack: siteContext.techStack || ['Next.js', 'React', 'TypeScript'],
-      targetPlatforms: ['Web'],
-      tasks: [],
-    }
+  // Return minimal valid structure
+  return {
+    title: `AI Visibility PRD: ${siteContext.businessName || siteContext.domain}`,
+    overview: 'PRD generation encountered an error. Please try regenerating.',
+    goals: ['Generation encountered a parsing error - please regenerate'],
+    techStack: siteContext.techStack || ['Next.js', 'React', 'TypeScript'],
+    targetPlatforms: ['Web'],
+    tasks: [],
   }
 }
 

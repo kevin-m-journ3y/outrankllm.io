@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, Loader2, ArrowRight, Sparkles, Lock, Globe } from 'lucide-react'
 import { Nav } from '@/components/nav/Nav'
@@ -13,12 +13,12 @@ interface VerificationData {
   email: string
   tier: string
   isNewDomain: boolean
+  isUpgrade: boolean
   domain: string | null
 }
 
 function SuccessContent() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const [status, setStatus] = useState<PageStatus>('loading')
   const [reportToken, setReportToken] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -60,6 +60,7 @@ function SuccessContent() {
           email: data.email,
           tier: data.tier,
           isNewDomain: data.isNewDomain,
+          isUpgrade: data.isUpgrade || false,
           domain: data.domain,
         })
 
@@ -157,12 +158,13 @@ function SuccessContent() {
     )
   }
 
-  // Complete state - different content for domain additions vs first-time signup
+  // Complete state - different content for domain additions, upgrades, vs first-time signup
   const isNewDomain = verificationData?.isNewDomain
+  const isUpgrade = verificationData?.isUpgrade
   const domain = verificationData?.domain
 
   if (isNewDomain && domain) {
-    // Domain addition success
+    // Domain addition success (e.g., Agency user adding second domain)
     return (
       <div className="text-center">
         <div
@@ -193,7 +195,7 @@ function SuccessContent() {
             </li>
             <li className="flex items-center gap-3 text-sm">
               <Sparkles className="w-4 h-4 text-[var(--green)]" />
-              <span>Results ready in ~5 minutes</span>
+              <span>Ready in ~10-15 minutes</span>
             </li>
             <li className="flex items-center gap-3 text-sm">
               <Sparkles className="w-4 h-4 text-[var(--green)]" />
@@ -210,6 +212,71 @@ function SuccessContent() {
           Go to Dashboard
           <ArrowRight className="w-4 h-4" />
         </Link>
+      </div>
+    )
+  }
+
+  if (isUpgrade && domain) {
+    // Upgrade from free - enriching existing report (no new scan)
+    return (
+      <div className="text-center">
+        <div
+          className="w-16 h-16 rounded-full bg-[var(--green)]/10 flex items-center justify-center"
+          style={{ margin: '0 auto 24px' }}
+        >
+          <Sparkles className="w-8 h-8 text-[var(--green)]" />
+        </div>
+
+        <h1 className="text-3xl font-medium" style={{ marginBottom: '12px' }}>
+          Subscription Activated
+        </h1>
+        <p className="text-[var(--text-mid)] text-lg" style={{ marginBottom: '32px' }}>
+          Upgrading your report for <span className="font-mono text-[var(--text)]">{domain}</span>
+        </p>
+
+        <div
+          className="border border-[var(--border)] bg-[var(--surface)]"
+          style={{ padding: '24px', marginBottom: '32px' }}
+        >
+          <h2 className="font-mono text-sm text-[var(--text-dim)] uppercase tracking-wider" style={{ marginBottom: '16px' }}>
+            What happens next
+          </h2>
+          <ul className="text-left" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <li className="flex items-center gap-3 text-sm">
+              <Sparkles className="w-4 h-4 text-[var(--green)]" />
+              <span>Enriching your existing report</span>
+            </li>
+            <li className="flex items-center gap-3 text-sm">
+              <Sparkles className="w-4 h-4 text-[var(--green)]" />
+              <span>Adding competitor analysis & action plans</span>
+            </li>
+            <li className="flex items-center gap-3 text-sm">
+              <Sparkles className="w-4 h-4 text-[var(--green)]" />
+              <span>Ready in ~10-15 minutes</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link
+            href="/dashboard"
+            className="form-button inline-flex items-center justify-center gap-2"
+            style={{ padding: '16px 28px' }}
+          >
+            Go to Dashboard
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          {reportToken && (
+            <Link
+              href={`/report/${reportToken}`}
+              className="inline-flex items-center justify-center gap-2 border border-[var(--border)] text-[var(--text-mid)] hover:border-[var(--green)] hover:text-[var(--text)] transition-colors font-mono text-sm"
+              style={{ padding: '16px 28px' }}
+            >
+              View Your Report
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          )}
+        </div>
       </div>
     )
   }

@@ -54,8 +54,9 @@ export async function GET(request: NextRequest) {
 
     // Check if this is a domain addition (has domain_subscription_id in metadata)
     const domainSubscriptionId = session.metadata?.domain_subscription_id
-    let domain: string | null = null
+    let domain: string | null = session.metadata?.domain || null
     let isNewDomain = false
+    let isUpgrade = false
 
     if (domainSubscriptionId) {
       // This is a domain addition - get the domain name
@@ -69,6 +70,22 @@ export async function GET(request: NextRequest) {
         domain = domainSub.domain
         isNewDomain = true
       }
+    } else if (domain) {
+      // Not a domain addition - check if this is an upgrade (existing scan being enriched)
+      // An upgrade means user had a free report and is now subscribing to get enrichment
+      const { data: existingScan } = await supabase
+        .from('scan_runs')
+        .select('id')
+        .eq('lead_id', leadId)
+        .eq('domain', domain)
+        .eq('status', 'complete')
+        .limit(1)
+        .single()
+
+      if (existingScan) {
+        // User has an existing completed scan - this is an upgrade, not a new scan
+        isUpgrade = true
+      }
     }
 
     return NextResponse.json({
@@ -76,6 +93,7 @@ export async function GET(request: NextRequest) {
       tier: lead.tier,
       hasPassword: !!lead.password_hash,
       isNewDomain,
+      isUpgrade,
       domain,
     })
   } catch (error) {

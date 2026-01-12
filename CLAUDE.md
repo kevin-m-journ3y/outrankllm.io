@@ -610,6 +610,88 @@ feedback
 └── created_at
 ```
 
+## Multi-Domain Subscriptions
+
+All subscribers (Starter, Pro, Agency) can monitor multiple domains. Each domain has its own subscription, scans, and enrichment data.
+
+### Data Model
+
+```
+leads (user account)
+  │
+  ├─→ domain_subscriptions (one per monitored domain)
+  │     ├── domain, tier, stripe_subscription_id
+  │     ├── scan_schedule_day/hour/timezone
+  │     │
+  │     ├─→ scan_runs (domain column links to this subscription)
+  │     │     ├─→ site_analyses, scan_prompts, llm_responses
+  │     │     └─→ reports
+  │     │
+  │     ├─→ subscriber_questions (per-domain)
+  │     ├─→ subscriber_competitors (per-domain)
+  │     ├─→ action_plans (per-domain)
+  │     └─→ prd_documents (per-domain)
+```
+
+### Critical: Domain Isolation
+
+**NEVER use `lead.domain`** for multi-domain features. The `leads.domain` field is a legacy single-value field from before multi-domain support.
+
+**Domain Resolution Priority** (used in enrichment, PRD generation, etc.):
+1. `domain_subscriptions.domain` (if `domainSubscriptionId` provided)
+2. `scan_runs.domain` (added in migration 032)
+3. `lead.domain` (legacy fallback only)
+
+### Key Files
+- `src/lib/subscriptions.ts` - Domain subscription CRUD
+- `src/app/api/subscriptions/route.ts` - Create/list subscriptions
+- `supabase/migrations/030_domain_subscriptions.sql` - Schema
+- `supabase/migrations/031_domain_subscription_isolation.sql` - Add domain_subscription_id to all tables
+- `supabase/migrations/032_fix_scan_domain_tracking.sql` - Add domain column to scan_runs
+
+---
+
+## Bug Fix History
+
+### 2025-01-12: Multi-Domain Data Isolation Fix
+
+**Problem**: When subscribers added a second domain (e.g., j4rvis.com after mantel.com.au):
+1. First domain's report "disappeared" from dashboard
+2. Second domain got brand awareness but NO action plans or PRDs
+3. Data from first domain contaminated second domain
+
+**Root Cause**: System assumed single domain per user via `leads.domain` field. The Stripe webhook was linking ALL scans to any new domain subscription, and enrichment was using `lead.domain` instead of the actual domain being enriched.
+
+**Fix** (Migration 032 + code changes):
+
+| Component | Issue | Fix |
+|-----------|-------|-----|
+| `scan_runs` table | No domain column | Added `domain` TEXT column |
+| Stripe webhook | Linked ALL scans to new subscription | Filter by `.eq('domain', domain)` |
+| `enrich-subscriber.ts` | Used `lead.domain` | Resolve from subscription → scan_run → lead |
+| `process-scan.ts` | Didn't store domain | Store `domain` on insert/update |
+| `/api/scan` | Free user check was per-lead | Added domain filter to queries |
+| `/api/user/report` | Returned `lead.domain` | Return `scanRun.domain` |
+| `/api/prd` | Used `lead.domain` for PRD | Resolve domain like enrichment |
+
+**Migration 032 Data Repair**:
+- Backfills `domain` from `domain_subscriptions` or `leads`
+- Unlinks scans from wrong `domain_subscription_id`
+- Re-links scans to correct subscription by matching domain
+
+**Files Modified**:
+- `src/app/api/stripe/webhook/route.ts`
+- `src/inngest/functions/enrich-subscriber.ts`
+- `src/inngest/functions/process-scan.ts`
+- `src/app/api/scan/route.ts`
+- `src/app/api/user/report/route.ts`
+- `src/app/api/prd/route.ts`
+- `src/app/api/admin/rescan/route.ts`
+
+**Validation**: `app/scripts/validate-multi-domain-fix.ts`
+
+---
+
 ## Design Notes
 
 - Green (#22c55e) = primary accent
