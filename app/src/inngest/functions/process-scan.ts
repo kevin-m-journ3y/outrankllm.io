@@ -173,31 +173,34 @@ export const processScan = inngest.createFunction(
       const finalLocation = geoResult.location || analysis.location
       const hasMetaDescriptions = crawlResult.pages.some((p) => p.hasMetaDescription)
 
-      // Save site analysis
-      await supabase.from("site_analyses").insert({
-        run_id: scanId,
-        business_type: analysis.businessType,
-        business_name: analysis.businessName,
-        services: analysis.services,
-        products: analysis.products || [],
-        location: finalLocation,
-        locations: analysis.locations || [],
-        target_audience: analysis.targetAudience,
-        key_phrases: analysis.keyPhrases,
-        industry: analysis.industry,
-        pages_crawled: crawlResult.totalPages,
-        raw_content: combinedContent.slice(0, 50000),
-        tld_country: geoResult.tldCountry,
-        detected_country: geoResult.country,
-        geo_confidence: geoResult.confidence,
-        has_sitemap: crawlResult.hasSitemap,
-        has_robots_txt: crawlResult.hasRobotsTxt,
-        schema_types: crawlResult.schemaTypes,
-        extracted_locations: crawlResult.extractedLocations,
-        extracted_services: crawlResult.extractedServices,
-        extracted_products: crawlResult.extractedProducts,
-        has_meta_descriptions: hasMetaDescriptions,
-      })
+      // Save site analysis (upsert to handle retries - prevents duplicate records)
+      await supabase.from("site_analyses").upsert(
+        {
+          run_id: scanId,
+          business_type: analysis.businessType,
+          business_name: analysis.businessName,
+          services: analysis.services,
+          products: analysis.products || [],
+          location: finalLocation,
+          locations: analysis.locations || [],
+          target_audience: analysis.targetAudience,
+          key_phrases: analysis.keyPhrases,
+          industry: analysis.industry,
+          pages_crawled: crawlResult.totalPages,
+          raw_content: combinedContent.slice(0, 50000),
+          tld_country: geoResult.tldCountry,
+          detected_country: geoResult.country,
+          geo_confidence: geoResult.confidence,
+          has_sitemap: crawlResult.hasSitemap,
+          has_robots_txt: crawlResult.hasRobotsTxt,
+          schema_types: crawlResult.schemaTypes,
+          extracted_locations: crawlResult.extractedLocations,
+          extracted_services: crawlResult.extractedServices,
+          extracted_products: crawlResult.extractedProducts,
+          has_meta_descriptions: hasMetaDescriptions,
+        },
+        { onConflict: "run_id" }
+      )
 
       return {
         analysis,

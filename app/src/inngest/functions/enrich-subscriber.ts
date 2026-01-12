@@ -122,28 +122,16 @@ export const enrichSubscriber = inngest.createFunction(
 
       // Get site analysis for this scan
       // Note: This data is created by process-scan step 3 (analyze-content)
-      // In rare cases (re-triggers, database lag), we may need to wait for it
-      let analysis = null
-      const maxRetries = 3
-      const retryDelayMs = 2000
+      // Use .limit(1) instead of .single() to handle cases where retries created duplicates
+      // Order by created_at desc to get the most recent one
+      const { data: analysisRows } = await supabase
+        .from("site_analyses")
+        .select("*")
+        .eq("run_id", scanRunId)
+        .order("created_at", { ascending: false })
+        .limit(1)
 
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        const { data } = await supabase
-          .from("site_analyses")
-          .select("*")
-          .eq("run_id", scanRunId)
-          .single()
-
-        if (data) {
-          analysis = data
-          break
-        }
-
-        if (attempt < maxRetries) {
-          log.warn(scanRunId, `Site analysis not found (attempt ${attempt}/${maxRetries}), retrying in ${retryDelayMs}ms...`)
-          await new Promise(resolve => setTimeout(resolve, retryDelayMs))
-        }
-      }
+      const analysis = analysisRows?.[0] || null
 
       if (!analysis) {
         // Check if the scan run even exists and what its status is
