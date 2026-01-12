@@ -181,14 +181,47 @@ async function handleDomainSubscriptionCheckout(
     .update({ tier: highestTier })
     .eq('id', leadId)
 
-  // If this domain has existing scans, trigger enrichment for the latest one
-  const { data: scanRuns } = await supabase
-    .from('scan_runs')
-    .select('id')
-    .eq('domain_subscription_id', domainSubscriptionId)
-    .eq('status', 'complete')
-    .order('created_at', { ascending: false })
-    .limit(1)
+  // Find existing scans for this domain - they may not have domain_subscription_id yet
+  // because the free scan was created before the subscription
+  // Look up by lead_id + domain first, then fall back to domain_subscription_id
+  let scanRuns: { id: string }[] | null = null
+
+  if (domain) {
+    // First, find scans by lead_id + domain (covers free scans that predate subscription)
+    const { data: leadScans } = await supabase
+      .from('scan_runs')
+      .select('id')
+      .eq('lead_id', leadId)
+      .eq('domain', domain)
+      .eq('status', 'complete')
+      .order('created_at', { ascending: false })
+
+    if (leadScans && leadScans.length > 0) {
+      scanRuns = leadScans
+
+      // Link all these scans to the new domain subscription
+      const scanIds = leadScans.map((s) => s.id)
+      await supabase
+        .from('scan_runs')
+        .update({ domain_subscription_id: domainSubscriptionId })
+        .in('id', scanIds)
+
+      console.log(`Linked ${scanIds.length} existing scans to domain subscription ${domainSubscriptionId}`)
+    }
+  }
+
+  // Fall back to scans already linked to this domain_subscription_id
+  if (!scanRuns || scanRuns.length === 0) {
+    const { data: linkedScans } = await supabase
+      .from('scan_runs')
+      .select('id')
+      .eq('domain_subscription_id', domainSubscriptionId)
+      .eq('status', 'complete')
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    scanRuns = linkedScans
+  }
 
   if (scanRuns && scanRuns.length > 0) {
     const latestScanId = scanRuns[0].id
