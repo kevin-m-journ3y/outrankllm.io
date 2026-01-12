@@ -3,6 +3,13 @@
  * Crawls a website to extract content for analysis
  */
 
+// Simple logger for crawl debugging
+const crawlLog = {
+  info: (msg: string) => console.log(`[crawl] ${msg}`),
+  warn: (msg: string) => console.warn(`[crawl] ${msg}`),
+  error: (msg: string) => console.error(`[crawl] ${msg}`),
+}
+
 // Fetch with timeout helper
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 10000): Promise<Response> {
   const controller = new AbortController()
@@ -341,6 +348,7 @@ function parseSchemaItem(item: Record<string, unknown>): SchemaData | null {
  * Discover pages by crawling from homepage
  */
 async function discoverPages(domain: string, maxPages = 20): Promise<string[]> {
+  crawlLog.info(`Discovering pages for ${domain} (max ${maxPages})`)
   const discovered = new Set<string>()
   const toVisit: string[] = [`https://${domain}`, `https://www.${domain}`]
   const baseUrls = [`https://${domain}`, `https://www.${domain}`]
@@ -353,20 +361,25 @@ async function discoverPages(domain: string, maxPages = 20): Promise<string[]> {
     if (discovered.has(normalizedUrl)) continue
 
     try {
-      const response = await fetch(url, {
+      crawlLog.info(`Discovering: ${url}`)
+      const response = await fetchWithTimeout(url, {
         headers: { 'User-Agent': 'outrankllm-crawler/1.0' },
         redirect: 'follow',
-      })
+      }, 15000) // 15s timeout per page
 
-      if (!response.ok) continue
+      if (!response.ok) {
+        crawlLog.warn(`Discovery failed (${response.status}): ${url}`)
+        continue
+      }
 
       const html = await response.text()
       discovered.add(normalizedUrl)
+      crawlLog.info(`Discovered ${discovered.size}/${maxPages}: ${normalizedUrl}`)
 
       // Extract internal links
       const linkMatches = html.matchAll(/<a[^>]+href=["']([^"']+)["']/gi)
       for (const match of linkMatches) {
-        let href = match[1]
+        const href = match[1]
 
         // Skip non-page links
         if (
@@ -411,11 +424,12 @@ async function discoverPages(domain: string, maxPages = 20): Promise<string[]> {
 
       // Small delay between requests
       await new Promise((resolve) => setTimeout(resolve, 200))
-    } catch {
-      // Failed to fetch, skip
+    } catch (error) {
+      crawlLog.warn(`Discovery error for ${url}: ${error instanceof Error ? error.message : 'Unknown'}`)
     }
   }
 
+  crawlLog.info(`Discovery complete: ${discovered.size} pages found`)
   return Array.from(discovered)
 }
 
@@ -424,13 +438,18 @@ async function discoverPages(domain: string, maxPages = 20): Promise<string[]> {
  */
 async function extractPageContent(url: string): Promise<CrawledPage | null> {
   try {
-    const response = await fetch(url, {
+    crawlLog.info(`Extracting content: ${url}`)
+    const response = await fetchWithTimeout(url, {
       headers: { 'User-Agent': 'outrankllm-crawler/1.0' },
-    })
+    }, 15000) // 15s timeout per page
 
-    if (!response.ok) return null
+    if (!response.ok) {
+      crawlLog.warn(`Extract failed (${response.status}): ${url}`)
+      return null
+    }
 
     const html = await response.text()
+    crawlLog.info(`Extracted ${html.length} bytes from ${url}`)
     const path = new URL(url).pathname
 
     // Extract title
@@ -501,22 +520,31 @@ async function extractPageContent(url: string): Promise<CrawledPage | null> {
  * Main crawl function
  */
 export async function crawlSite(domain: string): Promise<CrawlResult> {
+  crawlLog.info(`Starting crawl for ${domain}`)
+  const startTime = Date.now()
+
   // Check for sitemap and robots.txt in parallel
+  crawlLog.info(`Checking sitemap and robots.txt...`)
   const [sitemapResult, hasRobotsTxt] = await Promise.all([
     fetchSitemap(domain),
     checkRobotsTxt(domain),
   ])
+  crawlLog.info(`Sitemap: ${sitemapResult.found ? `found (${sitemapResult.urls.length} URLs)` : 'not found'}, robots.txt: ${hasRobotsTxt}`)
 
   // Use sitemap URLs or fall back to discovery
   let urls = sitemapResult.urls
   if (urls.length === 0) {
+    crawlLog.info(`No sitemap URLs, falling back to discovery...`)
     urls = await discoverPages(domain, 15)
   }
 
   // Ensure we have at least the homepage
   if (urls.length === 0) {
+    crawlLog.warn(`No URLs found, using homepage fallback`)
     urls = [`https://${domain}`, `https://www.${domain}`]
   }
+
+  crawlLog.info(`Crawling ${Math.min(urls.length, 15)} pages...`)
 
   // Crawl each page
   const pages: CrawledPage[] = []
@@ -524,10 +552,13 @@ export async function crawlSite(domain: string): Promise<CrawlResult> {
     const page = await extractPageContent(url)
     if (page) {
       pages.push(page)
+      crawlLog.info(`Crawled ${pages.length}/15: ${page.path}`)
     }
     // Small delay
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
+
+  crawlLog.info(`Crawl complete: ${pages.length} pages in ${Date.now() - startTime}ms`)
 
   // Aggregate schema data from all pages
   const allSchemas = pages.flatMap(p => p.schemaData)
