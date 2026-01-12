@@ -121,14 +121,43 @@ export const enrichSubscriber = inngest.createFunction(
       }
 
       // Get site analysis for this scan
-      const { data: analysis } = await supabase
-        .from("site_analyses")
-        .select("*")
-        .eq("run_id", scanRunId)
-        .single()
+      // Note: This data is created by process-scan step 3 (analyze-content)
+      // In rare cases (re-triggers, database lag), we may need to wait for it
+      let analysis = null
+      const maxRetries = 3
+      const retryDelayMs = 2000
+
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        const { data } = await supabase
+          .from("site_analyses")
+          .select("*")
+          .eq("run_id", scanRunId)
+          .single()
+
+        if (data) {
+          analysis = data
+          break
+        }
+
+        if (attempt < maxRetries) {
+          log.warn(scanRunId, `Site analysis not found (attempt ${attempt}/${maxRetries}), retrying in ${retryDelayMs}ms...`)
+          await new Promise(resolve => setTimeout(resolve, retryDelayMs))
+        }
+      }
 
       if (!analysis) {
-        throw new Error(`Site analysis not found for scan: ${scanRunId}`)
+        // Check if the scan run even exists and what its status is
+        const { data: scanRun } = await supabase
+          .from("scan_runs")
+          .select("status, progress")
+          .eq("id", scanRunId)
+          .single()
+
+        if (!scanRun) {
+          throw new Error(`Scan run not found: ${scanRunId}`)
+        }
+
+        throw new Error(`Site analysis not found for scan: ${scanRunId} (scan status: ${scanRun.status}, progress: ${scanRun.progress}%). This may be a re-triggered event for a scan that failed before analysis completed.`)
       }
 
       // Get competitors to compare against

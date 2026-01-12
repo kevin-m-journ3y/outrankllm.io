@@ -1,4 +1,5 @@
 import { inngest } from "../client"
+import { enrichSubscriber } from "./enrich-subscriber"
 import { createServiceClient } from "@/lib/supabase/server"
 import { crawlSite, combineCrawledContent } from "@/lib/ai/crawl"
 import { analyzeWebsite } from "@/lib/ai/analyze"
@@ -645,32 +646,22 @@ export const processScan = inngest.createFunction(
     const isSubscriberForEnrichment = userTier !== "free"
 
     if (isSubscriberForEnrichment) {
-      await step.run("trigger-enrichment", async () => {
-        const supabase = createServiceClient()
+      // Use step.invoke to directly call enrichSubscriber function
+      // This ensures enrichment only starts after process-scan data is fully committed
+      // Unlike inngest.send(), step.invoke waits for the child function to complete
+      log.step(scanId, "Invoking subscriber enrichment")
 
-        log.step(scanId, "Triggering subscriber enrichment")
-
-        // Mark enrichment as pending (will be updated to processing by enrich-subscriber)
-        await supabase
-          .from("scan_runs")
-          .update({
-            enrichment_status: "pending",
-          })
-          .eq("id", scanId)
-
-        // Send event to trigger the enrich-subscriber function
-        await inngest.send({
-          name: "subscriber/enrich",
-          data: {
-            leadId,
-            scanRunId: scanId,
-            domainSubscriptionId: domainSubscriptionId || undefined,
-          },
-        })
-
-        log.info(scanId, "Enrichment event sent")
-        return { triggered: true }
+      await step.invoke("invoke-enrichment", {
+        function: enrichSubscriber,
+        data: {
+          leadId,
+          scanRunId: scanId,
+          domainSubscriptionId: domainSubscriptionId || undefined,
+        },
+        timeout: "15m", // Match the enrichment function's timeout
       })
+
+      log.done(scanId, "Enrichment complete")
     } else {
       // Mark as not applicable for free users
       await step.run("mark-enrichment-not-applicable", async () => {

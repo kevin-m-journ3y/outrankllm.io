@@ -220,17 +220,19 @@ process-scan (10m timeout):
   ├─ query-platform-gemini   │
   └─ query-platform-perplexity┘
     ↓
-  update-progress → finalize-report → trigger-enrichment → send-email
-
-enrich-subscriber (15m timeout):
-  setup-enrichment → brand-awareness-setup
-    ↓
-  ┌─ brand-awareness-chatgpt ─┐
-  ├─ brand-awareness-claude   ├─ ALL RUN IN PARALLEL
-  ├─ brand-awareness-gemini   │
-  └─ brand-awareness-perplexity┘
-    ↓
-  brand-awareness-save → competitive-summary → generate-action-plan → generate-prd → finalize
+  update-progress → finalize-report → invoke-enrichment (step.invoke) → send-email
+                                             │
+                                             ↓ (synchronous call)
+                                    enrich-subscriber (15m timeout):
+                                      setup-enrichment → brand-awareness-setup
+                                        ↓
+                                      ┌─ brand-awareness-chatgpt ─┐
+                                      ├─ brand-awareness-claude   ├─ PARALLEL
+                                      ├─ brand-awareness-gemini   │
+                                      └─ brand-awareness-perplexity┘
+                                        ↓
+                                      brand-awareness-save → competitive-summary
+                                        → generate-action-plan → generate-prd → finalize
 ```
 
 **Benefits**:
@@ -238,6 +240,7 @@ enrich-subscriber (15m timeout):
 - Independent retries per platform (if Gemini fails, only Gemini retries)
 - Better observability in Inngest dashboard
 - Each step has its own timeout budget
+- `step.invoke` ensures enrichment only starts after scan data is committed (no race conditions)
 
 ### Weekly CRON Scans
 - `hourly-scan-dispatcher` runs every hour (`0 * * * *`)
