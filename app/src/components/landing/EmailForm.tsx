@@ -29,6 +29,7 @@ export function EmailForm({ onSuccess }: EmailFormProps) {
   const [cleanedDomain, setCleanedDomain] = useState('')
   const [userReport, setUserReport] = useState<UserReport | null>(null)
   const [loadingReport, setLoadingReport] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
 
   // Fetch user's report when logged in
   useEffect(() => {
@@ -65,7 +66,11 @@ export function EmailForm({ onSuccess }: EmailFormProps) {
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: session ? session.email : email.trim(), domain: cleanDomain }),
+        body: JSON.stringify({
+          email: session ? session.email : email.trim(),
+          domain: cleanDomain,
+          agreedToTerms,
+        }),
       })
 
       const data = await response.json()
@@ -181,10 +186,32 @@ export function EmailForm({ onSuccess }: EmailFormProps) {
           disabled={status === 'loading'}
           className="form-input"
         />
+        <label className="flex items-start gap-3 cursor-pointer" style={{ padding: '8px 0' }}>
+          <input
+            type="checkbox"
+            checked={agreedToTerms}
+            onChange={(e) => setAgreedToTerms(e.target.checked)}
+            disabled={status === 'loading'}
+            className="mt-1 w-4 h-4 accent-[var(--green)] cursor-pointer"
+            style={{ flexShrink: 0 }}
+          />
+          <span className="text-xs text-[var(--text-dim)]">
+            I agree to the{' '}
+            <Link
+              href="/terms"
+              target="_blank"
+              className="text-[var(--green)] hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Terms & Conditions
+            </Link>
+          </span>
+        </label>
         <button
           type="submit"
-          disabled={status === 'loading'}
+          disabled={status === 'loading' || !agreedToTerms}
           className="form-button flex items-center justify-center gap-2"
+          title={!agreedToTerms ? 'Please agree to the Terms & Conditions' : undefined}
         >
           {status === 'loading' ? (
             <>

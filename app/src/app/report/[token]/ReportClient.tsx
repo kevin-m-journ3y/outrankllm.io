@@ -262,6 +262,7 @@ export function ReportClient({ data, showLockedModal = false }: ReportClientProp
     // Store lead info for checkout process
     sessionStorage.setItem('checkout_lead_id', data.leadId)
     sessionStorage.setItem('checkout_report_token', report.url_token)
+    sessionStorage.setItem('checkout_domain', domain)
     window.location.href = '/pricing?from=report'
   }
 

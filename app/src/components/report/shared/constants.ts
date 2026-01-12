@@ -17,8 +17,8 @@ export const tabs: Tab[] = [
   { id: 'readiness', label: 'AI Readiness', icon: Shield },
   { id: 'responses', label: 'AI Responses', icon: MessageSquare },
   { id: 'measurements', label: 'Measurements', icon: BarChart3 },
-  { id: 'competitors', label: 'Competitors', icon: Users },
-  { id: 'brandAwareness', label: 'Brand Awareness', icon: Brain },
+  { id: 'competitors', label: 'Competitors', icon: Users, premium: true },
+  { id: 'brandAwareness', label: 'Brand Awareness', icon: Brain, premium: true },
   { id: 'actions', label: 'Action Plans', icon: Lightbulb, locked: true, premium: true, lockMessage: 'Subscribers get personalized action plans' },
   { id: 'prd', label: 'PRD & Specs', icon: FileCode, locked: true, premium: true, lockMessage: 'Subscribers get ready-to-ship PRDs' },
 ]

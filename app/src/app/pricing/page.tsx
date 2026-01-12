@@ -154,7 +154,8 @@ function PricingCards() {
     leadId: string | null
     reportToken: string | null
     fromReport: boolean
-  }>({ leadId: null, reportToken: null, fromReport: false })
+    domain: string | null
+  }>({ leadId: null, reportToken: null, fromReport: false, domain: null })
 
   // Detect region on mount
   useEffect(() => {
@@ -201,13 +202,41 @@ function PricingCards() {
     detectRegion()
   }, [searchParams])
 
-  // Get checkout context
+  // Get checkout context (including domain from report)
   useEffect(() => {
-    const leadId = sessionStorage.getItem('checkout_lead_id')
-    const reportToken = sessionStorage.getItem('checkout_report_token')
-    const fromReport = searchParams.get('from') === 'report'
+    const fetchCheckoutContext = async () => {
+      const leadId = sessionStorage.getItem('checkout_lead_id')
+      const reportToken = sessionStorage.getItem('checkout_report_token')
+      const fromReport = searchParams.get('from') === 'report'
+      const storedDomain = sessionStorage.getItem('checkout_domain')
 
-    setCheckoutContext({ leadId, reportToken, fromReport })
+      // If we have a stored domain, use it
+      if (storedDomain) {
+        setCheckoutContext({ leadId, reportToken, fromReport, domain: storedDomain })
+        return
+      }
+
+      // If we have a reportToken, fetch the domain from the report
+      if (reportToken) {
+        try {
+          const response = await fetch(`/api/report/${reportToken}/domain`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.domain) {
+              sessionStorage.setItem('checkout_domain', data.domain)
+              setCheckoutContext({ leadId, reportToken, fromReport, domain: data.domain })
+              return
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch domain from report:', e)
+        }
+      }
+
+      setCheckoutContext({ leadId, reportToken, fromReport, domain: null })
+    }
+
+    fetchCheckoutContext()
   }, [searchParams])
 
   const handleToggleRegion = useCallback(() => {
@@ -228,17 +257,23 @@ function PricingCards() {
       return
     }
 
+    // Check if we have a domain (required for new subscription flow)
+    if (!checkoutContext.domain) {
+      setError('Could not determine domain for subscription. Please try again from your report.')
+      return
+    }
+
     setLoadingTier(tier)
 
     try {
-      const response = await fetch('/api/stripe/checkout', {
+      // Use the new domain subscription API
+      const response = await fetch('/api/subscriptions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          domain: checkoutContext.domain,
           tier,
-          leadId: checkoutContext.leadId,
-          reportToken: checkoutContext.reportToken,
-          region, // Pass region for correct price selection
+          region,
         }),
       })
 

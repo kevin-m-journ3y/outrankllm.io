@@ -36,6 +36,7 @@ function SuccessContent() {
     // Clear checkout context from session storage
     sessionStorage.removeItem('checkout_lead_id')
     sessionStorage.removeItem('checkout_report_token')
+    sessionStorage.removeItem('checkout_domain')
 
     if (!sid) {
       setStatus('error')

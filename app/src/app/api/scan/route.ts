@@ -8,6 +8,9 @@ import crypto from 'crypto'
 const ScanRequestSchema = z.object({
   email: z.string().email('Invalid email address'),
   domain: z.string().min(3, 'Domain must be at least 3 characters'),
+  agreedToTerms: z.boolean().refine(val => val === true, {
+    message: 'You must agree to the Terms & Conditions',
+  }),
 })
 
 export async function POST(request: NextRequest) {
@@ -23,7 +26,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { email, domain } = result.data
+    const { email, domain, agreedToTerms } = result.data
 
     // Normalize email to lowercase for consistent matching
     const normalizedEmail = email.toLowerCase().trim()
@@ -120,10 +123,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert lead record (use normalized email for consistency)
+    // Record terms acceptance timestamp when user agrees
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .upsert(
-        { email: normalizedEmail, domain: cleanDomain },
+        {
+          email: normalizedEmail,
+          domain: cleanDomain,
+          terms_accepted_at: agreedToTerms ? new Date().toISOString() : null,
+        },
         { onConflict: 'email,domain', ignoreDuplicates: false }
       )
       .select('id, email_verified')

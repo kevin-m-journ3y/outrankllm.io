@@ -431,7 +431,7 @@ async function handleSubscriptionDeleted(
     if (scanRuns && scanRuns.length > 0) {
       const runIds = scanRuns.map((r) => r.id)
       const expiresAt = new Date()
-      expiresAt.setDate(expiresAt.getDate() + 3)
+      expiresAt.setDate(expiresAt.getDate() + 7)
 
       await supabase
         .from('reports')
@@ -471,7 +471,7 @@ async function handleSubscriptionDeleted(
   // Revert lead to free tier
   await supabase.from('leads').update({ tier: 'free' }).eq('id', existingSub.lead_id)
 
-  // Re-add expiry to reports (3 days from now)
+  // Re-add expiry to reports (7 days from now)
   const { data: scanRuns } = await supabase
     .from('scan_runs')
     .select('id')
@@ -480,7 +480,7 @@ async function handleSubscriptionDeleted(
   if (scanRuns && scanRuns.length > 0) {
     const runIds = scanRuns.map((r) => r.id)
     const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 3)
+    expiresAt.setDate(expiresAt.getDate() + 7)
 
     await supabase
       .from('reports')
