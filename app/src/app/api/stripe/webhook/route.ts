@@ -183,31 +183,29 @@ async function handleDomainSubscriptionCheckout(
 
   // Find existing scans for this domain - they may not have domain_subscription_id yet
   // because the free scan was created before the subscription
-  // Look up by lead_id + domain first, then fall back to domain_subscription_id
+  // Look up by lead_id first, then fall back to domain_subscription_id
+  // Note: scan_runs doesn't have a domain column - domain is on the leads table
   let scanRuns: { id: string }[] | null = null
 
-  if (domain) {
-    // First, find scans by lead_id + domain (covers free scans that predate subscription)
-    const { data: leadScans } = await supabase
+  // First, find scans by lead_id (covers free scans that predate subscription)
+  const { data: leadScans } = await supabase
+    .from('scan_runs')
+    .select('id')
+    .eq('lead_id', leadId)
+    .eq('status', 'complete')
+    .order('created_at', { ascending: false })
+
+  if (leadScans && leadScans.length > 0) {
+    scanRuns = leadScans
+
+    // Link all these scans to the new domain subscription
+    const scanIds = leadScans.map((s) => s.id)
+    await supabase
       .from('scan_runs')
-      .select('id')
-      .eq('lead_id', leadId)
-      .eq('domain', domain)
-      .eq('status', 'complete')
-      .order('created_at', { ascending: false })
+      .update({ domain_subscription_id: domainSubscriptionId })
+      .in('id', scanIds)
 
-    if (leadScans && leadScans.length > 0) {
-      scanRuns = leadScans
-
-      // Link all these scans to the new domain subscription
-      const scanIds = leadScans.map((s) => s.id)
-      await supabase
-        .from('scan_runs')
-        .update({ domain_subscription_id: domainSubscriptionId })
-        .in('id', scanIds)
-
-      console.log(`Linked ${scanIds.length} existing scans to domain subscription ${domainSubscriptionId}`)
-    }
+    console.log(`Linked ${scanIds.length} existing scans to domain subscription ${domainSubscriptionId}`)
   }
 
   // Fall back to scans already linked to this domain_subscription_id
