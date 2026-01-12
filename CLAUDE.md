@@ -28,7 +28,7 @@ Pricing varies by region (Australian vs International):
 
 | Tier | AU (AUD) | INTL (USD) | Features |
 |------|----------|------------|----------|
-| Free | $0 | $0 | One report, 3-day expiry, limited features |
+| Free | $0 | $0 | One report, 7-day expiry, limited features |
 | Starter | A$39/mo | $24.99/mo | Full report, no expiry, weekly updates, Action Plans |
 | Pro | A$59/mo | $39.99/mo | + Competitors, Brand Awareness, Action Plans, PRD |
 | Agency | A$199/mo | $139/mo | + Multiple domains, Action Plans, PRD |
@@ -127,7 +127,7 @@ When a subscriber tries to access their report:
 
 ## Report Expiry (Free Users)
 
-- Free reports expire 3 days after creation
+- Free reports expire 7 days after creation
 - `ExpiryCountdown` component shows countdown timer
 - After expiry: Report locked, prompt to subscribe
 - Subscribers: No expiry, timer hidden
@@ -138,9 +138,22 @@ When logged in, the email form shows different states:
 
 | User State | Display |
 |------------|---------|
-| Not logged in | Standard email + domain form |
+| Not logged in | Standard email + domain form + T&Cs checkbox |
 | Logged in (Free/Starter/Pro) | "Welcome back!" + "View Your Report" button |
 | Logged in (Agency) | Form with email locked, "Scan New Domain" button |
+
+### Terms & Conditions Consent
+
+Users must agree to T&Cs before submitting the homepage form:
+- Checkbox required before "Get Free Report" button enables
+- Consent timestamp stored in `leads.terms_accepted_at`
+- Links to `/terms` page (opens in new tab)
+
+### Key Pages
+- `/terms` - Full Terms & Conditions
+- `/about` - Company info (OutrankLLM by JOURN3Y)
+
+Footer contains links to About and Terms pages.
 
 ## Scoring System
 
