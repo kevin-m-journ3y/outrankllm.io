@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient()
     const { data: lead, error: leadError } = await supabase
       .from('leads')
-      .select('id, email, stripe_customer_id')
+      .select('id, email, stripe_customer_id, domain')
       .eq('id', leadId)
       .single()
 
@@ -50,6 +50,22 @@ export async function POST(request: NextRequest) {
         { error: 'Lead not found' },
         { status: 404 }
       )
+    }
+
+    // If report token provided, get the domain from the scan
+    // This helps detect upgrades vs new subscriptions
+    let domain = lead.domain
+    if (reportToken) {
+      const { data: report } = await supabase
+        .from('reports')
+        .select('scan_runs(domain)')
+        .eq('url_token', reportToken)
+        .single()
+
+      if (report?.scan_runs) {
+        const scanRun = report.scan_runs as { domain?: string } | { domain?: string }[]
+        domain = Array.isArray(scanRun) ? scanRun[0]?.domain : scanRun?.domain
+      }
     }
 
     // Get or create Stripe customer
@@ -101,6 +117,7 @@ export async function POST(request: NextRequest) {
         tier: tier,
         region: region,
         report_token: reportToken || '',
+        domain: domain || '',
       },
       subscription_data: {
         metadata: {

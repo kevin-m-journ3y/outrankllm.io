@@ -198,8 +198,7 @@ export function ActionsTab({ runId, domainSubscriptionId, enrichmentStatus = 'no
           status={enrichmentStatus}
           title="Generating Action Plan"
           description="We're analyzing your scan data with Claude's extended thinking to create comprehensive, prioritized recommendations."
-          processingMessage="This usually takes 30-60 seconds as Claude reasons through your data."
-          pendingMessage="Your AI-powered action plan will be generated shortly."
+          runId={runId}
         />
       </div>
     )

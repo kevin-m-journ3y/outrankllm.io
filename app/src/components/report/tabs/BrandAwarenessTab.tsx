@@ -16,6 +16,7 @@ export function BrandAwarenessTab({
   onUpgradeClick,
   isSubscriber = false,
   enrichmentStatus = 'not_applicable',
+  runId,
 }: {
   brandAwareness?: BrandAwarenessResult[] | null
   analysis: Analysis | null
@@ -25,6 +26,7 @@ export function BrandAwarenessTab({
   onUpgradeClick: () => void
   isSubscriber?: boolean
   enrichmentStatus?: EnrichmentStatus
+  runId?: string
 }) {
   // For free tier, show teaser instead of actual data
   if (!isSubscriber) {
@@ -207,8 +209,7 @@ export function BrandAwarenessTab({
           status={enrichmentStatus}
           title="Generating Brand Analysis"
           description="We're asking AI assistants what they know about your brand. This helps identify recognition gaps and competitive positioning."
-          processingMessage="This usually takes about 1 minute."
-          pendingMessage="Your brand analysis will begin shortly. Refresh in a moment."
+          runId={runId}
         />
       </div>
     )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Loader2, Clock, RefreshCw } from 'lucide-react'
 
 type EnrichmentStatus = 'pending' | 'processing' | 'complete' | 'failed' | 'not_applicable'
@@ -12,17 +12,50 @@ interface EnrichmentLoadingProps {
   processingMessage?: string
   pendingMessage?: string
   onRetry?: () => void
+  runId?: string  // Optional: pass runId for polling
 }
 
 export function EnrichmentLoading({
   status,
   title,
   description,
-  processingMessage = 'This usually takes about 1 minute.',
+  processingMessage = 'This usually takes 5-10 minutes.',
   pendingMessage = 'Your premium insights will be ready shortly.',
   onRetry,
+  runId,
 }: EnrichmentLoadingProps) {
   const [dots, setDots] = useState('')
+
+  // Poll for enrichment status and auto-refresh when complete
+  const checkEnrichmentStatus = useCallback(async () => {
+    if (!runId) return false
+
+    try {
+      const response = await fetch(`/api/scan/enrichment-status?runId=${runId}`)
+      if (!response.ok) return false
+
+      const data = await response.json()
+      return data.status === 'complete'
+    } catch {
+      return false
+    }
+  }, [runId])
+
+  // Poll every 15 seconds when processing or pending
+  useEffect(() => {
+    if (status !== 'processing' && status !== 'pending') return
+    if (!runId) return
+
+    const pollInterval = setInterval(async () => {
+      const isComplete = await checkEnrichmentStatus()
+      if (isComplete) {
+        // Refresh the page to show the new data
+        window.location.reload()
+      }
+    }, 15000) // Poll every 15 seconds
+
+    return () => clearInterval(pollInterval)
+  }, [status, runId, checkEnrichmentStatus])
 
   // Animate loading dots
   useEffect(() => {

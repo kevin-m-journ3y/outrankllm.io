@@ -409,8 +409,7 @@ export function PrdTab({ runId, domainSubscriptionId, enrichmentStatus = 'not_ap
           status={enrichmentStatus}
           title="Generating Technical PRD"
           description="We're creating Claude Code / Cursor-ready implementation specs from your action plan. Each task includes code snippets and acceptance criteria."
-          processingMessage="This usually takes 30-60 seconds as we generate detailed implementation tasks."
-          pendingMessage="Your PRD will be generated shortly after the action plan is complete."
+          runId={runId}
         />
       </div>
     )

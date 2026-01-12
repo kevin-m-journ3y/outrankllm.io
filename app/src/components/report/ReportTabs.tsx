@@ -213,6 +213,7 @@ export function ReportTabs({
             onUpgradeClick={onUpgradeClick}
             isSubscriber={isSubscriber}
             enrichmentStatus={enrichmentStatus}
+            runId={currentRunId}
           />
         )}
         {activeTab === 'actions' && (
