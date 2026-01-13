@@ -135,11 +135,13 @@ const readinessChecks: ReadinessCheck[] = [
 export function AIReadinessTab({
   analysis,
   crawlData,
-  domain
+  domain,
+  tier = 'free',
 }: {
   analysis: Analysis | null
   crawlData?: CrawlData
   domain: string
+  tier?: 'free' | 'starter' | 'pro' | 'agency'
 }) {
   const [showStickyUpsell, setShowStickyUpsell] = useState(false)
   const summaryRef = useRef<HTMLDivElement>(null)
@@ -150,6 +152,9 @@ export function AIReadinessTab({
       // Show sticky upsell after minimal scroll (50px)
       setShowStickyUpsell(window.scrollY > 50)
     }
+
+    // Check initial scroll position (in case page loaded scrolled down)
+    handleScroll()
 
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
@@ -272,8 +277,8 @@ export function AIReadinessTab({
         </p>
       </div>
 
-      {/* Sticky Floating Upsell - Different message for passing vs failing sites */}
-      {showStickyUpsell && (
+      {/* Sticky Floating Upsell - Tier-based messaging */}
+      {showStickyUpsell && tier !== 'agency' && (
         <div
           style={{
             position: 'fixed',
@@ -323,7 +328,9 @@ export function AIReadinessTab({
                     </span>
                     <span className="text-[var(--text-ghost)]">•</span>
                     <span className="text-[var(--text-dim)] text-sm">
-                      Get step-by-step fixes
+                      {tier === 'free' && 'Get step-by-step fixes'}
+                      {tier === 'starter' && 'Unlock competitive insights'}
+                      {tier === 'pro' && 'Scale to more domains'}
                     </span>
                   </div>
                 ) : (
@@ -333,7 +340,9 @@ export function AIReadinessTab({
                     </span>
                     <span className="text-[var(--text-ghost)]">•</span>
                     <span className="text-[var(--text-dim)] text-sm">
-                      Monitor weekly to maintain your edge
+                      {tier === 'free' && 'Monitor weekly to maintain your edge'}
+                      {tier === 'starter' && 'See who else AI recommends'}
+                      {tier === 'pro' && 'Track more domains'}
                     </span>
                   </div>
                 )}
@@ -354,7 +363,9 @@ export function AIReadinessTab({
               }}
             >
               <Sparkles size={16} />
-              {failCount > 0 ? 'Get Fixes & Action Plans' : 'Subscribe for Weekly Monitoring'}
+              {tier === 'free' && (failCount > 0 ? 'Get Fixes & Action Plans' : 'Subscribe for Weekly Monitoring')}
+              {tier === 'starter' && 'Unlock Competitors & PRD'}
+              {tier === 'pro' && 'Add More Domains'}
             </Link>
           </div>
         </div>

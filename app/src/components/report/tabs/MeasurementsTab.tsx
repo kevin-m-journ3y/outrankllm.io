@@ -42,6 +42,7 @@ export function MeasurementsTab({
   currentRunId,
   domain,
   domainSubscriptionId,
+  tier = 'free',
 }: {
   visibilityScore: number
   platformScores: Record<string, number>
@@ -52,6 +53,7 @@ export function MeasurementsTab({
   currentRunId?: string
   domain?: string
   domainSubscriptionId?: string | null
+  tier?: 'free' | 'starter' | 'pro' | 'agency'
 }) {
   const [showStickyUpsell, setShowStickyUpsell] = useState(false)
   const [rawTrendData, setRawTrendData] = useState<ScoreSnapshot[]>([])
@@ -225,11 +227,17 @@ export function MeasurementsTab({
   const totalServiceChecks = serviceCheckResults.length
   const serviceKnowledge = totalServiceChecks > 0 ? Math.round((knownServices / totalServiceChecks) * 100) : 0
 
+  // Helper to format percentages with <5% threshold
+  const formatVisibility = (value: number): string => {
+    if (value < 5) return '< 5%'
+    return `${Math.round(value)}%`
+  }
+
   // Define metrics for the table
   const metrics = [
     {
       name: 'Query Coverage',
-      current: `${queryCoverage}%`,
+      current: formatVisibility(queryCoverage),
       description: 'Percentage of queries where your brand was mentioned',
     },
     {
@@ -368,6 +376,8 @@ export function MeasurementsTab({
               ? (stats.total > 0 ? Math.round((stats.mentioned / stats.total) * 100) : 0)
               : (platformScores[platform] ?? 0)
             const color = platformColors[platform] || 'var(--text-dim)'
+            // Show minimum 5% on the ring when score is < 5
+            const displayScore = score < 5 ? 5 : score
 
             return (
               <div
@@ -396,7 +406,7 @@ export function MeasurementsTab({
                       stroke={color}
                       strokeWidth="8"
                       strokeLinecap="round"
-                      strokeDasharray={`${score * 2.64} 264`}
+                      strokeDasharray={`${displayScore * 2.64} 264`}
                       transform="rotate(-90 50 50)"
                       style={{ transition: 'stroke-dasharray 1s ease-out' }}
                     />
@@ -406,7 +416,7 @@ export function MeasurementsTab({
                       className="font-mono font-medium"
                       style={{ fontSize: '32px', color }}
                     >
-                      {score}%
+                      {score < 5 ? '< 5%' : `${score}%`}
                     </span>
                   </div>
                 </div>
@@ -427,7 +437,7 @@ export function MeasurementsTab({
 
                 {/* Mention Count */}
                 <p className="text-[var(--text-dim)] text-xs">
-                  {stats ? `${stats.mentioned}/${stats.total} questions mentioned` : `Score: ${score}%`}
+                  {stats ? `${stats.mentioned}/${stats.total} questions mentioned` : `Score: ${formatVisibility(score)}`}
                 </p>
               </div>
             )
@@ -759,11 +769,16 @@ export function MeasurementsTab({
         </div>
       )}
 
-      {/* Sticky Floating Upsell - Shows when visibility is low and user has scrolled */}
+      {/* Sticky Floating Upsell - Tier-based messaging */}
       {(() => {
         const shouldShowUpsell = queryCoverage < 50 // Show if less than 50% query coverage
 
-        if (!shouldShowUpsell || !showStickyUpsell) return null
+        if (!shouldShowUpsell || !showStickyUpsell || tier === 'agency') return null
+
+        // Format visibility text - show "Less than 5%" for low values
+        const visibilityText = queryCoverage < 5
+          ? 'Less than 5%'
+          : `Only ${queryCoverage}%`
 
         return (
           <div
@@ -802,11 +817,13 @@ export function MeasurementsTab({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[var(--text)] font-medium">
-                      Only {queryCoverage}% AI visibility
+                      {visibilityText} AI visibility
                     </span>
                     <span className="text-[var(--text-ghost)]">•</span>
                     <span className="text-[var(--text-dim)] text-sm">
-                      Get action plans to improve
+                      {tier === 'free' && 'Get action plans to improve'}
+                      {tier === 'starter' && 'Unlock competitor tracking'}
+                      {tier === 'pro' && 'Monitor more domains'}
                     </span>
                   </div>
                 </div>
@@ -827,7 +844,9 @@ export function MeasurementsTab({
                 }}
               >
                 <Sparkles size={16} />
-                Get Fixes & Action Plans
+                {tier === 'free' && 'Get Fixes & Action Plans'}
+                {tier === 'starter' && 'Unlock Competitors & PRD'}
+                {tier === 'pro' && 'Add More Domains'}
               </a>
             </div>
           </div>

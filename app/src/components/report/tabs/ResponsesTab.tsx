@@ -10,11 +10,13 @@ export function ResponsesTab({
   platformFilter,
   onFilterChange,
   domain,
+  tier = 'free',
 }: {
   responses: Response[] | null
   platformFilter: string
   onFilterChange: (filter: string) => void
   domain: string
+  tier?: 'free' | 'starter' | 'pro' | 'agency'
 }) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
   const [mentionsOnly, setMentionsOnly] = useState(false)
@@ -304,12 +306,17 @@ export function ResponsesTab({
         })}
       </div>
 
-      {/* Sticky Floating Upsell - Shows when mention rate is low and user has scrolled */}
+      {/* Sticky Floating Upsell - Tier-based messaging */}
       {(() => {
         const mentionRate = responses.length > 0 ? (mentionCount / responses.length) * 100 : 0
         const shouldShowUpsell = mentionRate < 50 // Show if less than 50% mention rate
 
-        if (!shouldShowUpsell || !showStickyUpsell) return null
+        if (!shouldShowUpsell || !showStickyUpsell || tier === 'agency') return null
+
+        // Format visibility text - show "Less than 5%" for low values
+        const visibilityText = mentionRate < 5
+          ? 'Less than 5%'
+          : `Only ${Math.round(mentionRate)}%`
 
         return (
           <div
@@ -348,11 +355,13 @@ export function ResponsesTab({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[var(--text)] font-medium">
-                      Only {Math.round(mentionRate)}% AI visibility
+                      {visibilityText} AI visibility
                     </span>
                     <span className="text-[var(--text-ghost)]">•</span>
                     <span className="text-[var(--text-dim)] text-sm">
-                      Get action plans to improve
+                      {tier === 'free' && 'Get action plans to improve'}
+                      {tier === 'starter' && 'See who else AI recommends'}
+                      {tier === 'pro' && 'Track more domains'}
                     </span>
                   </div>
                 </div>
@@ -373,7 +382,9 @@ export function ResponsesTab({
                 }}
               >
                 <Sparkles size={16} />
-                Get Fixes & Action Plans
+                {tier === 'free' && 'Get Fixes & Action Plans'}
+                {tier === 'starter' && 'Unlock Competitors & PRD'}
+                {tier === 'pro' && 'Add More Domains'}
               </a>
             </div>
           </div>

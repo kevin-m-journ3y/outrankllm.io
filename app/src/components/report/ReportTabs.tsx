@@ -4,6 +4,20 @@ import { useState, useEffect, useRef } from 'react'
 import { Lock, Lightbulb, FileCode } from 'lucide-react'
 
 import { tabs } from './shared/constants'
+
+// Extend Window type for gtag
+declare global {
+  interface Window {
+    gtag?: (command: string, action: string, params?: Record<string, unknown>) => void
+  }
+}
+
+// Track events to Google Analytics
+function trackEvent(eventName: string, params?: Record<string, string | boolean>) {
+  if (typeof window !== 'undefined' && window.gtag) {
+    window.gtag('event', eventName, params)
+  }
+}
 import type { TabId, Analysis, Response, Prompt, Competitor, CrawlData, BrandAwarenessResult, CompetitiveSummary } from './shared/types'
 
 import {
@@ -125,7 +139,14 @@ export function ReportTabs({
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id)
+                  trackEvent('report_tab_click', {
+                    tab_name: tab.id,
+                    user_tier: tier,
+                    is_subscriber: isSubscriber,
+                  })
+                }}
                 className={`
                   group relative flex flex-col items-center justify-center flex-1 font-mono
                   border-b-2 cursor-pointer
@@ -187,10 +208,11 @@ export function ReportTabs({
             platformFilter={platformFilter}
             onFilterChange={setPlatformFilter}
             domain={domain}
+            tier={tier}
           />
         )}
         {activeTab === 'readiness' && (
-          <AIReadinessTab analysis={analysis} crawlData={crawlData} domain={domain} />
+          <AIReadinessTab analysis={analysis} crawlData={crawlData} domain={domain} tier={tier} />
         )}
         {activeTab === 'measurements' && (
           <MeasurementsTab
@@ -203,6 +225,7 @@ export function ReportTabs({
             currentRunId={currentRunId}
             domain={domain}
             domainSubscriptionId={domainSubscriptionId}
+            tier={tier}
           />
         )}
         {activeTab === 'competitors' && (

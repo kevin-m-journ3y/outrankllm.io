@@ -60,12 +60,13 @@ export function ScoreGauge({ score, size = 'md' }: ScoreGaugeProps) {
       <div
         className="score-gauge-ring"
         style={{
-          background: `conic-gradient(${color} ${animatedScore * 3.6}deg, var(--border) ${animatedScore * 3.6}deg)`,
+          // Show minimum 5% on the ring when score is < 5
+          background: `conic-gradient(${color} ${Math.max(animatedScore, score < 5 ? 5 : 0) * 3.6}deg, var(--border) ${Math.max(animatedScore, score < 5 ? 5 : 0) * 3.6}deg)`,
         }}
       />
       <div className="score-gauge-value">
-        <span className="score-gauge-number" style={{ fontSize, color }}>
-          {animatedScore}
+        <span className="score-gauge-number" style={{ fontSize, color, whiteSpace: 'nowrap' }}>
+          {score < 5 ? '<5%' : animatedScore}
         </span>
         <span className="score-gauge-label" style={{ fontSize: labelSize }}>
           Reach-Weighted Score
