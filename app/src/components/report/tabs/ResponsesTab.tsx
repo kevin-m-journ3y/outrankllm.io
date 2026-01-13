@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { MessageSquare, Filter, CheckCircle2, ChevronDown, AlertCircle, Sparkles, Download } from 'lucide-react'
 import type { Response } from '../shared'
 import { platformColors, platformNames, formatResponseText, handlePricingClick, FilterButton } from '../shared'
+import { UpgradeModal } from '../UpgradeModal'
 
 export function ResponsesTab({
   responses,
@@ -21,6 +22,7 @@ export function ResponsesTab({
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
   const [mentionsOnly, setMentionsOnly] = useState(false)
   const [showStickyUpsell, setShowStickyUpsell] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const firstResponseRef = useRef<HTMLDivElement>(null)
 
   // Generate and download AI responses as markdown
@@ -367,28 +369,52 @@ export function ResponsesTab({
                 </div>
               </div>
 
-              <a
-                href="/pricing?from=report"
-                onClick={handlePricingClick}
-                className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
-                style={{
-                  padding: '12px 24px',
-                  background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%)',
-                  color: 'var(--bg)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  textDecoration: 'none',
-                }}
-              >
-                <Sparkles size={16} />
-                {tier === 'free' && 'Get Fixes & Action Plans'}
-                {tier === 'starter' && 'Upgrade to Pro'}
-              </a>
+              {tier === 'free' ? (
+                <a
+                  href="/pricing?from=report"
+                  onClick={handlePricingClick}
+                  className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
+                  style={{
+                    padding: '12px 24px',
+                    background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%)',
+                    color: 'var(--bg)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                  }}
+                >
+                  <Sparkles size={16} />
+                  Get Fixes & Action Plans
+                </a>
+              ) : (
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
+                  style={{
+                    padding: '12px 24px',
+                    background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%)',
+                    color: 'var(--bg)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                  }}
+                >
+                  <Sparkles size={16} />
+                  Upgrade to Pro
+                </button>
+              )}
             </div>
           </div>
         )
       })()}
+
+      {/* Upgrade Modal for Starter users */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier="starter"
+      />
     </div>
   )
 }

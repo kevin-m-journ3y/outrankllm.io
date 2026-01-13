@@ -5,6 +5,7 @@ import { BarChart3, Lock, AlertCircle, Sparkles, Info, TrendingUp } from 'lucide
 import Link from 'next/link'
 import { ScoreGauge } from '../ScoreGauge'
 import { MultiLineTrendChart, CompetitorMentionsTrendChart, type MultiLineSeries, type CompetitorMentionsSeries } from '../TrendChart'
+import { UpgradeModal } from '../UpgradeModal'
 import type { Response, Analysis, BrandAwarenessResult } from '../shared'
 import { platformColors, platformNames, calculateReadinessScore, handlePricingClick } from '../shared'
 
@@ -56,6 +57,7 @@ export function MeasurementsTab({
   tier?: 'free' | 'starter' | 'pro' | 'agency'
 }) {
   const [showStickyUpsell, setShowStickyUpsell] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [rawTrendData, setRawTrendData] = useState<ScoreSnapshot[]>([])
   const [trendLoading, setTrendLoading] = useState(false)
   const [rawCompetitorData, setRawCompetitorData] = useState<CompetitorSnapshot[]>([])
@@ -829,28 +831,52 @@ export function MeasurementsTab({
                 </div>
               </div>
 
-              <a
-                href="/pricing?from=report"
-                onClick={handlePricingClick}
-                className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
-                style={{
-                  padding: '12px 24px',
-                  background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%)',
-                  color: 'var(--bg)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  textDecoration: 'none',
-                }}
-              >
-                <Sparkles size={16} />
-                {tier === 'free' && 'Get Fixes & Action Plans'}
-                {tier === 'starter' && 'Upgrade to Pro'}
-              </a>
+              {tier === 'free' ? (
+                <a
+                  href="/pricing?from=report"
+                  onClick={handlePricingClick}
+                  className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
+                  style={{
+                    padding: '12px 24px',
+                    background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%)',
+                    color: 'var(--bg)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                  }}
+                >
+                  <Sparkles size={16} />
+                  Get Fixes & Action Plans
+                </a>
+              ) : (
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
+                  style={{
+                    padding: '12px 24px',
+                    background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%)',
+                    color: 'var(--bg)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                  }}
+                >
+                  <Sparkles size={16} />
+                  Upgrade to Pro
+                </button>
+              )}
             </div>
           </div>
         )
       })()}
+
+      {/* Upgrade Modal for Starter users */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier="starter"
+      />
     </div>
   )
 }

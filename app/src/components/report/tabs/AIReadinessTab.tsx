@@ -14,6 +14,7 @@ import {
 import Link from 'next/link'
 import type { Analysis, CrawlData, ReadinessCheck } from '../shared'
 import { handlePricingClick } from '../shared'
+import { UpgradeModal } from '../UpgradeModal'
 
 const readinessChecks: ReadinessCheck[] = [
   {
@@ -144,6 +145,7 @@ export function AIReadinessTab({
   tier?: 'free' | 'starter' | 'pro' | 'agency'
 }) {
   const [showStickyUpsell, setShowStickyUpsell] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const summaryRef = useRef<HTMLDivElement>(null)
 
   // Track scroll to show sticky upsell as soon as user starts scrolling
@@ -347,26 +349,50 @@ export function AIReadinessTab({
               </div>
             </div>
 
-            <Link
-              href="/pricing?from=report"
-              onClick={handlePricingClick}
-              className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
-              style={{
-                padding: '12px 24px',
-                background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%)',
-                color: 'var(--bg)',
-                border: 'none',
-                fontWeight: '600',
-                textDecoration: 'none',
-              }}
-            >
-              <Sparkles size={16} />
-              {tier === 'free' && (failCount > 0 ? 'Get Fixes & Action Plans' : 'Subscribe for Weekly Monitoring')}
-              {tier === 'starter' && 'Upgrade to Pro'}
-            </Link>
+            {tier === 'free' ? (
+              <Link
+                href="/pricing?from=report"
+                onClick={handlePricingClick}
+                className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
+                style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%)',
+                  color: 'var(--bg)',
+                  border: 'none',
+                  fontWeight: '600',
+                  textDecoration: 'none',
+                }}
+              >
+                <Sparkles size={16} />
+                {failCount > 0 ? 'Get Fixes & Action Plans' : 'Subscribe for Weekly Monitoring'}
+              </Link>
+            ) : (
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
+                style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%)',
+                  color: 'var(--bg)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                }}
+              >
+                <Sparkles size={16} />
+                Upgrade to Pro
+              </button>
+            )}
           </div>
         </div>
       )}
+
+      {/* Upgrade Modal for Starter users */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier="starter"
+      />
     </div>
   )
 }

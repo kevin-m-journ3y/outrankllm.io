@@ -18,9 +18,8 @@ import {
   FileCode,
   ArrowRight,
 } from 'lucide-react'
-import Link from 'next/link'
 import { EnrichmentLoading } from '../shared/EnrichmentLoading'
-import { handlePricingClick } from '../shared'
+import { UpgradeModal } from '../UpgradeModal'
 
 type EnrichmentStatus = 'pending' | 'processing' | 'complete' | 'failed' | 'not_applicable'
 
@@ -101,6 +100,7 @@ export function ActionsTab({ runId, domainSubscriptionId, enrichmentStatus = 'no
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState<'all' | 'quick_win' | 'strategic' | 'backlog'>('all')
   const [showStickyUpsell, setShowStickyUpsell] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   // Show sticky upsell for starter users after scrolling
   useEffect(() => {
@@ -756,9 +756,8 @@ export function ActionsTab({ runId, domainSubscriptionId, enrichmentStatus = 'no
               </div>
             </div>
 
-            <Link
-              href="/pricing?from=report"
-              onClick={handlePricingClick}
+            <button
+              onClick={() => setShowUpgradeModal(true)}
               className="font-mono text-sm flex items-center gap-2 transition-all hover:scale-105"
               style={{
                 padding: '12px 24px',
@@ -771,10 +770,17 @@ export function ActionsTab({ runId, domainSubscriptionId, enrichmentStatus = 'no
             >
               Upgrade to Pro
               <ArrowRight size={16} />
-            </Link>
+            </button>
           </div>
         </div>
       )}
+
+      {/* Upgrade Modal for Starter users */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentTier="starter"
+      />
     </div>
   )
 }
