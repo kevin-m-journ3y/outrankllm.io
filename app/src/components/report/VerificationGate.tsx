@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Ghost } from '@/components/ghost/Ghost'
 import { Mail, RefreshCw, Loader2 } from 'lucide-react'
+import { maskEmail } from '@/lib/utils/mask-email'
 
 interface VerificationGateProps {
   email: string
@@ -101,7 +102,7 @@ export function VerificationGate({
               className="text-sm text-[var(--text)]"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
-              {email}
+              {maskEmail(email)}
             </div>
           </div>
         </div>

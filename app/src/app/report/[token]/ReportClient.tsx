@@ -212,6 +212,7 @@ interface ReportData {
   isVerified: boolean
   featureFlags: FeatureFlags
   sitemapUsed: boolean
+  hasMarketingOptIn: boolean | null
 }
 
 interface ReportClientProps {
@@ -220,7 +221,7 @@ interface ReportClientProps {
 }
 
 export function ReportClient({ data, showLockedModal = false }: ReportClientProps) {
-  const { report, analysis, crawlData, responses, prompts, subscriberQuestions, brandAwareness, competitiveSummary, email, domain, runId, domainSubscriptionId, isVerified, featureFlags } = data
+  const { report, analysis, crawlData, responses, prompts, subscriberQuestions, brandAwareness, competitiveSummary, email, domain, runId, domainSubscriptionId, isVerified, featureFlags, hasMarketingOptIn } = data
   const [showModal, setShowModal] = useState(false)
   const [showLocked, setShowLocked] = useState(showLockedModal)
   const isSubscriber = featureFlags.isSubscriber
@@ -238,15 +239,17 @@ export function ReportClient({ data, showLockedModal = false }: ReportClientProp
   }, [])
 
   // Show modal after a brief delay on first view
+  // Skip if user has already opted in or out (hasMarketingOptIn is not null)
   useEffect(() => {
     const modalShown = localStorage.getItem(`modal_shown_${domain}`)
-    if (!modalShown && isVerified) {
+    const alreadyResponded = hasMarketingOptIn !== null
+    if (!modalShown && !alreadyResponded && isVerified) {
       const timer = setTimeout(() => {
         setShowModal(true)
       }, 8000) // Show after 8 seconds - let them explore first
       return () => clearTimeout(timer)
     }
-  }, [domain, isVerified])
+  }, [domain, isVerified, hasMarketingOptIn])
 
   const handleModalClose = () => {
     setShowModal(false)

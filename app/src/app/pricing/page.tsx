@@ -2,7 +2,7 @@
 
 import { Nav } from '@/components/nav/Nav'
 import { Footer } from '@/components/landing/Footer'
-import { Check, ArrowLeft, Loader2, Globe } from 'lucide-react'
+import { Check, ArrowLeft, Loader2, Globe, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { Suspense, useEffect, useState, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -155,7 +155,8 @@ function PricingCards() {
     reportToken: string | null
     fromReport: boolean
     domain: string | null
-  }>({ leadId: null, reportToken: null, fromReport: false, domain: null })
+    maskedEmail: string | null
+  }>({ leadId: null, reportToken: null, fromReport: false, domain: null, maskedEmail: null })
 
   // Detect region on mount
   useEffect(() => {
@@ -202,7 +203,7 @@ function PricingCards() {
     detectRegion()
   }, [searchParams])
 
-  // Get checkout context (including domain from report)
+  // Get checkout context (including domain and masked email from report)
   useEffect(() => {
     const fetchCheckoutContext = async () => {
       const leadId = sessionStorage.getItem('checkout_lead_id')
@@ -210,9 +211,23 @@ function PricingCards() {
       const fromReport = searchParams.get('from') === 'report'
       const storedDomain = sessionStorage.getItem('checkout_domain')
 
+      // If coming from report with a leadId, fetch masked email for confirmation
+      let maskedEmail: string | null = null
+      if (fromReport && leadId) {
+        try {
+          const response = await fetch(`/api/pricing/checkout-context?leadId=${leadId}`)
+          if (response.ok) {
+            const data = await response.json()
+            maskedEmail = data.maskedEmail || null
+          }
+        } catch (e) {
+          console.error('Failed to fetch checkout context:', e)
+        }
+      }
+
       // If we have a stored domain, use it
       if (storedDomain) {
-        setCheckoutContext({ leadId, reportToken, fromReport, domain: storedDomain })
+        setCheckoutContext({ leadId, reportToken, fromReport, domain: storedDomain, maskedEmail })
         return
       }
 
@@ -224,7 +239,7 @@ function PricingCards() {
             const data = await response.json()
             if (data.domain) {
               sessionStorage.setItem('checkout_domain', data.domain)
-              setCheckoutContext({ leadId, reportToken, fromReport, domain: data.domain })
+              setCheckoutContext({ leadId, reportToken, fromReport, domain: data.domain, maskedEmail })
               return
             }
           }
@@ -233,7 +248,7 @@ function PricingCards() {
         }
       }
 
-      setCheckoutContext({ leadId, reportToken, fromReport, domain: null })
+      setCheckoutContext({ leadId, reportToken, fromReport, domain: null, maskedEmail })
     }
 
     fetchCheckoutContext()
@@ -307,6 +322,48 @@ function PricingCards() {
         <div className="flex justify-center" style={{ marginBottom: '32px' }}>
           <RegionToggle region={region} onToggle={handleToggleRegion} />
         </div>
+
+        {/* Email confirmation banner - shown when coming from a shared report */}
+        {checkoutContext.fromReport && checkoutContext.maskedEmail && (
+          <div
+            className="border-2 border-[var(--amber)] bg-[var(--amber)]/10"
+            style={{ padding: '20px 24px', marginBottom: '32px' }}
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="flex items-center justify-center flex-shrink-0 bg-[var(--amber)] rounded-full"
+                style={{ width: '36px', height: '36px' }}
+              >
+                <AlertTriangle size={20} className="text-[var(--bg)]" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-[var(--text)]" style={{ fontSize: '15px', marginBottom: '6px' }}>
+                  Confirm your identity
+                </p>
+                <p className="text-sm text-[var(--text-mid)]" style={{ marginBottom: '12px' }}>
+                  This subscription will be linked to <span className="font-mono font-medium text-[var(--text)]">{checkoutContext.maskedEmail}</span>
+                </p>
+                <p className="text-xs text-[var(--text-dim)]" style={{ marginBottom: '16px' }}>
+                  If this isn&apos;t your email, you may have received a shared report link.
+                  Create your own free report to subscribe with your email address.
+                </p>
+                <button
+                  onClick={() => {
+                    // Clear checkout context and redirect to home
+                    sessionStorage.removeItem('checkout_lead_id')
+                    sessionStorage.removeItem('checkout_report_token')
+                    sessionStorage.removeItem('checkout_domain')
+                    router.push('/')
+                  }}
+                  className="font-mono text-sm text-[var(--amber)] hover:text-[var(--text)] transition-colors"
+                  style={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                >
+                  Not you? Create your own report
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div

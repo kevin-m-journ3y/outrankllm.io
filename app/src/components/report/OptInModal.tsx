@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { X, Bell } from 'lucide-react'
+import { maskEmail } from '@/lib/utils/mask-email'
 
 interface OptInModalProps {
   email: string
@@ -81,7 +82,7 @@ export function OptInModal({ email, onClose, onOptIn }: OptInModalProps) {
           >
             Your email
           </p>
-          <p className="font-mono text-sm text-[var(--text)]">{email}</p>
+          <p className="font-mono text-sm text-[var(--text)]">{maskEmail(email)}</p>
         </div>
 
         {/* Opt-in checkbox */}

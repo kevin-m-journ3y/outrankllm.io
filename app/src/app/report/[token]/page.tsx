@@ -86,6 +86,7 @@ interface ReportData {
   isVerified: boolean
   featureFlags: FeatureFlags
   sitemapUsed: boolean
+  hasMarketingOptIn: boolean | null
 }
 
 // Fetch report data server-side
@@ -104,7 +105,7 @@ async function getReport(token: string): Promise<ReportData | null> {
         created_at,
         enrichment_status,
         domain_subscription_id,
-        lead:leads(id, email, domain, email_verified, tier),
+        lead:leads(id, email, domain, email_verified, tier, marketing_opt_in),
         domain_subscription:domain_subscriptions(id, domain)
       )
     `)
@@ -115,7 +116,7 @@ async function getReport(token: string): Promise<ReportData | null> {
     return null
   }
 
-  const lead = report.run?.lead as { id: string; email: string; domain: string; email_verified: boolean; tier: string } | null
+  const lead = report.run?.lead as { id: string; email: string; domain: string; email_verified: boolean; tier: string; marketing_opt_in: boolean | null } | null
   const runId = report.run?.id as string
   const runCreatedAt = report.run?.created_at as string
   const enrichmentStatus = (report.run?.enrichment_status as EnrichmentStatus) || 'not_applicable'
@@ -302,6 +303,7 @@ async function getReport(token: string): Promise<ReportData | null> {
     isVerified,
     featureFlags,
     sitemapUsed,
+    hasMarketingOptIn: lead.marketing_opt_in,
   }
 }
 
