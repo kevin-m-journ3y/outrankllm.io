@@ -73,6 +73,8 @@ STRIPE_PRICE_AGENCY_USD=price_xxx
 
 ## Report Tabs
 
+The tab navigation bar is **sticky** - it stays fixed at the top of the viewport as users scroll down, making it easy to switch between tabs without scrolling back up.
+
 1. **Start Here** - Persona selection + tailored guide
 2. **Setup** - Business identity, services, questions
 3. **AI Readiness** - Technical SEO/GEO indicators (sticky upsell)
@@ -618,7 +620,7 @@ prd_tasks_history          -- Archive of completed tasks (preserved across resca
 
 ```
 src/components/report/
-├── ReportTabs.tsx           # Tab navigation
+├── ReportTabs.tsx           # Tab navigation (sticky header)
 ├── ExpiryCountdown.tsx      # Free user countdown timer
 ├── TrendChart.tsx           # Multi-line trend chart (dual axis)
 ├── shared/

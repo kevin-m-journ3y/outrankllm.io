@@ -99,24 +99,35 @@ export function ReportTabs({
 
   return (
     <div ref={tabsRef} style={{ marginTop: '48px', scrollMarginTop: '24px' }}>
-      {/* Tab Navigation Header */}
+      {/* Tab Navigation - Sticky container with header and tabs */}
       <div
-        className="font-mono text-[var(--text-dim)]"
-        style={{ fontSize: '11px', marginBottom: '12px', letterSpacing: '0.05em' }}
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 40,
+          backgroundColor: 'var(--bg)',
+          paddingTop: '12px',
+          marginTop: '-12px',
+          marginBottom: '40px',
+        }}
       >
-        <span style={{ textTransform: 'uppercase' }}>Click to explore each section</span>
-        <span style={{ marginLeft: '8px', color: 'var(--text-ghost)' }}>↓</span>
-      </div>
-
-      {/* Tab Navigation - Spread across full width */}
-      <div
-        className="border-b border-[var(--border)]"
-        style={{ marginBottom: '40px' }}
-      >
-        <nav
-          className="flex"
-          style={{ marginBottom: '-1px' }}
+        {/* Tab Navigation Header */}
+        <div
+          className="font-mono text-[var(--text-dim)]"
+          style={{ fontSize: '11px', marginBottom: '12px', letterSpacing: '0.05em' }}
         >
+          <span style={{ textTransform: 'uppercase' }}>Click to explore each section</span>
+          <span style={{ marginLeft: '8px', color: 'var(--text-ghost)' }}>↓</span>
+        </div>
+
+        {/* Tab buttons */}
+        <div
+          className="border-b border-[var(--border)]"
+        >
+          <nav
+            className="flex"
+            style={{ marginBottom: '-1px' }}
+          >
           {tabs.map((tab, index) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
@@ -168,6 +179,7 @@ export function ReportTabs({
             )
           })}
         </nav>
+        </div>
       </div>
 
       {/* Tab Content */}
