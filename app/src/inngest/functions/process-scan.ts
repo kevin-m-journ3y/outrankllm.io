@@ -19,6 +19,7 @@ import {
 import { extractTopCompetitors } from "@/lib/ai/query"
 // Brand awareness is now handled by enrich-subscriber function
 import { sendVerificationEmail, sendScanCompleteEmail } from "@/lib/email/resend"
+import { trackServerEvent, ANALYTICS_EVENTS } from "@/lib/analytics"
 import { detectGeography, extractTldCountry, countryToIsoCode } from "@/lib/geo/detect"
 import { log } from "@/lib/logger"
 import { getUserTier } from "@/lib/features/flags"
@@ -793,6 +794,13 @@ export const processScan = inngest.createFunction(
         log.error(scanId, "Failed to send email", emailResult.error)
       } else {
         log.done(scanId, "Email sent")
+
+        // Track report email sent (server-side analytics)
+        await trackServerEvent(leadId, ANALYTICS_EVENTS.REPORT_EMAIL_SENT, {
+          domain,
+          is_subscriber: isSubscriber,
+          email_type: isSubscriber ? "scan_complete" : "verification",
+        })
       }
 
       return emailResult

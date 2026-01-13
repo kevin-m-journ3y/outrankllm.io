@@ -10,6 +10,7 @@ import {
   updateDomainSubscription,
   getHighestTierForLead,
 } from '@/lib/subscriptions'
+import { trackServerEvent, ANALYTICS_EVENTS } from '@/lib/analytics'
 
 // Use service role client for webhook operations (no user session)
 function createServiceClient() {
@@ -143,6 +144,14 @@ async function handleCheckoutCompleted(
   }
 
   console.log(`Subscription created for lead ${leadId}, tier: ${resolvedTier}`)
+
+  // Track subscription completed (server-side analytics)
+  // Use leadId as client_id for server-side tracking
+  await trackServerEvent(leadId, ANALYTICS_EVENTS.SUBSCRIPTION_COMPLETED, {
+    tier: resolvedTier,
+    domain: domain || '',
+    currency: priceId?.includes('_AU') ? 'AUD' : 'USD',
+  })
 }
 
 async function handleDomainSubscriptionCheckout(

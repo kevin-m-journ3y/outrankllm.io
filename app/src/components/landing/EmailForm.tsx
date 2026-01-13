@@ -7,19 +7,7 @@ import { ScanProgressModal } from './ScanProgressModal'
 import { useSession } from '@/lib/auth-client'
 import Link from 'next/link'
 
-// Extend Window type for gtag
-declare global {
-  interface Window {
-    gtag?: (command: string, action: string, params?: Record<string, unknown>) => void
-  }
-}
-
-// Track events to Google Analytics
-function trackEvent(eventName: string, params?: Record<string, string | boolean>) {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', eventName, params)
-  }
-}
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics'
 
 interface EmailFormProps {
   onSuccess?: (data: { email: string; domain: string; scanId: string }) => void
@@ -77,7 +65,7 @@ export function EmailForm({ onSuccess }: EmailFormProps) {
     setCleanedDomain(cleanDomain)
 
     // Track button click
-    trackEvent('get_free_report_click', {
+    trackEvent(ANALYTICS_EVENTS.GET_FREE_REPORT_CLICK, {
       user_type: session ? 'logged_in' : 'anonymous',
       user_tier: session?.tier || 'none',
     })
@@ -124,6 +112,14 @@ export function EmailForm({ onSuccess }: EmailFormProps) {
       setScanId(data.scanId)
       setShowModal(true)
       setStatus('success')
+
+      // Track successful scan submission (form completed, not just clicked)
+      trackEvent(ANALYTICS_EVENTS.SCAN_SUBMITTED, {
+        user_type: session ? 'logged_in' : 'anonymous',
+        user_tier: session?.tier || 'none',
+        domain: cleanDomain,
+      })
+
       onSuccess?.({ email: session ? session.email : email.trim(), domain: cleanDomain, scanId: data.scanId })
     } catch (err) {
       setStatus('error')

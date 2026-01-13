@@ -5,19 +5,7 @@ import { Lock, Lightbulb, FileCode } from 'lucide-react'
 
 import { tabs } from './shared/constants'
 
-// Extend Window type for gtag
-declare global {
-  interface Window {
-    gtag?: (command: string, action: string, params?: Record<string, unknown>) => void
-  }
-}
-
-// Track events to Google Analytics
-function trackEvent(eventName: string, params?: Record<string, string | boolean>) {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', eventName, params)
-  }
-}
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics'
 import type { TabId, Analysis, Response, Prompt, Competitor, CrawlData, BrandAwarenessResult, CompetitiveSummary } from './shared/types'
 
 import {
@@ -141,7 +129,7 @@ export function ReportTabs({
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id)
-                  trackEvent('report_tab_click', {
+                  trackEvent(ANALYTICS_EVENTS.REPORT_TAB_CLICK, {
                     tab_name: tab.id,
                     user_tier: tier,
                     is_subscriber: isSubscriber,

@@ -10,6 +10,7 @@ import { Nav } from '@/components/nav/Nav'
 import { ArrowLeft, ExternalLink, Sparkles, Lock, Crown, Check } from 'lucide-react'
 import Link from 'next/link'
 import type { FeatureFlags } from '@/lib/features/flags'
+import { trackEventOnce, ANALYTICS_EVENTS } from '@/lib/analytics'
 
 // Locked report modal for users who already used their free report
 function LockedReportModal({
@@ -237,6 +238,22 @@ export function ReportClient({ data, showLockedModal = false }: ReportClientProp
       })
     }
   }, [])
+
+  // Track report view (once per session per report)
+  useEffect(() => {
+    if (!isVerified) return // Don't track until verified
+
+    const hoursSinceScan = Math.round(
+      (Date.now() - new Date(report.created_at).getTime()) / (1000 * 60 * 60)
+    )
+
+    trackEventOnce(ANALYTICS_EVENTS.REPORT_VIEWED, report.url_token, {
+      user_tier: featureFlags.tier,
+      is_subscriber: isSubscriber,
+      domain,
+      hours_since_scan: hoursSinceScan,
+    })
+  }, [isVerified, report.url_token, report.created_at, featureFlags.tier, isSubscriber, domain])
 
   // Show modal after a brief delay on first view
   // Skip if user has already opted in or out (hasMarketingOptIn is not null)

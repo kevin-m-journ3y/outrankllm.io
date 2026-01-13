@@ -20,6 +20,7 @@ import {
   REGION_COOKIE_NAME,
   type RegionDetectionContext
 } from '@/lib/geo/pricing-region'
+import { trackEvent, trackEventOnce, ANALYTICS_EVENTS } from '@/lib/analytics'
 
 type TierKey = SubscriptionTier
 
@@ -158,6 +159,14 @@ function PricingCards() {
     maskedEmail: string | null
   }>({ leadId: null, reportToken: null, fromReport: false, domain: null, maskedEmail: null })
 
+  // Track pricing page view (once per session)
+  useEffect(() => {
+    const fromReport = searchParams.get('from') === 'report'
+    trackEventOnce(ANALYTICS_EVENTS.PRICING_PAGE_VIEWED, 'pricing', {
+      source: fromReport ? 'report' : 'direct',
+    })
+  }, [searchParams])
+
   // Detect region on mount
   useEffect(() => {
     const detectRegion = async () => {
@@ -277,6 +286,16 @@ function PricingCards() {
       setError('Could not determine domain for subscription. Please try again from your report.')
       return
     }
+
+    // Track checkout started
+    const prices = TIER_PRICES[region]
+    trackEvent(ANALYTICS_EVENTS.CHECKOUT_STARTED, {
+      tier,
+      price: prices[tier],
+      currency: region === 'AU' ? 'AUD' : 'USD',
+      region,
+      source: checkoutContext.fromReport ? 'report' : 'direct',
+    })
 
     setLoadingTier(tier)
 
