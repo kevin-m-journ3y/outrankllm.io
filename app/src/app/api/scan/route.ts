@@ -15,6 +15,11 @@ const ScanRequestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Capture geo location from Vercel headers (best-guess customer location)
+    const ipCountry = request.headers.get('x-vercel-ip-country')
+    const ipCity = request.headers.get('x-vercel-ip-city')
+    const ipRegion = request.headers.get('x-vercel-ip-country-region')
+
     // Parse and validate request body
     const body = await request.json()
     const result = ScanRequestSchema.safeParse(body)
@@ -180,16 +185,19 @@ export async function POST(request: NextRequest) {
 
     // Upsert lead record (use normalized email for consistency)
     // Record terms acceptance timestamp when user agrees
+    // Only include geo fields if we have values (won't overwrite existing with null)
+    const upsertData: Record<string, unknown> = {
+      email: normalizedEmail,
+      domain: cleanDomain,
+      terms_accepted_at: agreedToTerms ? new Date().toISOString() : null,
+    }
+    if (ipCountry) upsertData.ip_country = ipCountry
+    if (ipCity) upsertData.ip_city = ipCity
+    if (ipRegion) upsertData.ip_region = ipRegion
+
     const { data: lead, error: leadError } = await supabase
       .from('leads')
-      .upsert(
-        {
-          email: normalizedEmail,
-          domain: cleanDomain,
-          terms_accepted_at: agreedToTerms ? new Date().toISOString() : null,
-        },
-        { onConflict: 'email,domain', ignoreDuplicates: false }
-      )
+      .upsert(upsertData, { onConflict: 'email,domain', ignoreDuplicates: false })
       .select('id, email_verified')
       .single()
 
