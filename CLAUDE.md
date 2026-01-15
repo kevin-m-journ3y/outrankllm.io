@@ -284,9 +284,20 @@ Inngest dashboard: http://localhost:8288
 - `POST /api/auth/reset-password` - Reset with token
 
 ### Stripe
-- `POST /api/stripe/checkout` - Create checkout session
+- `POST /api/stripe/checkout` - Create checkout session (supports promotion codes)
 - `POST /api/stripe/webhook` - Handle Stripe events
 - `POST /api/stripe/portal` - Create billing portal session
+
+### Promotion Codes / Vouchers
+
+Stripe Checkout has `allow_promotion_codes: true` enabled, so users see an "Add promotion code" field during checkout.
+
+**Creating vouchers** (Stripe Dashboard only, no code changes needed):
+1. Products → Coupons → Create coupon (set % off, $ off, duration)
+2. Click Promotion codes tab → Create code (e.g., `WELCOME50`)
+3. Set restrictions: max redemptions, expiry date, first-time customers only
+
+**No webhook changes needed** - Stripe sends the same subscription events; discounts are tracked automatically.
 
 ### User
 - `GET /api/user/report` - Get user's latest report token
