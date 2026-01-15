@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     const ipCountry = request.headers.get('x-vercel-ip-country')
     const ipCity = request.headers.get('x-vercel-ip-city')
     const ipRegion = request.headers.get('x-vercel-ip-country-region')
+    const ipTimezone = request.headers.get('x-vercel-ip-timezone')
 
     // Parse and validate request body
     const body = await request.json()
@@ -194,6 +195,7 @@ export async function POST(request: NextRequest) {
     if (ipCountry) upsertData.ip_country = ipCountry
     if (ipCity) upsertData.ip_city = ipCity
     if (ipRegion) upsertData.ip_region = ipRegion
+    if (ipTimezone) upsertData.ip_timezone = ipTimezone
 
     const { data: lead, error: leadError } = await supabase
       .from('leads')
