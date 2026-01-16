@@ -260,9 +260,17 @@ export function AdminReportViewer({ adminEmail }: AdminReportViewerProps) {
       return
     }
 
+    // Clear current report view to show search results
+    setReportData(null)
+    setUserInfo(null)
+    setSelectedToken('')
+
     setSearchLoading(true)
     setSearchError(null)
     setSearchResults(null)
+
+    // Clear URL token when searching
+    router.replace('/j3y-internal/view')
 
     try {
       const response = await fetch(`/api/admin/search?q=${encodeURIComponent(query)}`)
