@@ -190,6 +190,10 @@ export function ReportTabs({
             domain={domain}
             onContinue={() => scrollToTabsAndNavigate('setup')}
             isSubscriber={isSubscriber}
+            responses={responses}
+            crawlData={crawlData}
+            competitors={competitors}
+            platformScores={platformScores}
           />
         )}
         {activeTab === 'setup' && (
