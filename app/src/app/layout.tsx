@@ -44,11 +44,20 @@ export const metadata: Metadata = {
     url: "https://outrankllm.io",
     siteName: "outrankllm.io",
     type: "website",
+    images: [
+      {
+        url: "/images/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "outrankllm.io | See your visibility to AI",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "outrankllm.io | See your visibility to AI",
     description: "Your business is invisible to AI. We fix that.",
+    images: ["/images/og-image.png"],
   },
 };
 

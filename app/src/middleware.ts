@@ -19,6 +19,7 @@ const PUBLIC_PATHS = [
   '/_next',
   '/favicon.ico',
   '/images',
+  '/opengraph-image', // Allow OG image for social media crawlers
   '/report', // Allow report pages for verified users
   '/verify-error', // Allow verification error page
   '/report-pending', // Allow report pending page
