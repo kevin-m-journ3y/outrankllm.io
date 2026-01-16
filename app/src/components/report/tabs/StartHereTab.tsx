@@ -47,7 +47,7 @@ const getCompetitorPosition = (competitors: Competitor[], domain: string, respon
   const topCompetitorCount = competitors.length > 0 ? competitors[0].count : 0
 
   if (ourMentions === 0) {
-    return { label: 'Not Ranking', color: 'var(--text-dim)', icon: Minus }
+    return { label: 'No Mentions', color: 'var(--text-dim)', icon: Minus }
   }
 
   if (competitors.length === 0 || ourMentions > topCompetitorCount) {
@@ -232,16 +232,17 @@ export function StartHereTab({
   const readiness = calculateReadinessResults(analysis, crawlData)
   const competitorPosition = getCompetitorPosition(competitors, domain, responses)
 
-  // Platform scores with <5% treated as 0
-  const normalizeScore = (score: number | undefined) => {
+  // Platform scores with <5% displayed as "<5%"
+  const formatScore = (score: number | undefined): string => {
     const s = score || 0
-    return s < 5 ? 0 : Math.round(s)
+    if (s < 5) return '<5%'
+    return `${Math.round(s)}%`
   }
 
-  const chatgptScore = normalizeScore(platformScores.chatgpt)
-  const claudeScore = normalizeScore(platformScores.claude)
-  const geminiScore = normalizeScore(platformScores.gemini)
-  const perplexityScore = normalizeScore(platformScores.perplexity)
+  const chatgptScore = platformScores.chatgpt || 0
+  const claudeScore = platformScores.claude || 0
+  const geminiScore = platformScores.gemini || 0
+  const perplexityScore = platformScores.perplexity || 0
 
   return (
     <div style={{ display: 'grid', gap: '32px' }}>
@@ -299,7 +300,7 @@ export function StartHereTab({
             {/* ChatGPT */}
             <div>
               <div className="font-mono text-3xl text-[var(--text)]" style={{ marginBottom: '4px' }}>
-                {chatgptScore}%
+                {formatScore(chatgptScore)}
               </div>
               <div className="flex items-center justify-center gap-1" style={{ marginBottom: '4px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: platformColors.chatgpt }} />
@@ -313,7 +314,7 @@ export function StartHereTab({
             {/* Claude */}
             <div>
               <div className="font-mono text-3xl text-[var(--text)]" style={{ marginBottom: '4px' }}>
-                {claudeScore}%
+                {formatScore(claudeScore)}
               </div>
               <div className="flex items-center justify-center gap-1" style={{ marginBottom: '4px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: platformColors.claude }} />
@@ -327,7 +328,7 @@ export function StartHereTab({
             {/* Gemini */}
             <div>
               <div className="font-mono text-3xl text-[var(--text)]" style={{ marginBottom: '4px' }}>
-                {geminiScore}%
+                {formatScore(geminiScore)}
               </div>
               <div className="flex items-center justify-center gap-1" style={{ marginBottom: '4px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: platformColors.gemini }} />
@@ -341,7 +342,7 @@ export function StartHereTab({
             {/* Perplexity */}
             <div>
               <div className="font-mono text-3xl text-[var(--text)]" style={{ marginBottom: '4px' }}>
-                {perplexityScore}%
+                {formatScore(perplexityScore)}
               </div>
               <div className="flex items-center justify-center gap-1" style={{ marginBottom: '4px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: platformColors.perplexity }} />
