@@ -123,13 +123,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Trigger background processing via Inngest
-    console.log('[Admin Rescan] Sending to Inngest:', {
-      scanId: scanRun.id,
-      domain: targetDomain,
-      email: targetEmail,
-      leadId: leadId,
-      domainSubscriptionId: targetDomainSubscriptionId,
-    })
 
     await inngest.send({
       name: 'scan/process',

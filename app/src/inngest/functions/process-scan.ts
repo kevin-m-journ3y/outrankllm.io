@@ -52,8 +52,6 @@ export const processScan = inngest.createFunction(
     const { domain, email, verificationToken, skipEmail, domainSubscriptionId } = event.data
     const startTime = Date.now()
 
-    // DEBUG: Log entire event data at function start
-    console.log('[process-scan] EVENT DATA:', JSON.stringify(event.data, null, 2))
 
     // Step 1: Setup - resolve leadId and create or get scan run
     const { scanId, leadId } = await step.run("setup-scan", async () => {
@@ -220,10 +218,8 @@ export const processScan = inngest.createFunction(
       await updateScanStatus(supabase, scanId, "researching", 35)
 
       const userTier = await getUserTier(leadId)
-      log.info(scanId, `[DEBUG] userTier=${userTier}, leadId=${leadId}, domainSubscriptionId=${domainSubscriptionId}`)
 
       if (userTier === "free") {
-        log.info(scanId, `[DEBUG] Skipping subscriber questions - user is free tier`)
         return { hasSubscriberQuestions: false, prompts: [], userTier }
       }
 
@@ -233,22 +229,26 @@ export const processScan = inngest.createFunction(
         .select("id, prompt_text, category")
 
       if (domainSubscriptionId) {
-        log.info(scanId, `[DEBUG] Querying by domain_subscription_id: ${domainSubscriptionId}`)
         questionsQuery = questionsQuery.eq("domain_subscription_id", domainSubscriptionId)
       } else {
-        log.info(scanId, `[DEBUG] Querying by lead_id: ${leadId}`)
         questionsQuery = questionsQuery.eq("lead_id", leadId)
       }
 
-      const { data: subscriberQuestions, error: queryError } = await questionsQuery
+      const { data: subscriberQuestions } = await questionsQuery
         .eq("is_active", true)
         .eq("is_archived", false)
         .order("sort_order", { ascending: true })
 
-      log.info(scanId, `[DEBUG] Query result: ${subscriberQuestions?.length ?? 0} questions, error: ${queryError?.message ?? 'none'}`)
-
       if (subscriberQuestions && subscriberQuestions.length > 0) {
         log.info(scanId, `Using ${subscriberQuestions.length} subscriber questions`)
+
+        // Map categories to valid scan_prompts categories
+        // scan_prompts has a check constraint that only allows specific values
+        const validCategories = new Set([
+          'finding_provider', 'product_specific', 'service', 'comparison',
+          'review', 'how_to', 'general', 'location', 'recommendation'
+        ])
+        const mapCategory = (cat: string) => validCategories.has(cat) ? cat : 'general'
 
         const { data: insertedPrompts, error } = await supabase
           .from("scan_prompts")
@@ -256,20 +256,16 @@ export const processScan = inngest.createFunction(
             subscriberQuestions.map((q: { id: string; prompt_text: string; category: string }) => ({
               run_id: scanId,
               prompt_text: q.prompt_text,
-              category: q.category,
+              category: mapCategory(q.category),
               source: "subscriber",
             }))
           )
           .select("id, prompt_text, category")
 
-        log.info(scanId, `[DEBUG] Insert result: ${insertedPrompts?.length ?? 0} prompts, error: ${error?.message ?? 'none'}`)
-
         if (!error && insertedPrompts && insertedPrompts.length > 0) {
           return { hasSubscriberQuestions: true, prompts: insertedPrompts, userTier }
         }
       }
-
-      log.info(scanId, `[DEBUG] No subscriber questions found, falling back to research`)
       return { hasSubscriberQuestions: false, prompts: [], userTier }
     })
 
