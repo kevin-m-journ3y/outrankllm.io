@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     let leadId: string
     let targetDomain: string
     let targetEmail: string
+    let targetDomainSubscriptionId: string | null = domainSubscriptionId || null
 
     if (reportToken) {
       // Look up lead from report token
@@ -39,6 +40,8 @@ export async function POST(request: NextRequest) {
           scan_runs (
             id,
             lead_id,
+            domain_subscription_id,
+            domain,
             leads (
               id,
               email,
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest) {
 
       const scanRun = Array.isArray(report.scan_runs)
         ? report.scan_runs[0]
-        : report.scan_runs as { id: string; lead_id: string; leads: { id: string; email: string; domain: string } }
+        : report.scan_runs as { id: string; lead_id: string; domain_subscription_id: string | null; domain: string | null; leads: { id: string; email: string; domain: string } }
 
       if (!scanRun?.leads) {
         return NextResponse.json(
@@ -69,8 +72,12 @@ export async function POST(request: NextRequest) {
 
       const lead = Array.isArray(scanRun.leads) ? scanRun.leads[0] : scanRun.leads
       leadId = lead.id
-      targetDomain = domain || lead.domain
+      targetDomain = domain || scanRun.domain || lead.domain
       targetEmail = lead.email
+      // Inherit domain_subscription_id from original scan if not provided
+      if (!targetDomainSubscriptionId && scanRun.domain_subscription_id) {
+        targetDomainSubscriptionId = scanRun.domain_subscription_id
+      }
     } else {
       // Look up by email
       const normalizedEmail = email.toLowerCase().trim()
@@ -100,7 +107,7 @@ export async function POST(request: NextRequest) {
       .insert({
         lead_id: leadId,
         domain: targetDomain,  // CRITICAL: Store domain for multi-domain isolation
-        domain_subscription_id: domainSubscriptionId || null,
+        domain_subscription_id: targetDomainSubscriptionId,
         status: 'pending',
         progress: 0,
       })
@@ -129,7 +136,7 @@ export async function POST(request: NextRequest) {
         domain: targetDomain,
         email: targetEmail,
         leadId: leadId,
-        domainSubscriptionId: domainSubscriptionId || undefined,
+        domainSubscriptionId: targetDomainSubscriptionId || undefined,
         skipEmail, // Optionally skip email (defaults to false - subscribers get scan complete emails)
       },
     })
