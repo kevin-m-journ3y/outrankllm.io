@@ -217,8 +217,10 @@ export const processScan = inngest.createFunction(
       await updateScanStatus(supabase, scanId, "researching", 35)
 
       const userTier = await getUserTier(leadId)
+      log.info(scanId, `[DEBUG] userTier=${userTier}, leadId=${leadId}, domainSubscriptionId=${domainSubscriptionId}`)
 
       if (userTier === "free") {
+        log.info(scanId, `[DEBUG] Skipping subscriber questions - user is free tier`)
         return { hasSubscriberQuestions: false, prompts: [], userTier }
       }
 
@@ -228,15 +230,19 @@ export const processScan = inngest.createFunction(
         .select("id, prompt_text, category")
 
       if (domainSubscriptionId) {
+        log.info(scanId, `[DEBUG] Querying by domain_subscription_id: ${domainSubscriptionId}`)
         questionsQuery = questionsQuery.eq("domain_subscription_id", domainSubscriptionId)
       } else {
+        log.info(scanId, `[DEBUG] Querying by lead_id: ${leadId}`)
         questionsQuery = questionsQuery.eq("lead_id", leadId)
       }
 
-      const { data: subscriberQuestions } = await questionsQuery
+      const { data: subscriberQuestions, error: queryError } = await questionsQuery
         .eq("is_active", true)
         .eq("is_archived", false)
         .order("sort_order", { ascending: true })
+
+      log.info(scanId, `[DEBUG] Query result: ${subscriberQuestions?.length ?? 0} questions, error: ${queryError?.message ?? 'none'}`)
 
       if (subscriberQuestions && subscriberQuestions.length > 0) {
         log.info(scanId, `Using ${subscriberQuestions.length} subscriber questions`)
@@ -253,11 +259,14 @@ export const processScan = inngest.createFunction(
           )
           .select("id, prompt_text, category")
 
+        log.info(scanId, `[DEBUG] Insert result: ${insertedPrompts?.length ?? 0} prompts, error: ${error?.message ?? 'none'}`)
+
         if (!error && insertedPrompts && insertedPrompts.length > 0) {
           return { hasSubscriberQuestions: true, prompts: insertedPrompts, userTier }
         }
       }
 
+      log.info(scanId, `[DEBUG] No subscriber questions found, falling back to research`)
       return { hasSubscriberQuestions: false, prompts: [], userTier }
     })
 
