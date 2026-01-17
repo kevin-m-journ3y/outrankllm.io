@@ -134,6 +134,27 @@ When a subscriber tries to access their report:
 - After expiry: Report locked, prompt to subscribe
 - Subscribers: No expiry, timer hidden
 
+## Homepage Demo Video
+
+Product demo video autoplays (muted) between the tagline and email form for first-time visitors.
+
+### Features
+- **Autoplay muted loop** - Plays automatically, browsers allow this for muted videos
+- **Click to expand** - Opens fullscreen modal with synced playback position
+- **Landscape mobile** - Fills screen edge-to-edge when phone rotated
+- **Close options** - X button, click outside, or Escape key
+
+### Key Files
+- `src/components/landing/DemoVideo.tsx` - Video component with modal
+- `public/images/website-vid.mp4` - Product demo video (~8MB)
+
+### Updating the Video
+Replace `public/images/website-vid.mp4` with a new recording:
+- **Format**: MP4 (not GIF - much smaller file size)
+- **Resolution**: 720p or 1080p
+- **Frame rate**: 30fps is sufficient
+- **Aspect ratio**: 16:9 or 16:10 works best
+
 ## Homepage Smart Form
 
 When logged in, the email form shows different states:
