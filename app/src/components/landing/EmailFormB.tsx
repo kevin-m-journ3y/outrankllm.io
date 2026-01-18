@@ -9,6 +9,14 @@ import Link from 'next/link'
 
 import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics'
 import { trackLinkedInConversion, LINKEDIN_CONVERSIONS } from '@/lib/linkedin'
+import { experiments } from '@/lib/experiments/config'
+
+// Helper to read cookie value
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
+  return match ? match[2] : null
+}
 
 interface EmailFormBProps {
   onSuccess?: (data: { email: string; domain: string; scanId: string }) => void
@@ -80,6 +88,9 @@ export function EmailFormB({ onSuccess }: EmailFormBProps) {
     })
 
     try {
+      // Get the homepage variant from the experiment cookie
+      const homepageVariant = getCookie(experiments.homepage.cookieName)
+
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,6 +98,7 @@ export function EmailFormB({ onSuccess }: EmailFormBProps) {
           email: session ? session.email : email.trim(),
           domain: cleanDomain,
           agreedToTerms,
+          homepageVariant,
         }),
       })
 

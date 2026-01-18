@@ -11,6 +11,7 @@ const ScanRequestSchema = z.object({
   agreedToTerms: z.boolean().refine(val => val === true, {
     message: 'You must agree to the Terms & Conditions',
   }),
+  homepageVariant: z.string().nullable().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { email, domain, agreedToTerms } = result.data
+    const { email, domain, agreedToTerms, homepageVariant } = result.data
 
     // Normalize email to lowercase for consistent matching
     const normalizedEmail = email.toLowerCase().trim()
@@ -196,6 +197,7 @@ export async function POST(request: NextRequest) {
     if (ipCity) upsertData.ip_city = ipCity
     if (ipRegion) upsertData.ip_region = ipRegion
     if (ipTimezone) upsertData.ip_timezone = ipTimezone
+    if (homepageVariant) upsertData.homepage_variant = homepageVariant
 
     const { data: lead, error: leadError } = await supabase
       .from('leads')
