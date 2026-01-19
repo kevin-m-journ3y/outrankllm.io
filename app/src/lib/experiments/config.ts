@@ -34,8 +34,8 @@ export const experiments: Record<string, Experiment> = {
     cookieName: 'exp-homepage',
     variants: [
       { id: 'control', weight: 0 },
-      { id: 'variant-b', weight: 100 },
-      { id: 'variant-c', weight: 0 },
+      { id: 'variant-b', weight: 50 },
+      { id: 'variant-c', weight: 50 },
     ],
   },
 }
