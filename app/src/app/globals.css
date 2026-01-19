@@ -2,28 +2,56 @@
 
 /* ===========================================
    OUTRANKLLM.IO DESIGN SYSTEM
-   Industrial-Utilitarian Dark Theme
-   For Vibe Coders Who Build in Public
+   Professional Dark Theme with Blue Tones
    =========================================== */
 
+/* ===========================================
+   THEME: Professional Blue (Active)
+   To switch back to Industrial theme,
+   comment this section and uncomment the
+   Industrial theme section below.
+   =========================================== */
 :root {
-  /* Core Palette - Near-black foundation with strategic pops */
+  /* Core Palette - Dark blue foundation */
+  --bg: #0c1525;
+  --surface: #111c30;
+  --surface-elevated: #162340;
+  --border: #1e3a5f;
+  --border-subtle: #162a4a;
+
+  /* Text Hierarchy */
+  --text: #fafafa;
+  --text-mid: #ebebeb;
+  --text-dim: #c9c9c9;
+  --text-ghost: #8b939e;
+
+  /* Primary Accent - Lime */
+  --lime: #40F16C;
+  --lime-dim: #2dc455;
+  --lime-glow: rgba(64, 241, 108, 0.15);
+  --green: var(--lime);
+  --green-dim: var(--lime-dim);
+  --green-glow: var(--lime-glow);
+
+/* ===========================================
+   THEME: Industrial Dark (Original)
+   To restore, uncomment this section and
+   comment out the Professional Blue section above.
+   ===========================================
+:root {
   --bg: #0a0a0a;
   --surface: #141414;
   --surface-elevated: #1a1a1a;
   --border: #262626;
   --border-subtle: #1f1f1f;
-
-  /* Text Hierarchy - High contrast for terminal feel */
   --text: #fafafa;
   --text-mid: #d4d4d4;
   --text-dim: #a3a3a3;
   --text-ghost: #525252;
-
-  /* Signal Colors - Platform indicators + accents */
   --green: #22c55e;
   --green-dim: #16a34a;
   --green-glow: rgba(34, 197, 94, 0.15);
+*/
   --red: #ef4444;
   --red-dim: #dc2626;
   --blue: #3b82f6;
@@ -48,6 +76,8 @@
   /* Typography */
   --font-display: var(--font-outfit), 'Outfit', system-ui, sans-serif;
   --font-mono: var(--font-dm-mono), 'DM Mono', 'Fira Code', monospace;
+  /* Logo font: Nunito - rounded terminals for friendly professional look */
+  --font-logo: var(--font-nunito), 'Nunito', system-ui, sans-serif;
 
   /* Transitions */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -307,10 +337,10 @@ h3 {
    =========================================== */
 
 .logo-text {
-  font-family: var(--font-mono);
+  font-family: var(--font-logo);
   font-size: 1.75rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .logo-text .mark {

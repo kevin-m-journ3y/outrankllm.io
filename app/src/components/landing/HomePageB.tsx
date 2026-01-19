@@ -30,7 +30,7 @@ export function HomePageB() {
           {/* Logo - stacked vertically */}
           <div className="flex flex-col items-center gap-2" style={{ marginBottom: '24px' }}>
             <Ghost size="sm" />
-            <div className="logo-text" style={{ fontSize: '1rem' }}>
+            <div className="logo-text" style={{ fontSize: '1.5rem' }}>
               outrank<span className="mark">llm</span>.io
             </div>
           </div>

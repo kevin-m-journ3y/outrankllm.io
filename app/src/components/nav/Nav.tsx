@@ -60,8 +60,8 @@ export function Nav() {
       <nav className="fixed top-0 left-0 right-0 z-50 py-4 bg-[var(--bg)]/80 backdrop-blur-sm border-b border-[var(--border-subtle)]" style={{ paddingLeft: '32px', paddingRight: '32px' }}>
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="font-mono text-lg font-medium hover:opacity-80 transition-opacity">
-            outrank<span className="text-[var(--green)]">llm</span>.io
+          <Link href="/" className="logo-text hover:opacity-80 transition-opacity" style={{ fontSize: '1.25rem' }}>
+            outrank<span className="mark">llm</span>.io
           </Link>
 
           {/* Desktop Nav Links - hidden on mobile */}

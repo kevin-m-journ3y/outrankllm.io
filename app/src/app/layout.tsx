@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit, DM_Mono } from "next/font/google";
+import { Outfit, DM_Mono, Nunito } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 
@@ -13,6 +13,14 @@ const dmMono = DM_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--font-dm-mono",
+  display: "swap",
+});
+
+// Nunito for logo text - rounded terminals for friendly professional look
+const nunito = Nunito({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-nunito",
   display: "swap",
 });
 
@@ -67,7 +75,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${outfit.variable} ${dmMono.variable}`}>
+    <html lang="en" className={`${outfit.variable} ${dmMono.variable} ${nunito.variable}`}>
       <head>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-L2RQHE6GT0"
