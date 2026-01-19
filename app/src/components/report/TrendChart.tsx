@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 export interface TrendDataPoint {
@@ -34,6 +34,7 @@ interface MultiLineTrendChartProps {
   unit?: string
   rightAxisLabel?: string // Label for right axis (default: "Platform %")
   rightAxisUnit?: string // Unit for right axis values (default: "%")
+  defaultToMovingAverage?: boolean // Start with MA view (default: true)
 }
 
 /**
@@ -316,30 +317,157 @@ function formatDate(dateString: string): string {
 }
 
 /**
- * Dual-axis trend chart showing overall visibility (left axis, %)
- * and per-platform mentions (right axis, whole numbers)
+ * Calculate 3-point moving average for a data series
+ */
+function calculateMovingAverage(data: TrendDataPoint[], window = 3): TrendDataPoint[] {
+  if (data.length < window) return data
+
+  const result: TrendDataPoint[] = []
+  for (let i = 0; i < data.length; i++) {
+    // For the first and last points, use smaller windows
+    const start = Math.max(0, i - Math.floor(window / 2))
+    const end = Math.min(data.length, i + Math.ceil(window / 2))
+    const windowData = data.slice(start, end)
+    const avg = windowData.reduce((sum, d) => sum + d.value, 0) / windowData.length
+    result.push({ ...data[i], value: avg })
+  }
+  return result
+}
+
+/**
+ * Generate a smooth SVG path using monotone cubic spline interpolation
+ * This ensures curves pass through all data points without overshooting,
+ * which is ideal for data visualization
+ */
+function generateSmoothPath(points: { x: number; y: number }[]): string {
+  if (points.length < 2) return ''
+  if (points.length === 2) {
+    return `M ${points[0].x},${points[0].y} L ${points[1].x},${points[1].y}`
+  }
+
+  const n = points.length
+
+  // Calculate slopes between consecutive points
+  const slopes: number[] = []
+  for (let i = 0; i < n - 1; i++) {
+    const dx = points[i + 1].x - points[i].x
+    const dy = points[i + 1].y - points[i].y
+    slopes.push(dx !== 0 ? dy / dx : 0)
+  }
+
+  // Calculate tangent at each point using monotone method
+  const tangents: number[] = []
+  tangents[0] = slopes[0]
+  for (let i = 1; i < n - 1; i++) {
+    // If slopes have different signs, tangent is 0 (local extremum)
+    if (slopes[i - 1] * slopes[i] <= 0) {
+      tangents[i] = 0
+    } else {
+      // Use harmonic mean of slopes for smoother results
+      tangents[i] = (slopes[i - 1] + slopes[i]) / 2
+    }
+  }
+  tangents[n - 1] = slopes[n - 2]
+
+  // Build path with cubic bezier segments
+  let path = `M ${points[0].x},${points[0].y}`
+
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = points[i]
+    const p1 = points[i + 1]
+    const dx = (p1.x - p0.x) / 3
+
+    // Control points based on tangents
+    const cp1x = p0.x + dx
+    const cp1y = p0.y + dx * tangents[i]
+    const cp2x = p1.x - dx
+    const cp2y = p1.y - dx * tangents[i + 1]
+
+    path += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p1.x},${p1.y}`
+  }
+
+  return path
+}
+
+/**
+ * Single-axis trend chart showing all metrics as percentages (0-100)
+ * with toggle between raw values and 3-point moving average
  */
 export function MultiLineTrendChart({
   series,
   height = 200,
   showLabels = true,
   title,
-  rightAxisLabel = 'Platform %',
-  rightAxisUnit = '%',
+  defaultToMovingAverage = true,
 }: MultiLineTrendChartProps) {
-  const padding = { top: 16, right: 45, bottom: 32, left: 45 }
+  const padding = { top: 16, right: 20, bottom: 32, left: 45 }
+  const [showMovingAverage, setShowMovingAverage] = useState(defaultToMovingAverage)
+  const [isVisible, setIsVisible] = useState(false)
+  const [animationProgress, setAnimationProgress] = useState(0)
+  const chartRef = useRef<HTMLDivElement>(null)
 
-  // Calculate chart dimensions and ranges for both axes
-  const { innerHeight, dates, leftAxis, rightAxis, overallSeries, platformSeries } = useMemo(() => {
-    // Separate overall series from platform series
-    const overall = series.find(s => s.isOverall)
-    const platforms = series.filter(s => !s.isOverall)
+  // Observe when chart becomes visible
+  useEffect(() => {
+    const element = chartRef.current
+    if (!element) return
 
-    // Collect all unique dates (using exact strings, deduped by Set)
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.2 }
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  // Animate line drawing when visible
+  useEffect(() => {
+    if (!isVisible) return
+
+    const duration = 2500
+    const steps = 100
+    const interval = duration / steps
+
+    let step = 0
+    const timer = setInterval(() => {
+      step++
+      if (step >= steps) {
+        setAnimationProgress(1)
+        clearInterval(timer)
+      } else {
+        const progress = step / steps
+        // Ease-out cubic
+        const eased = 1 - Math.pow(1 - progress, 3)
+        setAnimationProgress(eased)
+      }
+    }, interval)
+
+    return () => clearInterval(timer)
+  }, [isVisible])
+
+  // Apply moving average if enabled
+  const displaySeries = useMemo(() => {
+    if (!showMovingAverage) return series
+    return series.map(s => ({
+      ...s,
+      data: calculateMovingAverage(s.data, 3),
+    }))
+  }, [series, showMovingAverage])
+
+  // Calculate chart dimensions and ranges - single axis (0-100)
+  const { innerHeight, dates, yAxis, overallSeries, platformSeries } = useMemo(() => {
+    const overall = displaySeries.find(s => s.isOverall)
+    const platforms = displaySeries.filter(s => !s.isOverall)
+
     const allDates: string[] = []
     const seenDates = new Set<string>()
 
-    for (const s of series) {
+    for (const s of displaySeries) {
       for (const d of s.data) {
         if (!seenDates.has(d.date)) {
           seenDates.add(d.date)
@@ -347,63 +475,43 @@ export function MultiLineTrendChart({
         }
       }
     }
-
-    // Sort dates chronologically by timestamp
     allDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
 
-    // Left axis: Overall visibility (0-100%)
-    const overallValues = overall?.data.map(d => d.value) || [0]
-    const overallMin = Math.min(...overallValues)
-    const overallMax = Math.max(...overallValues)
-    const overallRange = overallMax - overallMin
-    const leftMin = Math.max(0, overallMin - overallRange * 0.2)
-    const leftMax = Math.min(100, overallMax + overallRange * 0.2)
-
-    // Right axis: Dynamic based on values (can be percentages or absolute counts)
-    const platformValues = platforms.flatMap(s => s.data.map(d => d.value))
-    const platformMin = 0 // Always start at 0
-    const maxVal = Math.max(1, ...platformValues) // At least 1 to avoid division issues
-    // Add 10% padding above max value
-    const platformMax = Math.ceil(maxVal * 1.1)
+    // Single axis: All values are percentages (0-100)
+    const allValues = displaySeries.flatMap(s => s.data.map(d => d.value))
+    const minVal = Math.min(...allValues)
+    const maxVal = Math.max(...allValues)
+    const range = maxVal - minVal
+    const yMin = Math.max(0, minVal - range * 0.1)
+    const yMax = Math.min(100, maxVal + range * 0.1)
 
     return {
       innerHeight: height - padding.top - padding.bottom,
       dates: allDates,
-      leftAxis: { min: leftMin, max: leftMax, range: leftMax - leftMin || 1 },
-      rightAxis: { min: platformMin, max: platformMax, range: platformMax - platformMin || 1 },
+      yAxis: { min: yMin, max: yMax, range: yMax - yMin || 1 },
       overallSeries: overall,
       platformSeries: platforms,
     }
-  }, [series, height])
+  }, [displaySeries, height])
 
-  // Helper to calculate X position
   const getX = (date: string, viewBoxWidth: number) => {
     const dateIndex = dates.indexOf(date)
     if (dates.length <= 1) return padding.left + (viewBoxWidth - padding.left - padding.right) / 2
     return padding.left + (dateIndex / (dates.length - 1)) * (viewBoxWidth - padding.left - padding.right)
   }
 
-  // Helper to calculate Y position for left axis (overall %)
-  const getYLeft = (value: number) => {
-    return padding.top + innerHeight - ((value - leftAxis.min) / leftAxis.range) * innerHeight
+  const getY = (value: number) => {
+    return padding.top + innerHeight - ((value - yAxis.min) / yAxis.range) * innerHeight
   }
 
-  // Helper to calculate Y position for right axis (mentions)
-  const getYRight = (value: number) => {
-    return padding.top + innerHeight - ((value - rightAxis.min) / rightAxis.range) * innerHeight
-  }
-
-  // Calculate overall trend
-  const overallTrend = useMemo(() => {
-    if (!overallSeries || overallSeries.data.length < 2) return null
-
-    const firstValue = overallSeries.data[0]?.value || 0
-    const lastValue = overallSeries.data[overallSeries.data.length - 1]?.value || 0
-    const percentChange = firstValue > 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0
-    const trend = percentChange > 1 ? 'up' : percentChange < -1 ? 'down' : 'neutral'
-
-    return { percentChange, trend }
-  }, [overallSeries])
+  const [tooltip, setTooltip] = useState<{
+    x: number
+    y: number
+    name: string
+    value: string
+    date: string
+    color: string
+  } | null>(null)
 
   if (dates.length === 0) {
     return (
@@ -417,29 +525,81 @@ export function MultiLineTrendChart({
   }
 
   const viewBoxWidth = 800
-  const TrendIcon = overallTrend?.trend === 'up' ? TrendingUp : overallTrend?.trend === 'down' ? TrendingDown : Minus
-  const trendColor = overallTrend?.trend === 'up' ? 'var(--green)' : overallTrend?.trend === 'down' ? 'var(--red)' : 'var(--text-dim)'
 
-  // State for tooltip
-  const [tooltip, setTooltip] = useState<{
-    x: number
-    y: number
-    name: string
-    value: string
-    date: string
-    color: string
-  } | null>(null)
+  // Calculate stroke-dasharray for animation
+  const getAnimatedStroke = (totalLength: number) => {
+    const visibleLength = totalLength * animationProgress
+    return `${visibleLength} ${totalLength}`
+  }
 
   return (
-    <div style={{ position: 'relative' }}>
-      {/* Header with title */}
-      {title && (
-        <div style={{ marginBottom: '12px' }}>
+    <div ref={chartRef} style={{ position: 'relative' }}>
+      {/* Header with title and toggle */}
+      <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
+        {title && (
           <span className="text-xs font-mono text-[var(--text-dim)] uppercase tracking-wider">
             {title}
           </span>
+        )}
+
+        {/* Moving Average Toggle */}
+        <div className="flex items-center" style={{ gap: '8px' }}>
+          <span className="text-xs font-mono text-[var(--text-ghost)]">Raw</span>
+          <div className="relative group">
+            <button
+              onClick={() => setShowMovingAverage(!showMovingAverage)}
+              className="relative"
+              style={{
+                width: '36px',
+                height: '20px',
+                borderRadius: '10px',
+                backgroundColor: showMovingAverage ? 'var(--green)' : 'var(--border)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+              }}
+              aria-label={showMovingAverage ? 'Show raw values' : 'Show moving average'}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: showMovingAverage ? '18px' : '2px',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  backgroundColor: 'white',
+                  transition: 'left 0.2s',
+                }}
+              />
+            </button>
+            {/* Tooltip */}
+            <div
+              className="absolute opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+              style={{
+                top: '100%',
+                right: '0',
+                marginTop: '8px',
+                backgroundColor: 'var(--surface-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                width: '200px',
+                zIndex: 50,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              }}
+            >
+              <p className="text-xs text-[var(--text)]" style={{ marginBottom: '4px' }}>
+                <strong>Moving Average</strong> smooths out week-to-week variation to reveal the broader trend.
+              </p>
+              <p className="text-xs text-[var(--text-ghost)]">
+                <strong>Raw</strong> shows exact values for each scan.
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-mono text-[var(--text-ghost)]">MA</span>
         </div>
-      )}
+      </div>
 
       {/* SVG Chart */}
       <svg
@@ -466,12 +626,12 @@ export function MultiLineTrendChart({
           })}
         </g>
 
-        {/* Left Y-axis labels (Overall %) */}
+        {/* Y-axis labels (single axis, percentages) */}
         {showLabels && (
-          <g className="y-labels-left" fill="#ffffff" fontSize="10" fontFamily="monospace">
+          <g className="y-labels" fill="var(--text-dim)" fontSize="10" fontFamily="monospace">
             {[0, 0.5, 1].map((ratio) => {
               const y = padding.top + innerHeight * (1 - ratio)
-              const value = leftAxis.min + leftAxis.range * ratio
+              const value = yAxis.min + yAxis.range * ratio
               return (
                 <text
                   key={ratio}
@@ -483,7 +643,6 @@ export function MultiLineTrendChart({
                 </text>
               )
             })}
-            {/* Axis label - rotated beside the axis */}
             <text
               x={12}
               y={padding.top + innerHeight / 2}
@@ -492,69 +651,61 @@ export function MultiLineTrendChart({
               fill="var(--text-ghost)"
               transform={`rotate(-90, 12, ${padding.top + innerHeight / 2})`}
             >
-              Overall Score
+              Visibility %
             </text>
           </g>
         )}
 
-        {/* Right Y-axis labels */}
-        {showLabels && (
-          <g className="y-labels-right" fill="var(--text-dim)" fontSize="10" fontFamily="monospace">
-            {[0, 0.5, 1].map((ratio) => {
-              const y = padding.top + innerHeight * (1 - ratio)
-              const value = rightAxis.min + rightAxis.range * ratio
-              return (
-                <text
-                  key={ratio}
-                  x={viewBoxWidth - padding.right + 8}
-                  y={y + 4}
-                  textAnchor="start"
-                >
-                  {Math.round(value)}{rightAxisUnit === '%' ? '%' : ''}
-                </text>
-              )
-            })}
-            {/* Axis label - rotated beside the axis */}
-            <text
-              x={viewBoxWidth - 12}
-              y={padding.top + innerHeight / 2}
-              textAnchor="middle"
-              fontSize="9"
-              fill="var(--text-ghost)"
-              transform={`rotate(90, ${viewBoxWidth - 12}, ${padding.top + innerHeight / 2})`}
-            >
-              {rightAxisLabel}
-            </text>
-          </g>
-        )}
-
-        {/* Render platform series (right axis) first so overall is on top */}
+        {/* Render platform series first so overall is on top */}
         {platformSeries.map((s) => {
           if (s.data.length === 0) return null
 
-          const points = s.data.map((d, i) => ({
+          const points = s.data.map((d) => ({
             x: getX(d.date, viewBoxWidth),
-            y: getYRight(d.value),
+            y: getY(d.value),
             value: d.value,
             date: d.date,
           }))
-          const pointsStr = points.map(p => `${p.x},${p.y}`).join(' ')
 
+          // Estimate path length for animation
+          let pathLength = 0
+          for (let i = 1; i < points.length; i++) {
+            const dx = points[i].x - points[i-1].x
+            const dy = points[i].y - points[i-1].y
+            pathLength += Math.sqrt(dx * dx + dy * dy)
+          }
+
+          // Use smooth curves in MA mode, straight lines in raw mode
+          const smoothPath = showMovingAverage ? generateSmoothPath(points) : null
+          const pointsStr = points.map(p => `${p.x},${p.y}`).join(' ')
 
           return (
             <g key={s.key}>
-              {/* Line */}
-              <polyline
-                points={pointsStr}
-                fill="none"
-                stroke={s.color}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeOpacity="0.7"
-              />
-              {/* Data points with hover */}
-              {points.map((p, i) => (
+              {smoothPath ? (
+                <path
+                  d={smoothPath}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeOpacity="0.8"
+                  strokeDasharray={getAnimatedStroke(pathLength * 1.2 || 1000)}
+                />
+              ) : (
+                <polyline
+                  points={pointsStr}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeOpacity="0.8"
+                  strokeDasharray={getAnimatedStroke(pathLength || 1000)}
+                />
+              )}
+              {/* Data points - only show after animation */}
+              {animationProgress > 0.9 && points.map((p, i) => (
                 <circle
                   key={i}
                   cx={p.x}
@@ -562,20 +713,17 @@ export function MultiLineTrendChart({
                   r="5"
                   fill={s.color}
                   fillOpacity="0.9"
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', opacity: animationProgress > 0.95 ? 1 : 0 }}
                   onMouseEnter={(e) => {
                     const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect()
                     if (rect) {
                       const scaleX = rect.width / viewBoxWidth
                       const scaleY = rect.height / height
-                      const valueText = rightAxisUnit === '%'
-                        ? `${p.value.toFixed(0)}% visibility`
-                        : `${p.value} mention${p.value !== 1 ? 's' : ''}`
                       setTooltip({
                         x: rect.left + p.x * scaleX,
                         y: rect.top + p.y * scaleY - 10,
                         name: s.name,
-                        value: valueText,
+                        value: `${p.value.toFixed(0)}% visibility`,
                         date: formatDate(p.date),
                         color: s.color,
                       })
@@ -588,29 +736,51 @@ export function MultiLineTrendChart({
           )
         })}
 
-        {/* Render overall series (left axis) on top */}
+        {/* Render overall series on top */}
         {overallSeries && overallSeries.data.length > 0 && (() => {
           const points = overallSeries.data.map(d => ({
             x: getX(d.date, viewBoxWidth),
-            y: getYLeft(d.value),
+            y: getY(d.value),
             value: d.value,
             date: d.date,
           }))
+
+          // Estimate path length
+          let pathLength = 0
+          for (let i = 1; i < points.length; i++) {
+            const dx = points[i].x - points[i-1].x
+            const dy = points[i].y - points[i-1].y
+            pathLength += Math.sqrt(dx * dx + dy * dy)
+          }
+
+          // Use smooth curves in MA mode, straight lines in raw mode
+          const smoothPath = showMovingAverage ? generateSmoothPath(points) : null
           const pointsStr = points.map(p => `${p.x},${p.y}`).join(' ')
 
           return (
             <g key={overallSeries.key}>
-              {/* Line */}
-              <polyline
-                points={pointsStr}
-                fill="none"
-                stroke={overallSeries.color}
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {/* Data points with hover */}
-              {points.map((p, i) => (
+              {smoothPath ? (
+                <path
+                  d={smoothPath}
+                  fill="none"
+                  stroke={overallSeries.color}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={getAnimatedStroke(pathLength * 1.2 || 1000)}
+                />
+              ) : (
+                <polyline
+                  points={pointsStr}
+                  fill="none"
+                  stroke={overallSeries.color}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={getAnimatedStroke(pathLength || 1000)}
+                />
+              )}
+              {animationProgress > 0.9 && points.map((p, i) => (
                 <circle
                   key={i}
                   cx={p.x}
@@ -619,7 +789,7 @@ export function MultiLineTrendChart({
                   fill="var(--bg)"
                   stroke={overallSeries.color}
                   strokeWidth="2"
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', opacity: animationProgress > 0.95 ? 1 : 0 }}
                   onMouseEnter={(e) => {
                     const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect()
                     if (rect) {
@@ -662,12 +832,11 @@ export function MultiLineTrendChart({
         )}
       </svg>
 
-      {/* Legend - grouped by axis for clarity */}
+      {/* Legend */}
       <div
         className="flex flex-wrap items-center justify-center"
-        style={{ marginTop: '16px', gap: '24px' }}
+        style={{ marginTop: '16px', gap: '16px' }}
       >
-        {/* Left axis: Score */}
         {overallSeries && (
           <div className="flex items-center gap-2">
             <span
@@ -679,45 +848,25 @@ export function MultiLineTrendChart({
               }}
             />
             <span className="font-mono text-xs text-[var(--text)]">
-              AI Visibility Score
+              {overallSeries.name}
             </span>
           </div>
         )}
-
-        {/* Divider */}
-        {platformSeries.length > 0 && (
-          <span
-            style={{
-              width: '1px',
-              height: '16px',
-              backgroundColor: 'var(--border)',
-            }}
-          />
-        )}
-
-        {/* Right axis: Mentions by platform */}
-        {platformSeries.length > 0 && (
-          <div className="flex items-center" style={{ gap: '16px' }}>
-            <span className="font-mono text-xs text-[var(--text-ghost)] uppercase" style={{ letterSpacing: '0.05em' }}>
-              Mentions:
+        {platformSeries.map((s) => (
+          <div key={s.key} className="flex items-center gap-2">
+            <span
+              style={{
+                width: '16px',
+                height: '2px',
+                backgroundColor: s.color,
+                borderRadius: '1px',
+              }}
+            />
+            <span className="font-mono text-xs text-[var(--text-dim)]">
+              {s.name}
             </span>
-            {platformSeries.map((s) => (
-              <div key={s.key} className="flex items-center gap-1">
-                <span
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: s.color,
-                  }}
-                />
-                <span className="font-mono text-xs text-[var(--text-dim)]">
-                  {s.name}
-                </span>
-              </div>
-            ))}
           </div>
-        )}
+        ))}
       </div>
 
       {/* Tooltip */}
@@ -778,6 +927,27 @@ interface CompetitorMentionsTrendChartProps {
   height?: number
   showLabels?: boolean
   title?: string
+  defaultToMovingAverage?: boolean
+}
+
+/**
+ * Calculate 3-point moving average for competitor mention data
+ */
+function calculateCompetitorMovingAverage(
+  data: { date: string; value: number }[],
+  window = 3
+): { date: string; value: number }[] {
+  if (data.length < window) return data
+
+  const result: { date: string; value: number }[] = []
+  for (let i = 0; i < data.length; i++) {
+    const start = Math.max(0, i - Math.floor(window / 2))
+    const end = Math.min(data.length, i + Math.ceil(window / 2))
+    const windowData = data.slice(start, end)
+    const avg = windowData.reduce((sum, d) => sum + d.value, 0) / windowData.length
+    result.push({ ...data[i], value: avg })
+  }
+  return result
 }
 
 /**
@@ -789,12 +959,70 @@ export function CompetitorMentionsTrendChart({
   height = 250,
   showLabels = true,
   title,
+  defaultToMovingAverage = true,
 }: CompetitorMentionsTrendChartProps) {
-  const padding = { top: 16, right: 100, bottom: 32, left: 45 } // Extra right padding for labels
+  const padding = { top: 16, right: 20, bottom: 32, left: 45 } // Same padding as visibility trends
+  const [showMovingAverage, setShowMovingAverage] = useState(defaultToMovingAverage)
+  const [isVisible, setIsVisible] = useState(false)
+  const [animationProgress, setAnimationProgress] = useState(0)
+  const chartRef = useRef<HTMLDivElement>(null)
+
+  // Observe when chart becomes visible
+  useEffect(() => {
+    const element = chartRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.2 }
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  // Animate line drawing when visible
+  useEffect(() => {
+    if (!isVisible) return
+
+    const duration = 2500
+    const steps = 100
+    const interval = duration / steps
+
+    let step = 0
+    const timer = setInterval(() => {
+      step++
+      if (step >= steps) {
+        setAnimationProgress(1)
+        clearInterval(timer)
+      } else {
+        const progress = step / steps
+        // Ease-out cubic
+        const eased = 1 - Math.pow(1 - progress, 3)
+        setAnimationProgress(eased)
+      }
+    }, interval)
+
+    return () => clearInterval(timer)
+  }, [isVisible])
+
+  // Apply moving average if enabled
+  const displaySeries = useMemo(() => {
+    if (!showMovingAverage) return series
+    return series.map(s => ({
+      ...s,
+      data: calculateCompetitorMovingAverage(s.data, 3),
+    }))
+  }, [series, showMovingAverage])
 
   // Separate domain series from competitor series
-  const domainSeries = series.find(s => s.isDomain)
-  const competitorSeries = series.filter(s => !s.isDomain)
+  const domainSeries = displaySeries.find(s => s.isDomain)
+  const competitorSeries = displaySeries.filter(s => !s.isDomain)
 
   // Assign colors to competitors
   const competitorWithColors = competitorSeries.map((s, i) => ({
@@ -865,16 +1093,80 @@ export function CompetitorMentionsTrendChart({
 
   const viewBoxWidth = 800
 
+  // Calculate stroke-dasharray for animation
+  const getAnimatedStroke = (totalLength: number) => {
+    const visibleLength = totalLength * animationProgress
+    return `${visibleLength} ${totalLength}`
+  }
+
   return (
-    <div style={{ position: 'relative' }}>
-      {/* Header */}
-      {title && (
-        <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
+    <div ref={chartRef} style={{ position: 'relative' }}>
+      {/* Header with title and toggle */}
+      <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
+        {title && (
           <span className="text-xs font-mono text-[var(--text-dim)] uppercase tracking-wider">
             {title}
           </span>
+        )}
+
+        {/* Moving Average Toggle */}
+        <div className="flex items-center" style={{ gap: '8px' }}>
+          <span className="text-xs font-mono text-[var(--text-ghost)]">Raw</span>
+          <div className="relative group">
+            <button
+              onClick={() => setShowMovingAverage(!showMovingAverage)}
+              className="relative"
+              style={{
+                width: '36px',
+                height: '20px',
+                borderRadius: '10px',
+                backgroundColor: showMovingAverage ? 'var(--green)' : 'var(--border)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+              }}
+              aria-label={showMovingAverage ? 'Show raw values' : 'Show moving average'}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: showMovingAverage ? '18px' : '2px',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  backgroundColor: 'white',
+                  transition: 'left 0.2s',
+                }}
+              />
+            </button>
+            {/* Tooltip */}
+            <div
+              className="absolute opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+              style={{
+                top: '100%',
+                right: '0',
+                marginTop: '8px',
+                backgroundColor: 'var(--surface-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                width: '200px',
+                zIndex: 50,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              }}
+            >
+              <p className="text-xs text-[var(--text)]" style={{ marginBottom: '4px' }}>
+                <strong>Moving Average</strong> smooths out week-to-week variation to reveal the broader trend.
+              </p>
+              <p className="text-xs text-[var(--text-ghost)]">
+                <strong>Raw</strong> shows exact values for each scan.
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-mono text-[var(--text-ghost)]">MA</span>
         </div>
-      )}
+      </div>
 
       {/* SVG Chart */}
       <svg
@@ -942,22 +1234,45 @@ export function CompetitorMentionsTrendChart({
             value: d.value,
             date: d.date,
           }))
+          const smoothPath = showMovingAverage ? generateSmoothPath(points) : null
           const pointsStr = points.map(p => `${p.x},${p.y}`).join(' ')
+
+          // Estimate path length for animation
+          let pathLength = 0
+          for (let i = 1; i < points.length; i++) {
+            const dx = points[i].x - points[i-1].x
+            const dy = points[i].y - points[i-1].y
+            pathLength += Math.sqrt(dx * dx + dy * dy)
+          }
 
           return (
             <g key={s.name}>
-              {/* Line */}
-              <polyline
-                points={pointsStr}
-                fill="none"
-                stroke={s.color}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeOpacity="0.8"
-              />
-              {/* Data points with hover */}
-              {points.map((p, i) => (
+              {/* Line - smooth in MA mode, sharp in raw mode */}
+              {smoothPath ? (
+                <path
+                  d={smoothPath}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeOpacity="0.8"
+                  strokeDasharray={getAnimatedStroke(pathLength * 1.2 || 1000)}
+                />
+              ) : (
+                <polyline
+                  points={pointsStr}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeOpacity="0.8"
+                  strokeDasharray={getAnimatedStroke(pathLength || 1000)}
+                />
+              )}
+              {/* Data points with hover - only show after animation */}
+              {animationProgress > 0.9 && points.map((p, i) => (
                 <circle
                   key={i}
                   cx={p.x}
@@ -965,7 +1280,7 @@ export function CompetitorMentionsTrendChart({
                   r="5"
                   fill={s.color}
                   fillOpacity="0.9"
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', opacity: animationProgress > 0.95 ? 1 : 0 }}
                   onMouseEnter={(e) => {
                     const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect()
                     if (rect) {
@@ -984,18 +1299,6 @@ export function CompetitorMentionsTrendChart({
                   onMouseLeave={() => setTooltip(null)}
                 />
               ))}
-              {/* Label next to last data point */}
-              {points.length > 0 && (
-                <text
-                  x={points[points.length - 1].x + 12}
-                  y={points[points.length - 1].y + 4}
-                  fontSize="10"
-                  fontFamily="monospace"
-                  fill={s.color}
-                >
-                  {s.name}
-                </text>
-              )}
             </g>
           )
         })}
@@ -1008,21 +1311,43 @@ export function CompetitorMentionsTrendChart({
             value: d.value,
             date: d.date,
           }))
+          const smoothPath = showMovingAverage ? generateSmoothPath(points) : null
           const pointsStr = points.map(p => `${p.x},${p.y}`).join(' ')
+
+          // Estimate path length for animation
+          let pathLength = 0
+          for (let i = 1; i < points.length; i++) {
+            const dx = points[i].x - points[i-1].x
+            const dy = points[i].y - points[i-1].y
+            pathLength += Math.sqrt(dx * dx + dy * dy)
+          }
 
           return (
             <g>
-              {/* Line */}
-              <polyline
-                points={pointsStr}
-                fill="none"
-                stroke="#ffffff"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {/* Data points with hover */}
-              {points.map((p, i) => (
+              {/* Line - smooth in MA mode, sharp in raw mode */}
+              {smoothPath ? (
+                <path
+                  d={smoothPath}
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={getAnimatedStroke(pathLength * 1.2 || 1000)}
+                />
+              ) : (
+                <polyline
+                  points={pointsStr}
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={getAnimatedStroke(pathLength || 1000)}
+                />
+              )}
+              {/* Data points with hover - only show after animation */}
+              {animationProgress > 0.9 && points.map((p, i) => (
                 <circle
                   key={i}
                   cx={p.x}
@@ -1031,7 +1356,7 @@ export function CompetitorMentionsTrendChart({
                   fill="var(--bg)"
                   stroke="#ffffff"
                   strokeWidth="2"
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', opacity: animationProgress > 0.95 ? 1 : 0 }}
                   onMouseEnter={(e) => {
                     const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect()
                     if (rect) {
@@ -1050,19 +1375,6 @@ export function CompetitorMentionsTrendChart({
                   onMouseLeave={() => setTooltip(null)}
                 />
               ))}
-              {/* Label next to last data point */}
-              {points.length > 0 && (
-                <text
-                  x={points[points.length - 1].x + 12}
-                  y={points[points.length - 1].y + 4}
-                  fontSize="10"
-                  fontFamily="monospace"
-                  fontWeight="bold"
-                  fill="#ffffff"
-                >
-                  {domain}
-                </text>
-              )}
             </g>
           )
         })()}
@@ -1086,6 +1398,45 @@ export function CompetitorMentionsTrendChart({
           </g>
         )}
       </svg>
+
+      {/* Legend */}
+      <div
+        className="flex flex-wrap items-center justify-center"
+        style={{ marginTop: '16px', gap: '16px' }}
+      >
+        {/* Domain (user's site) - thicker line like "Overall" */}
+        {domainSeries && (
+          <div className="flex items-center gap-2">
+            <span
+              style={{
+                width: '24px',
+                height: '3px',
+                backgroundColor: '#ffffff',
+                borderRadius: '2px',
+              }}
+            />
+            <span className="font-mono text-xs text-[var(--text)]">
+              {domain}
+            </span>
+          </div>
+        )}
+        {/* Competitors */}
+        {competitorWithColors.map((s) => (
+          <div key={s.name} className="flex items-center gap-2">
+            <span
+              style={{
+                width: '16px',
+                height: '2px',
+                backgroundColor: s.color,
+                borderRadius: '1px',
+              }}
+            />
+            <span className="font-mono text-xs text-[var(--text-dim)]">
+              {s.name}
+            </span>
+          </div>
+        ))}
+      </div>
 
       {/* Tooltip */}
       {tooltip && (

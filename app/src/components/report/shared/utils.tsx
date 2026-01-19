@@ -11,12 +11,57 @@ import type { Analysis } from './types'
  * - Converts bullet points (- item, * item at start of line) to styled bullets
  * - Strips markdown headers (# ## ###)
  * - Converts markdown tables to styled tables
+ * - Optionally highlights specified keywords
  */
-export function formatResponseText(text: string): React.ReactNode[] {
+export function formatResponseText(text: string, highlightKeywords?: string[]): React.ReactNode[] {
   if (!text) return []
 
   const lines = text.split('\n')
   const result: React.ReactNode[] = []
+
+  // Helper to highlight keywords in plain text
+  const highlightText = (plainText: string, keyPrefix: string, startIndex: number): React.ReactNode[] => {
+    if (!highlightKeywords || highlightKeywords.length === 0) {
+      return [plainText]
+    }
+
+    const parts: React.ReactNode[] = []
+    let idx = startIndex
+
+    // Create case-insensitive regex for all keywords
+    const keywordPattern = highlightKeywords
+      .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) // Escape regex special chars
+      .join('|')
+    const regex = new RegExp(`(${keywordPattern})`, 'gi')
+
+    let lastIndex = 0
+    let match
+
+    while ((match = regex.exec(plainText)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(plainText.slice(lastIndex, match.index))
+      }
+      // Add the highlighted match
+      parts.push(
+        <mark
+          key={`${keyPrefix}-hl-${idx++}`}
+          className="bg-[var(--green)]/20 text-[var(--green)] px-0.5 rounded-sm"
+          style={{ fontWeight: 500 }}
+        >
+          {match[0]}
+        </mark>
+      )
+      lastIndex = regex.lastIndex
+    }
+
+    // Add remaining text after last match
+    if (lastIndex < plainText.length) {
+      parts.push(plainText.slice(lastIndex))
+    }
+
+    return parts.length > 0 ? parts : [plainText]
+  }
 
   // Process inline formatting (bold and italic)
   const formatInline = (text: string, keyPrefix: string): React.ReactNode[] => {
@@ -30,7 +75,7 @@ export function formatResponseText(text: string): React.ReactNode[] {
       if (boldMatch) {
         parts.push(
           <strong key={`${keyPrefix}-bold-${keyIndex++}`} className="text-[var(--text)]">
-            {boldMatch[1]}
+            {highlightText(boldMatch[1], keyPrefix, keyIndex)}
           </strong>
         )
         remaining = remaining.slice(boldMatch[0].length)
@@ -42,7 +87,7 @@ export function formatResponseText(text: string): React.ReactNode[] {
       if (italicMatch) {
         parts.push(
           <em key={`${keyPrefix}-italic-${keyIndex++}`} className="text-[var(--text-mid)]">
-            {italicMatch[1]}
+            {highlightText(italicMatch[1], keyPrefix, keyIndex)}
           </em>
         )
         remaining = remaining.slice(italicMatch[0].length)
@@ -67,9 +112,10 @@ export function formatResponseText(text: string): React.ReactNode[] {
       if (nextBold !== -1 && nextBold < nextToken) nextToken = nextBold
       if (nextItalic !== -1 && nextItalic < nextToken) nextToken = nextItalic
 
-      // Add plain text up to the next token
+      // Add plain text up to the next token (with keyword highlighting)
       if (nextToken > 0) {
-        parts.push(remaining.slice(0, nextToken))
+        const plainChunk = remaining.slice(0, nextToken)
+        parts.push(...highlightText(plainChunk, keyPrefix, keyIndex++))
         remaining = remaining.slice(nextToken)
       } else if (remaining.length > 0) {
         // If we're stuck, add one character and move on

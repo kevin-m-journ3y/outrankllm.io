@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { BarChart3, Lock, AlertCircle, Sparkles, TrendingUp, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react'
 import { ScoreGauge } from '../ScoreGauge'
 import { MultiLineTrendChart, CompetitorMentionsTrendChart, type MultiLineSeries, type CompetitorMentionsSeries } from '../TrendChart'
@@ -63,6 +63,9 @@ export function MeasurementsTab({
   const [rawCompetitorData, setRawCompetitorData] = useState<CompetitorSnapshot[]>([])
   const [competitorTopNames, setCompetitorTopNames] = useState<string[]>([])
   const [competitorLoading, setCompetitorLoading] = useState(false)
+  const [animatedPlatformScores, setAnimatedPlatformScores] = useState<Record<string, number>>({})
+  const [platformGaugesVisible, setPlatformGaugesVisible] = useState(false)
+  const platformGaugesRef = useRef<HTMLDivElement>(null)
 
   // Fetch trend data for subscribers
   useEffect(() => {
@@ -122,15 +125,38 @@ export function MeasurementsTab({
   const trendData = useMemo(() => {
     if (!currentRunId || rawTrendData.length === 0) return rawTrendData
 
-    // Find the index of the current report in the trend data
+    // Find the index of the current report in the trend data by run_id
     const currentIndex = rawTrendData.findIndex(s => s.run_id === currentRunId)
 
-    // If current report not found in trend data, show all data
-    if (currentIndex === -1) return rawTrendData
+    // If current report found, return data up to and including it
+    if (currentIndex !== -1) {
+      return rawTrendData.slice(0, currentIndex + 1)
+    }
 
-    // Return only data up to and including the current report
-    return rawTrendData.slice(0, currentIndex + 1)
-  }, [rawTrendData, currentRunId])
+    // Current report not found in trend data by run_id - this can happen if:
+    // 1. This is a free user report (score_history only tracks subscribers)
+    // 2. There's a domain_subscription_id mismatch
+    // 3. The score_history entry wasn't created yet
+    //
+    // Fallback: Find the entry that matches the current visibility score.
+    // Search from the end (most recent) since that's most likely to match.
+    const matchingIndex = rawTrendData.findLastIndex(
+      s => Math.round(s.visibility_score) === Math.round(visibilityScore)
+    )
+
+    if (matchingIndex !== -1) {
+      return rawTrendData.slice(0, matchingIndex + 1)
+    }
+
+    // No match found - return all data (edge case)
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        `[MeasurementsTab] Current run_id ${currentRunId} not found in trend data, ` +
+        `and no matching score (${visibilityScore}) found. Showing all ${rawTrendData.length} entries.`
+      )
+    }
+    return rawTrendData
+  }, [rawTrendData, currentRunId, visibilityScore])
 
   // Filter competitor data to only show data up to and including the current report
   const competitorData = useMemo(() => {
@@ -212,6 +238,72 @@ export function MeasurementsTab({
   const orderedPlatforms = hasResponseStats
     ? platformOrder.filter(p => p in platformStats)
     : platformOrder.filter(p => p in platformScores)
+
+  // Observe when platform gauges become visible
+  useEffect(() => {
+    const element = platformGaugesRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setPlatformGaugesVisible(true)
+          observer.disconnect() // Only trigger once
+        }
+      },
+      { threshold: 0.2 } // Trigger when 20% visible
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  // Animate platform scores when gauges become visible
+  useEffect(() => {
+    if (!platformGaugesVisible) return
+
+    const duration = 1500
+    const steps = 60
+    const interval = duration / steps
+
+    // Calculate target scores for each platform
+    const targetScores: Record<string, number> = {}
+    for (const platform of platformOrder) {
+      if (hasResponseStats && platformStats[platform]) {
+        const stats = platformStats[platform]
+        targetScores[platform] = stats.total > 0 ? Math.round((stats.mentioned / stats.total) * 100) : 0
+      } else if (platformScores[platform] !== undefined) {
+        targetScores[platform] = platformScores[platform]
+      }
+    }
+
+    // Initialize animated scores to 0
+    setAnimatedPlatformScores(
+      Object.keys(targetScores).reduce((acc, key) => ({ ...acc, [key]: 0 }), {})
+    )
+
+    let step = 0
+    const timer = setInterval(() => {
+      step++
+      if (step >= steps) {
+        setAnimatedPlatformScores(targetScores)
+        clearInterval(timer)
+      } else {
+        const progress = step / steps
+        // Ease-out cubic for smooth deceleration
+        const eased = 1 - Math.pow(1 - progress, 3)
+        setAnimatedPlatformScores(
+          Object.keys(targetScores).reduce((acc, key) => ({
+            ...acc,
+            [key]: Math.round(targetScores[key] * eased)
+          }), {})
+        )
+      }
+    }, interval)
+
+    return () => clearInterval(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platformGaugesVisible])
 
   // Calculate summary metrics
   const totalQueries = responses?.length || 0
@@ -494,7 +586,7 @@ export function MeasurementsTab({
       </div>
 
       {/* Per-Platform Visibility Gauges */}
-      <div className="card" style={{ padding: '32px' }}>
+      <div ref={platformGaugesRef} className="card" style={{ padding: '32px' }}>
         <h3
           className="text-[var(--text-dim)] font-mono uppercase tracking-wider"
           style={{ fontSize: '11px', marginBottom: '8px', letterSpacing: '0.1em' }}
@@ -513,8 +605,10 @@ export function MeasurementsTab({
               ? (stats.total > 0 ? Math.round((stats.mentioned / stats.total) * 100) : 0)
               : (platformScores[platform] ?? 0)
             const color = platformColors[platform] || 'var(--text-dim)'
-            // Show minimum 5% on the ring when score is < 5
-            const displayScore = score < 5 ? 5 : score
+            // Use animated score for display, fall back to 0 if not yet initialized
+            const animatedScore = animatedPlatformScores[platform] ?? 0
+            // Show minimum 5% on the ring when final score is < 5 (but only after animation completes)
+            const displayScore = score < 5 && animatedScore >= score ? 5 : animatedScore
 
             return (
               <div
@@ -545,7 +639,6 @@ export function MeasurementsTab({
                       strokeLinecap="round"
                       strokeDasharray={`${displayScore * 2.64} 264`}
                       transform="rotate(-90 50 50)"
-                      style={{ transition: 'stroke-dasharray 1s ease-out' }}
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -553,7 +646,7 @@ export function MeasurementsTab({
                       className="font-mono font-medium"
                       style={{ fontSize: '32px', color }}
                     >
-                      {score < 5 ? '< 5%' : `${score}%`}
+                      {score < 5 ? '< 5%' : `${animatedScore}%`}
                     </span>
                   </div>
                 </div>
@@ -632,8 +725,7 @@ export function MeasurementsTab({
                 </p>
               </div>
             ) : (
-              // Real trend chart - full width with dual axes
-              // Left axis: Overall visibility score (0-100) | Right axis: Platform mentions (absolute count)
+              // Real trend chart - single axis showing all percentages (0-100)
               <div
                 className="bg-[var(--surface-elevated)] border border-[var(--border)]"
                 style={{ padding: '24px' }}
@@ -641,13 +733,11 @@ export function MeasurementsTab({
                 <MultiLineTrendChart
                   title="Visibility Over Time"
                   height={300}
-                  rightAxisLabel="Mentions"
-                  rightAxisUnit=""
                   series={[
-                    // Overall visibility score (left axis - 0-100)
+                    // Overall visibility score
                     {
                       key: 'overall',
-                      name: 'AI Visibility Score',
+                      name: 'Overall Score',
                       color: '#ffffff',
                       isOverall: true,
                       data: trendData.map(s => ({
@@ -655,14 +745,14 @@ export function MeasurementsTab({
                         value: Number(s.visibility_score),
                       })),
                     },
-                    // Per-platform mentions (right axis - absolute counts)
+                    // Per-platform visibility percentages
                     {
                       key: 'chatgpt',
                       name: 'ChatGPT',
                       color: '#ef4444',
                       data: trendData.map(s => ({
                         date: s.recorded_at,
-                        value: Number(s.chatgpt_mentions ?? 0),
+                        value: Number(s.chatgpt_score ?? 0),
                       })),
                     },
                     {
@@ -671,7 +761,7 @@ export function MeasurementsTab({
                       color: '#1FB8CD',
                       data: trendData.map(s => ({
                         date: s.recorded_at,
-                        value: Number(s.perplexity_mentions ?? 0),
+                        value: Number(s.perplexity_score ?? 0),
                       })),
                     },
                     {
@@ -680,7 +770,7 @@ export function MeasurementsTab({
                       color: '#3b82f6',
                       data: trendData.map(s => ({
                         date: s.recorded_at,
-                        value: Number(s.gemini_mentions ?? 0),
+                        value: Number(s.gemini_score ?? 0),
                       })),
                     },
                     {
@@ -689,7 +779,7 @@ export function MeasurementsTab({
                       color: '#22c55e',
                       data: trendData.map(s => ({
                         date: s.recorded_at,
-                        value: Number(s.claude_mentions ?? 0),
+                        value: Number(s.claude_score ?? 0),
                       })),
                     },
                   ]}

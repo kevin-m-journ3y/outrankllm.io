@@ -147,6 +147,28 @@ export function AIReadinessTab({
   const [showStickyUpsell, setShowStickyUpsell] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const summaryRef = useRef<HTMLDivElement>(null)
+  const [summaryVisible, setSummaryVisible] = useState(false)
+  const [animatedPercent, setAnimatedPercent] = useState(0)
+  const [animatedCounts, setAnimatedCounts] = useState({ pass: 0, warning: 0, fail: 0 })
+
+  // Observe when summary section becomes visible
+  useEffect(() => {
+    const element = summaryRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setSummaryVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.3 }
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
 
   // Track scroll to show sticky upsell as soon as user starts scrolling
   useEffect(() => {
@@ -173,6 +195,37 @@ export function AIReadinessTab({
   const warningCount = results.filter(r => r.status === 'warning').length
   const totalChecks = results.filter(r => r.status !== 'unknown').length
   const readinessPercent = totalChecks > 0 ? Math.round((passCount / totalChecks) * 100) : 0
+
+  // Animate counts and percentage when summary becomes visible
+  useEffect(() => {
+    if (!summaryVisible) return
+
+    const duration = 1200
+    const steps = 60
+    const interval = duration / steps
+
+    let step = 0
+    const timer = setInterval(() => {
+      step++
+      if (step >= steps) {
+        setAnimatedPercent(readinessPercent)
+        setAnimatedCounts({ pass: passCount, warning: warningCount, fail: failCount })
+        clearInterval(timer)
+      } else {
+        const progress = step / steps
+        // Ease-out cubic
+        const eased = 1 - Math.pow(1 - progress, 3)
+        setAnimatedPercent(Math.round(readinessPercent * eased))
+        setAnimatedCounts({
+          pass: Math.round(passCount * eased),
+          warning: Math.round(warningCount * eased),
+          fail: Math.round(failCount * eased),
+        })
+      }
+    }, interval)
+
+    return () => clearInterval(timer)
+  }, [summaryVisible, readinessPercent, passCount, warningCount, failCount])
 
   // Group by impact
   const highImpact = results.filter(r => r.impact === 'high')
@@ -208,24 +261,30 @@ export function AIReadinessTab({
           <div className="flex items-center" style={{ gap: '32px' }}>
             <div className="flex items-center" style={{ gap: '10px' }}>
               <CheckCircle2 size={20} className="text-[var(--green)]" />
-              <span className="font-mono text-lg text-[var(--text)]">{passCount}</span>
+              <span className="font-mono text-lg text-[var(--text)]">
+                {summaryVisible ? animatedCounts.pass : 0}
+              </span>
               <span className="text-[var(--text-dim)] text-sm">passed</span>
             </div>
             <div className="flex items-center" style={{ gap: '10px' }}>
               <AlertCircle size={20} className="text-[var(--amber)]" />
-              <span className="font-mono text-lg text-[var(--text)]">{warningCount}</span>
+              <span className="font-mono text-lg text-[var(--text)]">
+                {summaryVisible ? animatedCounts.warning : 0}
+              </span>
               <span className="text-[var(--text-dim)] text-sm">warnings</span>
             </div>
             <div className="flex items-center" style={{ gap: '10px' }}>
               <XCircle size={20} className="text-[var(--red)]" />
-              <span className="font-mono text-lg text-[var(--text)]">{failCount}</span>
+              <span className="font-mono text-lg text-[var(--text)]">
+                {summaryVisible ? animatedCounts.fail : 0}
+              </span>
               <span className="text-[var(--text-dim)] text-sm">failed</span>
             </div>
           </div>
 
           <div className="text-right">
             <span className="font-mono text-3xl text-[var(--text)]">
-              {readinessPercent}%
+              {summaryVisible ? animatedPercent : 0}%
             </span>
             <span className="text-[var(--text-dim)] text-sm block">ready for AI</span>
           </div>
@@ -242,8 +301,14 @@ export function AIReadinessTab({
         </h3>
 
         <div style={{ display: 'grid', gap: '16px' }}>
-          {highImpact.map((check) => (
-            <ReadinessCheckRow key={check.id} check={check} analysis={analysis} crawlData={crawlData} />
+          {highImpact.map((check, index) => (
+            <ReadinessCheckRow
+              key={check.id}
+              check={check}
+              analysis={analysis}
+              crawlData={crawlData}
+              animationDelay={index * 100}
+            />
           ))}
         </div>
       </div>
@@ -258,8 +323,14 @@ export function AIReadinessTab({
         </h3>
 
         <div style={{ display: 'grid', gap: '16px' }}>
-          {mediumImpact.map((check) => (
-            <ReadinessCheckRow key={check.id} check={check} analysis={analysis} crawlData={crawlData} />
+          {mediumImpact.map((check, index) => (
+            <ReadinessCheckRow
+              key={check.id}
+              check={check}
+              analysis={analysis}
+              crawlData={crawlData}
+              animationDelay={(highImpact.length + index) * 100}
+            />
           ))}
         </div>
       </div>
@@ -400,13 +471,37 @@ export function AIReadinessTab({
 function ReadinessCheckRow({
   check,
   analysis,
-  crawlData
+  crawlData,
+  animationDelay = 0,
 }: {
   check: ReadinessCheck & { status: string }
   analysis: Analysis | null
   crawlData?: CrawlData
+  animationDelay?: number
 }) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
+  const rowRef = useRef<HTMLDivElement>(null)
+
+  // Observe when row becomes visible and trigger animation with delay
+  useEffect(() => {
+    const element = rowRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          // Add delay for staggered effect
+          setTimeout(() => setIsVisible(true), animationDelay)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [animationDelay])
 
   const statusConfig = {
     pass: { icon: CheckCircle2, color: 'var(--green)', bg: 'var(--green)' },
@@ -451,8 +546,14 @@ function ReadinessCheckRow({
 
   return (
     <div
+      ref={rowRef}
       className="bg-[var(--surface-elevated)] border border-[var(--border)]"
-      style={{ padding: '20px' }}
+      style={{
+        padding: '20px',
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? 'translateY(0)' : 'translateY(8px)',
+        transition: 'opacity 0.4s ease-out, transform 0.4s ease-out',
+      }}
     >
       <div
         className="flex items-start cursor-pointer"

@@ -215,6 +215,7 @@ export function ReportTabs({
             onFilterChange={setPlatformFilter}
             domain={domain}
             tier={tier}
+            analysis={analysis}
           />
         )}
         {activeTab === 'readiness' && (

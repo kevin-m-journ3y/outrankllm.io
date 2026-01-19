@@ -1,10 +1,175 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { MessageSquare, Filter, CheckCircle2, ChevronDown, AlertCircle, Sparkles, Download } from 'lucide-react'
-import type { Response } from '../shared'
+import type { Response, Analysis } from '../shared'
 import { platformColors, platformNames, formatResponseText, handlePricingClick, FilterButton } from '../shared'
 import { UpgradeModal } from '../UpgradeModal'
+
+// Individual response card component with animations
+function ResponseCard({
+  response,
+  isExpanded,
+  onToggleExpand,
+  highlightKeywords,
+  animationDelay,
+}: {
+  response: Response
+  isExpanded: boolean
+  onToggleExpand: () => void
+  highlightKeywords: string[]
+  animationDelay: number
+}) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [isVisible, setIsVisible] = useState(false)
+  const [badgeAnimated, setBadgeAnimated] = useState(false)
+
+  // Default collapsed - show first ~3 lines worth of text
+  const previewLength = 280
+  const responseText = response.response_text || ''
+  const shouldTruncate = responseText.length > previewLength
+  const displayText = isExpanded || !shouldTruncate
+    ? responseText
+    : responseText.slice(0, previewLength) + '...'
+
+  // Observe when card becomes visible
+  useEffect(() => {
+    const element = cardRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          // Staggered reveal
+          setTimeout(() => setIsVisible(true), animationDelay)
+          // Badge animation triggers slightly after card appears
+          if (response.domain_mentioned) {
+            setTimeout(() => setBadgeAnimated(true), animationDelay + 400)
+          }
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [animationDelay, response.domain_mentioned])
+
+  return (
+    <div
+      ref={cardRef}
+      className="card"
+      style={{
+        padding: '28px',
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? 'translateY(0)' : 'translateY(12px)',
+        transition: 'opacity 0.4s ease-out, transform 0.4s ease-out',
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between" style={{ marginBottom: '20px' }}>
+        <div className="flex items-center gap-3">
+          <div
+            style={{
+              width: '10px',
+              height: '10px',
+              backgroundColor: platformColors[response.platform] || 'var(--text-dim)',
+            }}
+          />
+          <span className="font-mono text-sm text-[var(--text)]">
+            {platformNames[response.platform] || response.platform}
+          </span>
+        </div>
+
+        {response.domain_mentioned && (
+          <span
+            className="text-[var(--green)] font-mono flex items-center gap-1"
+            style={{
+              fontSize: '12px',
+              transform: badgeAnimated ? 'scale(1)' : 'scale(0.8)',
+              opacity: badgeAnimated ? 1 : 0,
+              transition: 'transform 0.3s ease-out, opacity 0.3s ease-out',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '14px',
+                display: 'inline-block',
+                animation: badgeAnimated ? 'popIn 0.4s ease-out' : 'none',
+              }}
+            >
+              ✓
+            </span>{' '}
+            Mentioned
+          </span>
+        )}
+      </div>
+
+      {/* Question */}
+      {response.prompt?.prompt_text && (
+        <div
+          className="bg-[var(--surface-elevated)] border-l-2 border-[var(--border)]"
+          style={{ padding: '16px 20px', marginBottom: '20px' }}
+        >
+          <span className="text-[var(--text-ghost)] font-mono text-xs block" style={{ marginBottom: '8px' }}>
+            QUESTION
+          </span>
+          <p className="text-[var(--text-mid)]" style={{ fontSize: '14px', lineHeight: '1.6' }}>
+            {response.prompt.prompt_text}
+          </p>
+        </div>
+      )}
+
+      {/* Response */}
+      <div>
+        <span className="text-[var(--text-ghost)] font-mono text-xs block" style={{ marginBottom: '12px' }}>
+          RESPONSE
+        </span>
+        <div
+          className="text-[var(--text-mid)]"
+          style={{
+            fontSize: '14px',
+            lineHeight: '1.7',
+            maxHeight: isExpanded ? 'none' : '120px',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          {formatResponseText(displayText, highlightKeywords)}
+          {/* Fade overlay when collapsed */}
+          {!isExpanded && shouldTruncate && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: '40px',
+                background: 'linear-gradient(transparent, var(--surface))',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+        </div>
+
+        {shouldTruncate && (
+          <button
+            onClick={onToggleExpand}
+            className="text-[var(--green)] font-mono text-sm hover:underline flex items-center gap-1"
+            style={{ marginTop: '12px' }}
+          >
+            {isExpanded ? 'Show less' : 'Read full response'}
+            <ChevronDown
+              size={14}
+              style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+            />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export function ResponsesTab({
   responses,
@@ -12,18 +177,41 @@ export function ResponsesTab({
   onFilterChange,
   domain,
   tier = 'free',
+  analysis,
 }: {
   responses: Response[] | null
   platformFilter: string
   onFilterChange: (filter: string) => void
   domain: string
   tier?: 'free' | 'starter' | 'pro' | 'agency'
+  analysis?: Analysis | null
 }) {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+  const [expandedIndices, setExpandedIndices] = useState<Set<number>>(new Set())
   const [mentionsOnly, setMentionsOnly] = useState(false)
   const [showStickyUpsell, setShowStickyUpsell] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-  const firstResponseRef = useRef<HTMLDivElement>(null)
+
+  // Build highlight keywords from domain and business name
+  const highlightKeywords = useMemo(() => {
+    const keywords: string[] = []
+
+    // Add domain (without TLD for flexibility)
+    if (domain) {
+      keywords.push(domain)
+      // Also add domain without extension
+      const domainWithoutTld = domain.replace(/\.(com|io|org|net|co|com\.au|co\.uk|ai)$/i, '')
+      if (domainWithoutTld !== domain) {
+        keywords.push(domainWithoutTld)
+      }
+    }
+
+    // Add business name if available
+    if (analysis?.business_name) {
+      keywords.push(analysis.business_name)
+    }
+
+    return keywords.filter(k => k.length > 2) // Filter out very short strings
+  }, [domain, analysis?.business_name])
 
   // Generate and download AI responses as markdown
   const downloadResponses = () => {
@@ -219,93 +407,37 @@ export function ResponsesTab({
         </div>
       )}
 
+      {/* Animation keyframes for badge pop-in */}
+      <style>{`
+        @keyframes popIn {
+          0% { transform: scale(0.5); }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); }
+        }
+      `}</style>
+
       {/* Response Cards */}
       <div style={{ display: 'grid', gap: '20px' }}>
-        {filteredResponses.map((response, index) => {
-          const isExpanded = expandedIndex === index
-          const truncateAt = 1200  // Increased from 500 to show more context before truncating
-          const shouldTruncate = (response.response_text?.length || 0) > truncateAt
-
-          return (
-            <div
-              key={index}
-              ref={index === 0 ? firstResponseRef : undefined}
-              className="card"
-              style={{ padding: '28px' }}
-            >
-              {/* Header */}
-              <div className="flex items-start justify-between" style={{ marginBottom: '20px' }}>
-                <div className="flex items-center gap-3">
-                  <div
-                    style={{
-                      width: '10px',
-                      height: '10px',
-                      backgroundColor: platformColors[response.platform] || 'var(--text-dim)',
-                    }}
-                  />
-                  <span className="font-mono text-sm text-[var(--text)]">
-                    {platformNames[response.platform] || response.platform}
-                  </span>
-                </div>
-
-                {response.domain_mentioned && (
-                  <span
-                    className="text-[var(--green)] font-mono flex items-center gap-1"
-                    style={{ fontSize: '12px' }}
-                  >
-                    <span style={{ fontSize: '14px' }}>✓</span> Mentioned
-                  </span>
-                )}
-              </div>
-
-              {/* Question */}
-              {response.prompt?.prompt_text && (
-                <div
-                  className="bg-[var(--surface-elevated)] border-l-2 border-[var(--border)]"
-                  style={{ padding: '16px 20px', marginBottom: '20px' }}
-                >
-                  <span className="text-[var(--text-ghost)] font-mono text-xs block" style={{ marginBottom: '8px' }}>
-                    QUESTION
-                  </span>
-                  <p className="text-[var(--text-mid)]" style={{ fontSize: '14px', lineHeight: '1.6' }}>
-                    {response.prompt.prompt_text}
-                  </p>
-                </div>
-              )}
-
-              {/* Response */}
-              <div>
-                <span className="text-[var(--text-ghost)] font-mono text-xs block" style={{ marginBottom: '12px' }}>
-                  RESPONSE
-                </span>
-                <div
-                  className="text-[var(--text-mid)]"
-                  style={{ fontSize: '14px', lineHeight: '1.7' }}
-                >
-                  {formatResponseText(
-                    isExpanded || !shouldTruncate
-                      ? response.response_text || ''
-                      : (response.response_text?.slice(0, truncateAt) || '') + '...'
-                  )}
-                </div>
-
-                {shouldTruncate && (
-                  <button
-                    onClick={() => setExpandedIndex(isExpanded ? null : index)}
-                    className="text-[var(--green)] font-mono text-sm hover:underline flex items-center gap-1"
-                    style={{ marginTop: '12px' }}
-                  >
-                    {isExpanded ? 'Show less' : 'Show more'}
-                    <ChevronDown
-                      size={14}
-                      style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
-                    />
-                  </button>
-                )}
-              </div>
-            </div>
-          )
-        })}
+        {filteredResponses.map((response, index) => (
+          <ResponseCard
+            key={`${response.platform}-${index}`}
+            response={response}
+            isExpanded={expandedIndices.has(index)}
+            onToggleExpand={() => {
+              setExpandedIndices(prev => {
+                const next = new Set(prev)
+                if (next.has(index)) {
+                  next.delete(index)
+                } else {
+                  next.add(index)
+                }
+                return next
+              })
+            }}
+            highlightKeywords={highlightKeywords}
+            animationDelay={Math.min(index, 5) * 80} // Cap delay at 5 cards to avoid long waits
+          />
+        ))}
       </div>
 
       {/* Sticky Floating Upsell - Free and Starter only (no meaningful upgrade path for Pro/Agency) */}

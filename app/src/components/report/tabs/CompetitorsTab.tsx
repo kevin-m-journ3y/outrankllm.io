@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Users, Lock, Sparkles, CheckCircle2, XCircle, AlertCircle, Plus, Minus, Loader2, X, ChevronDown, Download } from 'lucide-react'
 import type { Competitor, Analysis, Response, BrandAwarenessResult, CompetitiveSummary } from '../shared'
 import { platformColors, platformNames, formatResponseText, FilterButton } from '../shared'
@@ -48,6 +48,260 @@ function PositioningBadge({ positioning }: { positioning: string | null }) {
   )
 }
 
+// Positioning Matrix - visual grid showing competitive standing at a glance
+function PositioningMatrix({
+  resultsByCompetitor,
+  brandRecognition,
+}: {
+  resultsByCompetitor: Map<string, BrandAwarenessResult[]>
+  brandRecognition: Map<string, boolean>
+}) {
+  const matrixRef = useRef<HTMLDivElement>(null)
+  const [isVisible, setIsVisible] = useState(false)
+  const [animatedCells, setAnimatedCells] = useState<Set<string>>(new Set())
+
+  const platforms = ['chatgpt', 'claude', 'gemini', 'perplexity'] as const
+  const competitorNames = [...resultsByCompetitor.keys()]
+
+  // Calculate summary stats
+  const stats = { stronger: 0, weaker: 0, equal: 0, unknown: 0 }
+  for (const results of resultsByCompetitor.values()) {
+    for (const result of results) {
+      const brandRecognized = brandRecognition.get(result.platform) ?? false
+      if (!brandRecognized) {
+        stats.unknown++
+      } else if (result.positioning === 'stronger') {
+        stats.stronger++
+      } else if (result.positioning === 'weaker') {
+        stats.weaker++
+      } else if (result.positioning === 'equal') {
+        stats.equal++
+      } else {
+        stats.unknown++
+      }
+    }
+  }
+
+  const totalComparisons = stats.stronger + stats.weaker + stats.equal
+
+  // Observe when matrix becomes visible
+  useEffect(() => {
+    const element = matrixRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.2 }
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  // Animate cells with staggered timing when visible
+  useEffect(() => {
+    if (!isVisible) return
+
+    const staggerDelay = 60 // ms between each cell
+    let cellIndex = 0
+
+    competitorNames.forEach((compName) => {
+      platforms.forEach((platform) => {
+        const delay = cellIndex * staggerDelay
+        const cellKey = `${compName}-${platform}`
+        setTimeout(() => {
+          setAnimatedCells(prev => new Set(prev).add(cellKey))
+        }, delay)
+        cellIndex++
+      })
+    })
+  }, [isVisible, competitorNames])
+
+  if (competitorNames.length === 0) return null
+
+  const getPositioningStyle = (positioning: string | null, brandRecognized: boolean) => {
+    if (!brandRecognized) {
+      return { bg: 'var(--surface)', color: 'var(--text-ghost)', icon: '?' }
+    }
+    switch (positioning) {
+      case 'stronger':
+        return { bg: 'var(--green)', color: 'var(--bg)', icon: '▲' }
+      case 'weaker':
+        return { bg: 'var(--red)', color: 'var(--bg)', icon: '▼' }
+      case 'equal':
+        return { bg: 'var(--amber)', color: 'var(--bg)', icon: '=' }
+      default:
+        return { bg: 'var(--surface)', color: 'var(--text-ghost)', icon: '—' }
+    }
+  }
+
+  return (
+    <div ref={matrixRef} className="card" style={{ padding: '32px' }}>
+      <h3
+        className="text-[var(--green)] font-mono uppercase tracking-wider"
+        style={{ fontSize: '11px', marginBottom: '20px', letterSpacing: '0.1em' }}
+      >
+        Positioning At a Glance
+      </h3>
+
+      {/* Summary Stats */}
+      <div
+        className="flex items-center flex-wrap bg-[var(--surface-elevated)] border border-[var(--border)]"
+        style={{ padding: '16px 20px', marginBottom: '24px', gap: '24px' }}
+      >
+        <div className="flex items-center" style={{ gap: '8px' }}>
+          <div
+            style={{
+              width: '12px',
+              height: '12px',
+              backgroundColor: 'var(--green)',
+              borderRadius: '2px',
+            }}
+          />
+          <span className="font-mono text-lg text-[var(--text)]">{stats.stronger}</span>
+          <span className="text-[var(--text-dim)] text-sm">Stronger</span>
+        </div>
+        <div className="flex items-center" style={{ gap: '8px' }}>
+          <div
+            style={{
+              width: '12px',
+              height: '12px',
+              backgroundColor: 'var(--amber)',
+              borderRadius: '2px',
+            }}
+          />
+          <span className="font-mono text-lg text-[var(--text)]">{stats.equal}</span>
+          <span className="text-[var(--text-dim)] text-sm">Equal</span>
+        </div>
+        <div className="flex items-center" style={{ gap: '8px' }}>
+          <div
+            style={{
+              width: '12px',
+              height: '12px',
+              backgroundColor: 'var(--red)',
+              borderRadius: '2px',
+            }}
+          />
+          <span className="font-mono text-lg text-[var(--text)]">{stats.weaker}</span>
+          <span className="text-[var(--text-dim)] text-sm">Weaker</span>
+        </div>
+        {totalComparisons > 0 && (
+          <div className="text-[var(--text-dim)] text-sm" style={{ marginLeft: 'auto' }}>
+            {Math.round((stats.stronger / totalComparisons) * 100)}% win rate across {totalComparisons} comparisons
+          </div>
+        )}
+      </div>
+
+      {/* Matrix Grid */}
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th
+                className="text-left font-mono text-xs text-[var(--text-ghost)] uppercase"
+                style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}
+              >
+                Competitor
+              </th>
+              {platforms.map((platform) => (
+                <th
+                  key={platform}
+                  className="text-center font-mono text-xs uppercase"
+                  style={{
+                    padding: '12px 8px',
+                    borderBottom: '1px solid var(--border)',
+                    color: platformColors[platform],
+                    minWidth: '80px',
+                  }}
+                >
+                  {platformNames[platform]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {competitorNames.map((compName) => {
+              const results = resultsByCompetitor.get(compName) || []
+              return (
+                <tr key={compName} className="border-b border-[var(--border-subtle)]">
+                  <td
+                    className="text-[var(--text)] font-medium"
+                    style={{ padding: '14px 16px', fontSize: '14px' }}
+                  >
+                    vs. {compName}
+                  </td>
+                  {platforms.map((platform) => {
+                    const result = results.find(r => r.platform === platform)
+                    const brandRecognized = brandRecognition.get(platform) ?? false
+                    const style = getPositioningStyle(result?.positioning || null, brandRecognized)
+                    const cellKey = `${compName}-${platform}`
+                    const isAnimated = animatedCells.has(cellKey)
+
+                    return (
+                      <td key={platform} style={{ padding: '8px', textAlign: 'center' }}>
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '36px',
+                            height: '36px',
+                            backgroundColor: style.bg,
+                            color: style.color,
+                            fontWeight: 600,
+                            fontSize: '14px',
+                            borderRadius: '4px',
+                            opacity: isAnimated ? 1 : 0,
+                            transform: isAnimated ? 'scale(1)' : 'scale(0.5)',
+                            transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+                          }}
+                          title={
+                            !brandRecognized
+                              ? 'Brand not recognized by this platform'
+                              : result?.positioning
+                                ? `${result.positioning.charAt(0).toUpperCase()}${result.positioning.slice(1)} than ${compName}`
+                                : 'No data'
+                          }
+                        >
+                          {style.icon}
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Legend */}
+      <div
+        className="flex items-center flex-wrap text-xs text-[var(--text-ghost)]"
+        style={{ marginTop: '16px', gap: '16px' }}
+      >
+        <span className="flex items-center" style={{ gap: '6px' }}>
+          <span style={{ color: 'var(--green)' }}>▲</span> You&apos;re stronger
+        </span>
+        <span className="flex items-center" style={{ gap: '6px' }}>
+          <span style={{ color: 'var(--amber)' }}>=</span> Equal footing
+        </span>
+        <span className="flex items-center" style={{ gap: '6px' }}>
+          <span style={{ color: 'var(--red)' }}>▼</span> They&apos;re stronger
+        </span>
+        <span className="flex items-center" style={{ gap: '6px' }}>
+          <span>?</span> Brand not recognized
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function HorizontalBarChart({
   data,
   isBlurred = false,
@@ -56,11 +310,74 @@ function HorizontalBarChart({
   isBlurred?: boolean
 }) {
   const maxCount = Math.max(...data.map(d => d.count), 1)
+  const chartRef = useRef<HTMLDivElement>(null)
+  const [isVisible, setIsVisible] = useState(false)
+  const [animatedWidths, setAnimatedWidths] = useState<number[]>(data.map(() => 0))
+
+  // Observe when chart becomes visible
+  useEffect(() => {
+    const element = chartRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.2 }
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  // Animate bars with staggered timing when visible
+  useEffect(() => {
+    if (!isVisible) return
+
+    const duration = 1200 // Total animation duration per bar
+    const staggerDelay = 120 // Delay between each bar starting
+    const steps = 60
+
+    // Animate each bar with a stagger
+    data.forEach((entry, index) => {
+      const targetWidth = (entry.count / maxCount) * 100
+      const startDelay = index * staggerDelay
+
+      setTimeout(() => {
+        let step = 0
+        const interval = duration / steps
+
+        const timer = setInterval(() => {
+          step++
+          if (step >= steps) {
+            setAnimatedWidths(prev => {
+              const next = [...prev]
+              next[index] = targetWidth
+              return next
+            })
+            clearInterval(timer)
+          } else {
+            const progress = step / steps
+            // Ease-out cubic for natural deceleration
+            const eased = 1 - Math.pow(1 - progress, 3)
+            setAnimatedWidths(prev => {
+              const next = [...prev]
+              next[index] = targetWidth * eased
+              return next
+            })
+          }
+        }, interval)
+      }, startDelay)
+    })
+  }, [isVisible, data, maxCount])
 
   return (
-    <div style={{ display: 'grid', gap: '14px' }}>
+    <div ref={chartRef} style={{ display: 'grid', gap: '14px' }}>
       {data.map((entry, index) => {
-        const barWidth = (entry.count / maxCount) * 100
+        const currentWidth = isVisible ? animatedWidths[index] : 0
         const shouldBlur = isBlurred && index > 0
 
         return (
@@ -94,11 +411,10 @@ function HorizontalBarChart({
             >
               <div
                 style={{
-                  width: `${barWidth}%`,
+                  width: `${currentWidth}%`,
                   height: '100%',
                   backgroundColor: entry.isUser ? 'var(--green)' : 'var(--text-mid)',
                   borderRadius: '2px',
-                  transition: 'width 0.3s ease-out',
                 }}
               />
             </div>
@@ -707,8 +1023,6 @@ export function CompetitorsTab({
   // Get unique competitor names that have positioning data
   const competitorNames = [...resultsByCompetitor.keys()]
 
-  const [firstCompetitor] = competitors
-
   return (
     <div style={{ display: 'grid', gap: '32px' }}>
       {/* Description Box */}
@@ -805,6 +1119,14 @@ export function CompetitorsTab({
         domainSubscriptionId={domainSubscriptionId}
         isSubscriber={isSubscriber}
       />
+
+      {/* Positioning Matrix - Visual overview (Subscribers only) */}
+      {isSubscriber && resultsByCompetitor.size > 0 && (
+        <PositioningMatrix
+          resultsByCompetitor={resultsByCompetitor}
+          brandRecognition={platformRecognition}
+        />
+      )}
 
       {/* Competitive Summary Section (AI Synthesized) */}
       {isSubscriber && competitiveSummary && (
