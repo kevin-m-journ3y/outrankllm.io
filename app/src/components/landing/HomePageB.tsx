@@ -244,7 +244,7 @@ export function HomePageB() {
               }
             }}
           >
-            Get Started — It&apos;s Free
+            Get your 1 week free trial
           </a>
 
           {/* JOURN3Y attribution */}

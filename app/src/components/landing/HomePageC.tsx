@@ -124,7 +124,7 @@ export function HomePageC() {
               onClick={() => openModal('hero_cta')}
               className="form-button w-full flex items-center justify-center gap-2"
             >
-              Get My Free AI Visibility Report
+              Get your 1 week free trial
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -256,7 +256,7 @@ export function HomePageC() {
             className="form-button flex items-center justify-center w-full gap-2"
             style={{ marginBottom: '48px' }}
           >
-            Get Started — It&apos;s Free
+            Get your 1 week free trial
             <ArrowRight className="w-4 h-4" />
           </button>
 

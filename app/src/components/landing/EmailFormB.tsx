@@ -299,7 +299,7 @@ export function EmailFormB({ onSuccess }: EmailFormBProps) {
           ) : session?.tier === 'agency' ? (
             'Scan New Domain'
           ) : (
-            'Get My Free AI Visibility Report'
+            'Get your 1 week free trial'
           )}
         </button>
       </form>
