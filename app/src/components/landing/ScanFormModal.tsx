@@ -395,7 +395,7 @@ export function ScanFormModal({ isOpen, onClose, triggerButtonRef }: ScanFormMod
                     style={session ? { opacity: 0.7, cursor: 'not-allowed' } : { backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
                   />
                   <span className="text-[var(--text-dim)] text-[0.65rem] text-center">
-                    We&apos;ll send a private link to your report here
+                    We&apos;ll send a private link to access your free trial
                   </span>
                 </div>
 

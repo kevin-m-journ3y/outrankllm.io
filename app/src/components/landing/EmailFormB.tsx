@@ -235,7 +235,7 @@ export function EmailFormB({ onSuccess }: EmailFormBProps) {
             style={session ? { opacity: 0.7, cursor: 'not-allowed' } : { backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
           />
           <span className="text-[var(--text-dim)] text-[0.65rem]">
-            We&apos;ll send your report here
+            We&apos;ll send a link to access your free trial
           </span>
         </div>
 
@@ -280,7 +280,7 @@ export function EmailFormB({ onSuccess }: EmailFormBProps) {
             >
               Terms & Conditions
             </Link>
-            {' '}and understand you&apos;ll email my report. Unsubscribe anytime.
+            {' '}and understand you&apos;ll email me. Unsubscribe anytime.
           </span>
         </label>
 
