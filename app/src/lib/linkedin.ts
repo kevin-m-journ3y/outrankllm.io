@@ -74,7 +74,7 @@ export function trackLinkedInConversionOnce(
  */
 export const LINKEDIN_CONVERSIONS = {
   // Conversion IDs from LinkedIn Campaign Manager (outrankllm.io)
-  FREE_REPORT_SIGNUP: 0,      // Not set up yet - add ID when needed
+  FREE_REPORT_SIGNUP: 23665268,      // User submits free report form
   REPORT_VIEWED: 23485596,    // User views their report
   PRICING_PAGE_VIEWED: 23485604, // User visits pricing page
   CHECKOUT_STARTED: 23485612, // User clicks subscribe button
