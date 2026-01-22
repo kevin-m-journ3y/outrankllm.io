@@ -2,8 +2,54 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Settings, Globe, Lock, Sparkles, Lightbulb, Pencil, Plus, X, Check, Trash2, ChevronDown, RotateCcw, Bot, User, Library, CheckCircle, History } from 'lucide-react'
-import type { Analysis, Prompt } from '../shared'
+import type { Analysis, Prompt, PlatformData } from '../shared'
+import { Monitor, Code, BarChart3, MessageSquare, FileText, AlertTriangle, Cpu, Info } from 'lucide-react'
 import { handlePricingClick, categoryLabels, categoryColors, selectableCategories } from '../shared'
+
+// Simple tooltip component
+function InfoTooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false)
+
+  return (
+    <span
+      className="relative inline-flex cursor-help"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <Info size={10} className="text-[var(--text-ghost)]" />
+      {show && (
+        <span
+          className="absolute z-50 bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-mid)] text-xs"
+          style={{
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            marginBottom: '6px',
+            padding: '8px 12px',
+            width: '220px',
+            lineHeight: '1.5',
+            whiteSpace: 'normal',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          }}
+        >
+          {text}
+          {/* Arrow */}
+          <span
+            className="absolute border-[var(--border)]"
+            style={{
+              top: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              borderLeft: '6px solid transparent',
+              borderRight: '6px solid transparent',
+              borderTop: '6px solid var(--surface-elevated)',
+            }}
+          />
+        </span>
+      )}
+    </span>
+  )
+}
 
 interface EditableQuestion {
   id: string
@@ -669,6 +715,7 @@ export function SetupTab({
   domainSubscriptionId,
   isSubscriber = false,
   customQuestionLimit = 0,
+  platformData,
 }: {
   analysis: Analysis | null
   prompts?: Prompt[] | null
@@ -676,7 +723,10 @@ export function SetupTab({
   domainSubscriptionId?: string | null
   isSubscriber?: boolean
   customQuestionLimit?: number
+  platformData?: PlatformData | null
 }) {
+  // Suppress unused variable warnings
+  void domain
   // State for editable questions
   const [questions, setQuestions] = useState<EditableQuestion[]>(() =>
     (prompts || []).map(p => ({
@@ -888,7 +938,7 @@ export function SetupTab({
         </div>
       </div>
 
-      {/* Business Identity */}
+      {/* What We Detected */}
       <div className="card" style={{ padding: '32px' }}>
         <h3
           className="text-[var(--green)] font-mono uppercase tracking-wider"
@@ -897,62 +947,250 @@ export function SetupTab({
           What We Detected
         </h3>
 
-        <div style={{ display: 'grid', gap: '28px' }}>
-          {analysis.business_name && (
-            <div>
-              <label className="text-[var(--text-dim)] font-mono text-xs block" style={{ marginBottom: '8px' }}>
-                Business Name
-              </label>
-              <p className="text-[var(--text)] text-xl font-medium">
-                {analysis.business_name}
-              </p>
+        {/* AI Readability Warning - shown prominently at top if issues */}
+        {platformData?.has_ai_readability_issues && (
+          <div
+            className="bg-[var(--red)]/10 border border-[var(--red)]/30"
+            style={{ padding: '16px 20px', marginBottom: '24px' }}
+          >
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={18} className="text-[var(--red)] flex-shrink-0" style={{ marginTop: '2px' }} />
+              <div>
+                <p className="text-[var(--red)] text-sm font-medium">AI Readability Issue Detected</p>
+                <p className="text-[var(--text-dim)] text-sm" style={{ marginTop: '6px', lineHeight: '1.5' }}>
+                  {platformData.ai_readability_issues?.[0] || 'Your site may not be fully readable by AI assistants due to client-side rendering.'}
+                </p>
+              </div>
             </div>
-          )}
+          </div>
+        )}
 
-          <div>
-            <label className="text-[var(--text-dim)] font-mono text-xs block" style={{ marginBottom: '8px' }}>
-              Business Type
-            </label>
-            <p className="text-[var(--text)] text-lg">
+        {/* Business Identity - Featured at top */}
+        {analysis.business_name && (
+          <div style={{ marginBottom: '28px' }}>
+            <p className="text-[var(--text)] font-medium" style={{ fontSize: '1.5rem', lineHeight: '1.3' }}>
+              {analysis.business_name}
+            </p>
+            <p className="text-[var(--text-mid)]" style={{ marginTop: '6px' }}>
               {analysis.business_type}
             </p>
           </div>
+        )}
 
-          <div className="grid sm:grid-cols-2" style={{ gap: '24px' }}>
+        {!analysis.business_name && (
+          <div style={{ marginBottom: '28px' }}>
+            <p className="text-[var(--text)] font-medium" style={{ fontSize: '1.25rem' }}>
+              {analysis.business_type}
+            </p>
+          </div>
+        )}
+
+        {/* Detection Grid - 2 column layout for balance */}
+        <div
+          className="border-t border-[var(--border)] grid sm:grid-cols-2"
+          style={{ paddingTop: '24px', gap: '20px 40px' }}
+        >
+          {/* Left Column - Business Info */}
+          <div style={{ display: 'grid', gap: '20px', alignContent: 'start' }}>
+            {/* Location */}
             {analysis.location && (
               <div>
-                <label className="text-[var(--text-dim)] font-mono text-xs block" style={{ marginBottom: '8px' }}>
+                <label className="text-[var(--text-dim)] font-mono uppercase tracking-wider block" style={{ fontSize: '10px', marginBottom: '6px' }}>
                   Location
                 </label>
-                <p className="text-[var(--text-mid)]">
+                <p className="text-[var(--text-mid)] text-sm">
                   {analysis.location}
                 </p>
               </div>
             )}
 
+            {/* Industry */}
             {analysis.industry && (
               <div>
-                <label className="text-[var(--text-dim)] font-mono text-xs block" style={{ marginBottom: '8px' }}>
+                <label className="text-[var(--text-dim)] font-mono uppercase tracking-wider block" style={{ fontSize: '10px', marginBottom: '6px' }}>
                   Industry
                 </label>
-                <p className="text-[var(--text-mid)]">
+                <p className="text-[var(--text-mid)] text-sm">
                   {analysis.industry}
                 </p>
               </div>
             )}
 
+            {/* Target Audience */}
             {analysis.target_audience && (
               <div>
-                <label className="text-[var(--text-dim)] font-mono text-xs block" style={{ marginBottom: '8px' }}>
+                <label className="text-[var(--text-dim)] font-mono uppercase tracking-wider block" style={{ fontSize: '10px', marginBottom: '6px' }}>
                   Target Audience
                 </label>
-                <p className="text-[var(--text-mid)]">
+                <p className="text-[var(--text-mid)] text-sm">
                   {analysis.target_audience}
                 </p>
               </div>
             )}
+
+            {/* E-commerce indicator */}
+            {platformData?.is_ecommerce && (
+              <div>
+                <label className="text-[var(--text-dim)] font-mono uppercase tracking-wider block" style={{ fontSize: '10px', marginBottom: '6px' }}>
+                  Business Model
+                </label>
+                <p className="text-[var(--text-mid)] text-sm">
+                  E-commerce
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Tech Info */}
+          <div style={{ display: 'grid', gap: '20px', alignContent: 'start' }}>
+            {/* Platform */}
+            <div>
+              <label className="text-[var(--text-dim)] font-mono uppercase tracking-wider flex items-center gap-1.5" style={{ fontSize: '10px', marginBottom: '6px' }}>
+                <Monitor size={10} />
+                Platform
+                <InfoTooltip text={
+                  platformData?.detected_cms === 'unknown'
+                    ? "We couldn't detect your website's platform. This may be due to bot protection, the site being temporarily unavailable, or using a custom-built solution."
+                    : platformData?.detected_cms
+                    ? `Your site is built with ${platformData.detected_cms}.`
+                    : "The CMS or website builder used to create your site (e.g., WordPress, Webflow, Squarespace). 'Custom-built' means we didn't detect a known platform."
+                } />
+              </label>
+              <p className="text-[var(--text-mid)] text-sm">
+                {platformData?.detected_cms === 'unknown'
+                  ? 'Unknown'
+                  : platformData?.detected_cms || 'Custom-built'}
+              </p>
+            </div>
+
+            {/* Tech Stack */}
+            {(platformData?.detected_framework || platformData?.detected_css_framework || platformData?.detected_hosting) && (
+              <div>
+                <label className="text-[var(--text-dim)] font-mono uppercase tracking-wider flex items-center gap-1.5" style={{ fontSize: '10px', marginBottom: '6px' }}>
+                  <Code size={10} />
+                  Tech Stack
+                </label>
+                <p className="text-[var(--text-mid)] text-sm">
+                  {[
+                    platformData?.detected_framework,
+                    platformData?.detected_css_framework,
+                    platformData?.detected_hosting,
+                  ].filter(Boolean).join(', ')}
+                </p>
+              </div>
+            )}
+
+            {/* Analytics */}
+            {platformData?.detected_analytics && platformData.detected_analytics.length > 0 && (
+              <div>
+                <label className="text-[var(--text-dim)] font-mono uppercase tracking-wider flex items-center gap-1.5" style={{ fontSize: '10px', marginBottom: '6px' }}>
+                  <BarChart3 size={10} />
+                  Analytics
+                </label>
+                <p className="text-[var(--text-mid)] text-sm">
+                  {platformData.detected_analytics.join(', ')}
+                </p>
+              </div>
+            )}
+
+            {/* Lead Capture */}
+            {platformData?.detected_lead_capture && platformData.detected_lead_capture.length > 0 && (
+              <div>
+                <label className="text-[var(--text-dim)] font-mono uppercase tracking-wider flex items-center gap-1.5" style={{ fontSize: '10px', marginBottom: '6px' }}>
+                  <MessageSquare size={10} />
+                  Lead Capture
+                </label>
+                <p className="text-[var(--text-mid)] text-sm">
+                  {platformData.detected_lead_capture.join(', ')}
+                </p>
+              </div>
+            )}
+
+            {/* AI Readability Status */}
+            <div>
+              <label className="text-[var(--text-dim)] font-mono uppercase tracking-wider flex items-center gap-1.5" style={{ fontSize: '10px', marginBottom: '6px' }}>
+                <Bot size={10} />
+                AI Readability
+                <InfoTooltip text={
+                  platformData?.renders_client_side
+                    ? "Your site loads content via JavaScript, which AI assistants like ChatGPT and Claude cannot read. This significantly limits your AI visibility."
+                    : platformData?.has_ai_readability_issues
+                    ? "We detected potential issues that may affect how AI assistants read your site. Some content may not be fully visible."
+                    : "Your site's content is server-rendered, which means AI assistants like ChatGPT and Claude can read and understand it. This is ideal for AI visibility."
+                } />
+              </label>
+              {platformData?.renders_client_side ? (
+                <p className="text-[var(--red)] text-sm flex items-center gap-1.5">
+                  <AlertTriangle size={12} />
+                  Client-side only
+                </p>
+              ) : platformData?.has_ai_readability_issues ? (
+                <p className="text-[var(--yellow)] text-sm">
+                  Potential issues
+                </p>
+              ) : (
+                <p className="text-[var(--green)] text-sm flex items-center gap-1.5">
+                  <Check size={12} />
+                  Good
+                </p>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Content Sections - Tag cloud */}
+        {(() => {
+          const sections = [
+            platformData?.has_blog && 'Blog',
+            platformData?.has_case_studies && 'Case Studies',
+            platformData?.has_resources && 'Resources',
+            platformData?.has_faq && 'FAQ',
+            platformData?.has_about_page && 'About',
+            platformData?.has_team_page && 'Team',
+            platformData?.has_testimonials && 'Testimonials',
+          ].filter(Boolean) as string[]
+
+          if (sections.length === 0) return null
+
+          return (
+            <div
+              className="border-t border-[var(--border)]"
+              style={{ paddingTop: '20px', marginTop: '24px' }}
+            >
+              <label className="text-[var(--text-dim)] font-mono uppercase tracking-wider flex items-center gap-1.5" style={{ fontSize: '10px', marginBottom: '12px' }}>
+                <FileText size={10} />
+                Content Found
+              </label>
+              <div className="flex flex-wrap" style={{ gap: '8px' }}>
+                {sections.map((section) => (
+                  <span
+                    key={section}
+                    className="bg-[var(--green)]/10 text-[var(--green)] font-mono"
+                    style={{ padding: '4px 10px', fontSize: '11px' }}
+                  >
+                    {section}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* AI-Generated Badge */}
+        {platformData?.likely_ai_generated && (
+          <div
+            className="border-t border-[var(--border)]"
+            style={{ paddingTop: '20px', marginTop: '24px' }}
+          >
+            <span
+              className="inline-flex items-center gap-2 font-mono text-xs bg-[var(--blue)]/10 text-[var(--blue)]"
+              style={{ padding: '6px 12px' }}
+            >
+              <Cpu size={12} />
+              AI-assisted build detected
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Services */}

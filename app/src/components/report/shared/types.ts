@@ -48,6 +48,41 @@ export interface CrawlData {
   hasMetaDescriptions?: boolean
 }
 
+export interface PlatformData {
+  // CMS / Website Builder
+  detected_cms?: string | null
+  detected_cms_confidence?: 'high' | 'medium' | 'low' | null
+  detected_framework?: string | null
+  detected_css_framework?: string | null
+  detected_ecommerce?: string | null
+  detected_hosting?: string | null
+
+  // Analytics & Lead Capture
+  detected_analytics?: string[]
+  detected_lead_capture?: string[]
+
+  // Content sections
+  has_blog?: boolean
+  has_case_studies?: boolean
+  has_resources?: boolean
+  has_faq?: boolean
+  has_about_page?: boolean
+  has_team_page?: boolean
+  has_testimonials?: boolean
+
+  // E-commerce flag
+  is_ecommerce?: boolean
+
+  // AI Readability
+  has_ai_readability_issues?: boolean
+  ai_readability_issues?: string[]
+  renders_client_side?: boolean
+
+  // AI-generated signals
+  likely_ai_generated?: boolean
+  ai_generated_signals?: string[]
+}
+
 export interface BrandAwarenessResult {
   platform: string
   query_type: string

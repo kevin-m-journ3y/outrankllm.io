@@ -171,6 +171,29 @@ interface ReportData {
     schemaTypes: string[]
     hasMetaDescriptions: boolean
   } | null
+  platformData: {
+    detected_cms?: string | null
+    detected_cms_confidence?: 'high' | 'medium' | 'low' | null
+    detected_framework?: string | null
+    detected_css_framework?: string | null
+    detected_ecommerce?: string | null
+    detected_hosting?: string | null
+    detected_analytics?: string[]
+    detected_lead_capture?: string[]
+    has_blog?: boolean
+    has_case_studies?: boolean
+    has_resources?: boolean
+    has_faq?: boolean
+    has_about_page?: boolean
+    has_team_page?: boolean
+    has_testimonials?: boolean
+    is_ecommerce?: boolean
+    has_ai_readability_issues?: boolean
+    ai_readability_issues?: string[]
+    renders_client_side?: boolean
+    likely_ai_generated?: boolean
+    ai_generated_signals?: string[]
+  } | null
   responses: {
     platform: string
     response_text: string
@@ -223,7 +246,7 @@ interface ReportClientProps {
 }
 
 export function ReportClient({ data, showLockedModal = false }: ReportClientProps) {
-  const { report, analysis, crawlData, responses, prompts, subscriberQuestions, brandAwareness, competitiveSummary, email, domain, runId, domainSubscriptionId, isVerified, featureFlags, hasMarketingOptIn } = data
+  const { report, analysis, crawlData, platformData, responses, prompts, subscriberQuestions, brandAwareness, competitiveSummary, email, domain, runId, domainSubscriptionId, isVerified, featureFlags, hasMarketingOptIn } = data
   const [showModal, setShowModal] = useState(false)
   const [showLocked, setShowLocked] = useState(showLockedModal)
   const isSubscriber = featureFlags.isSubscriber
@@ -389,6 +412,7 @@ export function ReportClient({ data, showLockedModal = false }: ReportClientProp
             brandAwareness={brandAwareness}
             competitiveSummary={competitiveSummary}
             crawlData={crawlData ?? undefined}
+            platformData={platformData ?? undefined}
             visibilityScore={report.visibility_score}
             platformScores={report.platform_scores}
             competitors={report.top_competitors}

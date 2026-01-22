@@ -3,6 +3,8 @@
  * Crawls a website to extract content for analysis
  */
 
+import { detectPlatform, type PlatformDetection } from './platform-detect'
+
 // Simple logger for crawl debugging
 const crawlLog = {
   info: (msg: string) => console.log(`[crawl] ${msg}`),
@@ -71,6 +73,8 @@ export interface CrawlResult {
   extractedLocations: string[]
   extractedServices: string[]
   extractedProducts: string[]
+  // Platform detection
+  platformDetection: PlatformDetection | null
 }
 
 /**
@@ -523,8 +527,42 @@ export async function crawlSite(domain: string): Promise<CrawlResult> {
   crawlLog.info(`Starting crawl for ${domain}`)
   const startTime = Date.now()
 
-  // Check for sitemap and robots.txt in parallel
-  crawlLog.info(`Checking sitemap and robots.txt...`)
+  // Check for sitemap and robots.txt in parallel, and fetch homepage for platform detection
+  crawlLog.info(`Checking sitemap, robots.txt, and detecting platform...`)
+
+  // Fetch homepage for platform detection
+  let platformDetection: PlatformDetection | null = null
+  let homepageHtml: string | null = null
+  let homepageHeaders: Record<string, string> = {}
+
+  const homepageUrl = `https://${domain}`
+  try {
+    const homepageResponse = await fetchWithTimeout(homepageUrl, {
+      headers: { 'User-Agent': 'outrankllm-crawler/1.0' },
+      redirect: 'follow',
+    }, 15000)
+
+    if (homepageResponse.ok) {
+      homepageHtml = await homepageResponse.text()
+      homepageResponse.headers.forEach((value, key) => {
+        homepageHeaders[key] = value
+      })
+
+      // Run platform detection
+      platformDetection = detectPlatform({
+        html: homepageHtml,
+        headers: homepageHeaders,
+        url: homepageUrl,
+      })
+      crawlLog.info(`Platform detection: ${platformDetection.cms || 'Custom'}, Framework: ${platformDetection.framework || 'Unknown'}`)
+      if (platformDetection.hasAiReadabilityIssues) {
+        crawlLog.warn(`AI Readability issues detected: ${platformDetection.aiReadabilityIssues.join(', ')}`)
+      }
+    }
+  } catch (error) {
+    crawlLog.warn(`Homepage fetch for platform detection failed: ${error instanceof Error ? error.message : 'Unknown'}`)
+  }
+
   const [sitemapResult, hasRobotsTxt] = await Promise.all([
     fetchSitemap(domain),
     checkRobotsTxt(domain),
@@ -620,6 +658,7 @@ export async function crawlSite(domain: string): Promise<CrawlResult> {
     extractedLocations: [...new Set(extractedLocations)],
     extractedServices: [...new Set(extractedServices)],
     extractedProducts: [...new Set(extractedProducts)],
+    platformDetection,
   }
 }
 

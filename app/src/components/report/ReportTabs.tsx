@@ -6,7 +6,7 @@ import { Lock, Lightbulb, FileCode } from 'lucide-react'
 import { tabs } from './shared/constants'
 
 import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics'
-import type { TabId, Analysis, Response, Prompt, Competitor, CrawlData, BrandAwarenessResult, CompetitiveSummary } from './shared/types'
+import type { TabId, Analysis, Response, Prompt, Competitor, CrawlData, BrandAwarenessResult, CompetitiveSummary, PlatformData } from './shared/types'
 
 import {
   StartHereTab,
@@ -35,6 +35,7 @@ interface ReportTabsProps {
   platformScores: Record<string, number>
   competitors?: Competitor[]
   crawlData?: CrawlData
+  platformData?: PlatformData | null
   domain: string
   domainSubscriptionId?: string | null
   onUpgradeClick: () => void
@@ -55,6 +56,7 @@ export function ReportTabs({
   platformScores,
   competitors = [],
   crawlData,
+  platformData,
   domain,
   domainSubscriptionId,
   onUpgradeClick,
@@ -206,6 +208,7 @@ export function ReportTabs({
             domainSubscriptionId={domainSubscriptionId}
             isSubscriber={isSubscriber}
             customQuestionLimit={customQuestionLimit}
+            platformData={platformData}
           />
         )}
         {activeTab === 'responses' && (

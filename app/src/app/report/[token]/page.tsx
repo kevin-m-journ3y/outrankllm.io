@@ -43,6 +43,29 @@ interface ReportData {
     schemaTypes: string[]
     hasMetaDescriptions: boolean
   } | null
+  platformData: {
+    detected_cms?: string | null
+    detected_cms_confidence?: 'high' | 'medium' | 'low' | null
+    detected_framework?: string | null
+    detected_css_framework?: string | null
+    detected_ecommerce?: string | null
+    detected_hosting?: string | null
+    detected_analytics?: string[]
+    detected_lead_capture?: string[]
+    has_blog?: boolean
+    has_case_studies?: boolean
+    has_resources?: boolean
+    has_faq?: boolean
+    has_about_page?: boolean
+    has_team_page?: boolean
+    has_testimonials?: boolean
+    is_ecommerce?: boolean
+    has_ai_readability_issues?: boolean
+    ai_readability_issues?: string[]
+    renders_client_side?: boolean
+    likely_ai_generated?: boolean
+    ai_generated_signals?: string[]
+  } | null
   responses: {
     platform: string
     response_text: string
@@ -146,7 +169,12 @@ async function getReport(token: string): Promise<ReportData | null> {
     .select(`
       business_type, business_name, services, location, target_audience, key_phrases, industry,
       pages_crawled, has_sitemap, has_robots_txt, schema_types, has_meta_descriptions,
-      locations, products
+      locations, products,
+      detected_cms, detected_cms_confidence, detected_framework, detected_css_framework,
+      detected_ecommerce, detected_hosting, detected_analytics, detected_lead_capture,
+      has_blog, has_case_studies, has_resources, has_faq, has_about_page, has_team_page, has_testimonials,
+      is_ecommerce, has_ai_readability_issues, ai_readability_issues, renders_client_side,
+      likely_ai_generated, ai_generated_signals
     `)
     .eq('run_id', runId)
     .single()
@@ -289,6 +317,29 @@ async function getReport(token: string): Promise<ReportData | null> {
       pagesCrawled: analysis.pages_crawled ?? 0,
       schemaTypes: analysis.schema_types ?? [],
       hasMetaDescriptions: analysis.has_meta_descriptions ?? false,
+    } : null,
+    platformData: analysis ? {
+      detected_cms: analysis.detected_cms ?? null,
+      detected_cms_confidence: analysis.detected_cms_confidence ?? null,
+      detected_framework: analysis.detected_framework ?? null,
+      detected_css_framework: analysis.detected_css_framework ?? null,
+      detected_ecommerce: analysis.detected_ecommerce ?? null,
+      detected_hosting: analysis.detected_hosting ?? null,
+      detected_analytics: analysis.detected_analytics ?? [],
+      detected_lead_capture: analysis.detected_lead_capture ?? [],
+      has_blog: analysis.has_blog ?? false,
+      has_case_studies: analysis.has_case_studies ?? false,
+      has_resources: analysis.has_resources ?? false,
+      has_faq: analysis.has_faq ?? false,
+      has_about_page: analysis.has_about_page ?? false,
+      has_team_page: analysis.has_team_page ?? false,
+      has_testimonials: analysis.has_testimonials ?? false,
+      is_ecommerce: analysis.is_ecommerce ?? false,
+      has_ai_readability_issues: analysis.has_ai_readability_issues ?? false,
+      ai_readability_issues: analysis.ai_readability_issues ?? [],
+      renders_client_side: analysis.renders_client_side ?? false,
+      likely_ai_generated: analysis.likely_ai_generated ?? false,
+      ai_generated_signals: analysis.ai_generated_signals ?? [],
     } : null,
     responses: responses as ReportData['responses'],
     prompts: prompts as ReportData['prompts'],

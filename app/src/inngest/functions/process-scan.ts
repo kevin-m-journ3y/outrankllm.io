@@ -176,6 +176,7 @@ export const processScan = inngest.createFunction(
       const hasMetaDescriptions = crawlResult.pages.some((p) => p.hasMetaDescription)
 
       // Save site analysis (upsert to handle retries - prevents duplicate records)
+      const platformData = crawlResult.platformDetection
       await supabase.from("site_analyses").upsert(
         {
           run_id: scanId,
@@ -200,6 +201,31 @@ export const processScan = inngest.createFunction(
           extracted_services: crawlResult.extractedServices,
           extracted_products: crawlResult.extractedProducts,
           has_meta_descriptions: hasMetaDescriptions,
+          // Platform detection fields
+          // Use 'unknown' when detection ran but didn't identify CMS
+          // This distinguishes "detection ran, nothing found" from "detection never ran"
+          detected_cms: platformData ? (platformData.cms || 'unknown') : null,
+          detected_cms_confidence: platformData?.cmsConfidence ?? null,
+          detected_framework: platformData?.framework ?? null,
+          detected_css_framework: platformData?.cssFramework ?? null,
+          detected_ecommerce: platformData?.ecommerce ?? null,
+          detected_hosting: platformData?.hosting ?? null,
+          detected_analytics: platformData?.analytics ?? [],
+          detected_lead_capture: platformData?.leadCapture ?? [],
+          has_blog: platformData?.contentSections?.hasBlog ?? false,
+          has_case_studies: platformData?.contentSections?.hasCaseStudies ?? false,
+          has_resources: platformData?.contentSections?.hasResources ?? false,
+          has_faq: platformData?.contentSections?.hasFaq ?? false,
+          has_about_page: platformData?.contentSections?.hasAboutPage ?? false,
+          has_team_page: platformData?.contentSections?.hasTeamPage ?? false,
+          has_testimonials: platformData?.contentSections?.hasTestimonials ?? false,
+          is_ecommerce: platformData?.isEcommerce ?? false,
+          has_ai_readability_issues: platformData?.hasAiReadabilityIssues ?? false,
+          ai_readability_issues: platformData?.aiReadabilityIssues ?? [],
+          renders_client_side: platformData?.rendersClientSide ?? false,
+          likely_ai_generated: platformData?.likelyAiGenerated ?? false,
+          ai_generated_signals: platformData?.aiSignals ?? [],
+          platform_detection_signals: platformData?.detectedSignals ?? [],
         },
         { onConflict: "run_id" }
       )
