@@ -112,7 +112,7 @@ export function HomePageD() {
       {/* Main content */}
       <main
         className="page relative z-10 min-h-screen flex flex-col items-center"
-        style={{ paddingTop: '4vh' }}
+        style={{ paddingTop: '80px' }}
       >
         <div
           className="w-full flex flex-col items-center"
