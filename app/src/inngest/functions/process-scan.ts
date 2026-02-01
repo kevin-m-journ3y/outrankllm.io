@@ -828,9 +828,21 @@ export const processScan = inngest.createFunction(
       const userTier = await getUserTier(leadId)
       const isSubscriber = userTier !== "free"
 
+      // Check if user has verified their email
+      // Trial users who haven't verified should still get the verification email
+      const { data: leadData } = await supabase
+        .from("leads")
+        .select("email_verified")
+        .eq("id", leadId)
+        .single()
+
+      const isEmailVerified = leadData?.email_verified === true
+
       let emailResult: { success: boolean; messageId?: string; error?: string }
 
-      if (isSubscriber) {
+      // Only send scan complete email if user is a subscriber AND has verified email
+      // This prevents trial users from getting the wrong email before verification
+      if (isSubscriber && isEmailVerified) {
         // Get previous score for comparison
         let previousScore: number | undefined
         const { data: prevScores } = await supabase
@@ -865,7 +877,8 @@ export const processScan = inngest.createFunction(
           })
         }
       } else {
-        // Free user: send verification email
+        // Free user or unverified trial user: send verification email
+        // Trial users need to verify their email before accessing the report
         let tokenToUse = verificationToken
         if (!tokenToUse) {
           tokenToUse = crypto.randomBytes(32).toString("hex")
@@ -901,10 +914,11 @@ export const processScan = inngest.createFunction(
         log.done(scanId, "Email sent")
 
         // Track report email sent (server-side analytics)
+        const sentScanCompleteEmail = isSubscriber && isEmailVerified
         await trackServerEvent(leadId, ANALYTICS_EVENTS.REPORT_EMAIL_SENT, {
           domain,
           is_subscriber: isSubscriber,
-          email_type: isSubscriber ? "scan_complete" : "verification",
+          email_type: sentScanCompleteEmail ? "scan_complete" : "verification",
         })
       }
 
