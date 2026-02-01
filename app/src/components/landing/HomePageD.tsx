@@ -205,7 +205,7 @@ export function HomePageD() {
                 className="text-[var(--text-dim)] text-xs text-center italic"
                 style={{ marginTop: '10px' }}
               >
-                Built for growing businesses, not enterprise budgets.
+                One focus. Fair pricing.
               </p>
             </div>
           </div>
@@ -485,27 +485,27 @@ export function HomePageD() {
                 className="text-[var(--text-mid)] text-sm text-center"
                 style={{ marginBottom: '16px' }}
               >
-                Enterprise tools charge $500/month because they&apos;re built for Fortune 500
-                compliance requirements. We built outrankllm.io for businesses that need
-                insights, not red tape.
+                Other tools bundle dozens of features you&apos;ll never use. We focus on one
+                thing: showing you exactly what AI says about your business. We believe every
+                business deserves these insights — not just those with $500/month budgets.
               </p>
               <div className="flex flex-col gap-3">
                 <div className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-[var(--green)] flex-shrink-0" style={{ marginTop: '2px' }} />
                   <span className="text-[var(--text)] text-sm">
-                    No enterprise sales team — you sign up yourself in minutes
+                    No feature bloat — just the insights that matter
                   </span>
                 </div>
                 <div className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-[var(--green)] flex-shrink-0" style={{ marginTop: '2px' }} />
                   <span className="text-[var(--text)] text-sm">
-                    No bloated features — we focus on what actually matters
+                    Same AI platforms as the expensive tools
                   </span>
                 </div>
                 <div className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-[var(--green)] flex-shrink-0" style={{ marginTop: '2px' }} />
                   <span className="text-[var(--text)] text-sm">
-                    Same AI platforms, same visibility data, fair pricing
+                    Sign up in minutes, no sales calls required
                   </span>
                 </div>
               </div>
