@@ -10,7 +10,7 @@ import { Nav } from '@/components/nav/Nav'
 import { ExperimentTracker } from '@/components/experiments/ExperimentTracker'
 import { ScanFormModal } from '@/components/landing/ScanFormModal'
 import Image from 'next/image'
-import { Search, Users, CheckCircle, ArrowRight } from 'lucide-react'
+import { Search, Users, CheckCircle, ArrowRight, X } from 'lucide-react'
 import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics'
 import {
   detectPricingRegion,
@@ -101,6 +101,29 @@ export function HomePageD() {
 
   return (
     <>
+      {/* CTA Button Animation Styles */}
+      <style jsx>{`
+        @keyframes ctaPulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+          }
+          50% {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.6);
+          }
+        }
+        .cta-enhanced {
+          animation: ctaPulse 3s ease-in-out infinite;
+          box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+        }
+        .cta-enhanced:hover {
+          animation: none;
+          transform: scale(1.02);
+          box-shadow: 0 0 35px rgba(34, 197, 94, 0.7);
+        }
+      `}</style>
+
       {/* A/B Test Tracking */}
       <ExperimentTracker experimentName="homepage" />
 
@@ -118,10 +141,10 @@ export function HomePageD() {
           className="w-full flex flex-col items-center"
           style={{ maxWidth: '520px', padding: '0 20px' }}
         >
-          {/* Logo - smaller to save vertical space */}
-          <div className="flex flex-col items-center gap-2" style={{ marginBottom: '24px' }}>
+          {/* Logo - compact */}
+          <div className="flex flex-col items-center gap-1" style={{ marginBottom: '16px' }}>
             <Ghost size="sm" />
-            <div className="logo-text" style={{ fontSize: '1.25rem' }}>
+            <div className="logo-text" style={{ fontSize: '1.125rem' }}>
               outrank<span className="mark">llm</span>.io
             </div>
           </div>
@@ -130,8 +153,8 @@ export function HomePageD() {
           <h1
             className="text-center"
             style={{
-              marginBottom: '16px',
-              fontSize: 'clamp(1.5rem, 5vw, 1.875rem)',
+              marginBottom: '12px',
+              fontSize: 'clamp(1.4rem, 5vw, 1.75rem)',
               lineHeight: '1.25',
             }}
           >
@@ -143,8 +166,8 @@ export function HomePageD() {
           <p
             className="text-[var(--text-mid)] text-center"
             style={{
-              marginBottom: '20px',
-              fontSize: 'clamp(0.9rem, 3vw, 1.05rem)',
+              marginBottom: '16px',
+              fontSize: 'clamp(0.85rem, 3vw, 1rem)',
               lineHeight: '1.5',
             }}
           >
@@ -153,68 +176,74 @@ export function HomePageD() {
             <span className="text-[var(--green)] font-semibold">{displayPrice}/month</span>.
           </p>
 
-          {/* Price Comparison Section - moved up for price-led approach */}
+          {/* Cut the Bloat Section - Condensed */}
           <div
             className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)]"
-            style={{ padding: '16px', marginBottom: '20px' }}
+            style={{ padding: '12px', marginBottom: '16px' }}
           >
-            <h2
-              className="font-mono text-[0.65rem] text-[var(--text-dim)] uppercase tracking-widest text-center"
-              style={{ marginBottom: '12px' }}
+            <p
+              className="text-[var(--text-mid)] text-xs text-center"
+              style={{ marginBottom: '8px' }}
             >
-              Compare the value
-            </h2>
+              Other tools charge <span className="text-[var(--text)] font-semibold">$99–$499/month</span> for features you&apos;ll never use:
+            </p>
 
-            <div className="flex flex-col gap-2">
-              {/* Competitor: Profound */}
-              <div className="flex items-center justify-between">
-                <span className="text-[var(--text-dim)] text-sm">Profound</span>
-                <span className="text-[var(--text-dim)] font-mono text-sm">$499 USD/mo</span>
+            {/* What you DON'T need - crossed out, 2-column grid */}
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1" style={{ marginBottom: '8px' }}>
+              <div className="flex items-center gap-1">
+                <X className="w-3 h-3 text-red-400 flex-shrink-0" />
+                <span className="text-[var(--text-dim)] text-xs line-through">Enterprise dashboards</span>
               </div>
-
-              {/* Competitor: Semrush AI */}
-              <div className="flex items-center justify-between">
-                <span className="text-[var(--text-dim)] text-sm">Semrush AI Toolkit</span>
-                <span className="text-[var(--text-dim)] font-mono text-sm">$99 USD/mo</span>
+              <div className="flex items-center gap-1">
+                <X className="w-3 h-3 text-red-400 flex-shrink-0" />
+                <span className="text-[var(--text-dim)] text-xs line-through">50+ SEO metrics</span>
               </div>
-
-              {/* Competitor: Peec AI */}
-              <div className="flex items-center justify-between">
-                <span className="text-[var(--text-dim)] text-sm">Peec AI</span>
-                <span className="text-[var(--text-dim)] font-mono text-sm">$89 USD/mo</span>
+              <div className="flex items-center gap-1">
+                <X className="w-3 h-3 text-red-400 flex-shrink-0" />
+                <span className="text-[var(--text-dim)] text-xs line-through">Annual contracts</span>
               </div>
-
-              {/* Divider */}
-              <div
-                className="border-t border-[var(--border)]"
-                style={{ margin: '6px 0' }}
-              />
-
-              {/* Our price - highlighted */}
-              <div className="flex items-center justify-between">
-                <span className="text-[var(--text)] text-sm font-medium">
-                  outrankllm.io
-                </span>
-                <span className="text-[var(--green)] font-mono text-sm font-bold">
-                  {displayPrice}/mo
-                </span>
+              <div className="flex items-center gap-1">
+                <X className="w-3 h-3 text-red-400 flex-shrink-0" />
+                <span className="text-[var(--text-dim)] text-xs line-through">Sales calls</span>
               </div>
+            </div>
 
-              {/* Brief value explanation */}
-              <p
-                className="text-[var(--text-dim)] text-xs text-center italic"
-                style={{ marginTop: '10px' }}
-              >
-                One focus. Fair pricing.
-              </p>
+            {/* Divider */}
+            <div className="border-t border-[var(--border)]" style={{ margin: '8px 0' }} />
+
+            {/* What you get - compact two-column */}
+            <p
+              className="text-[var(--green)] font-mono text-sm font-bold text-center"
+              style={{ marginBottom: '6px' }}
+            >
+              outrankllm.io: Just {displayPrice}/mo
+            </p>
+
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+              <div className="flex items-center gap-1">
+                <CheckCircle className="w-3 h-3 text-[var(--green)] flex-shrink-0" />
+                <span className="text-[var(--text)] text-xs">AI visibility insights</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <CheckCircle className="w-3 h-3 text-[var(--green)] flex-shrink-0" />
+                <span className="text-[var(--text)] text-xs">Competitor tracking</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <CheckCircle className="w-3 h-3 text-[var(--green)] flex-shrink-0" />
+                <span className="text-[var(--text)] text-xs">Actionable fixes</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <CheckCircle className="w-3 h-3 text-[var(--green)] flex-shrink-0" />
+                <span className="text-[var(--text)] text-xs">No contracts</span>
+              </div>
             </div>
           </div>
 
           {/* Platform logos - condensed */}
-          <div className="flex flex-col items-center w-full" style={{ marginBottom: '20px' }}>
+          <div className="flex flex-col items-center w-full" style={{ marginBottom: '14px' }}>
             <span
-              className="font-mono text-[0.6rem] text-[var(--text-dim)] uppercase tracking-widest"
-              style={{ marginBottom: '10px' }}
+              className="font-mono text-[0.55rem] text-[var(--text-dim)] uppercase tracking-widest"
+              style={{ marginBottom: '8px' }}
             >
               We scan these AI assistants
             </span>
@@ -310,11 +339,11 @@ export function HomePageD() {
             <button
               ref={ctaButtonRef}
               onClick={() => openModal('hero_cta')}
-              className="form-button w-full flex items-center justify-center gap-2"
-              style={{ fontSize: '1rem', padding: '14px 24px' }}
+              className="form-button cta-enhanced w-full flex items-center justify-center gap-2"
+              style={{ fontSize: '1.125rem', padding: '18px 28px', fontWeight: 600 }}
             >
               Start Your Free 7-Day Trial
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-5 h-5" />
             </button>
           </div>
 
@@ -604,11 +633,11 @@ export function HomePageD() {
           {/* Secondary CTA */}
           <button
             onClick={() => openModal('bottom_cta')}
-            className="form-button flex items-center justify-center w-full gap-2"
-            style={{ marginBottom: '48px', fontSize: '1rem', padding: '14px 24px' }}
+            className="form-button cta-enhanced flex items-center justify-center w-full gap-2"
+            style={{ marginBottom: '48px', fontSize: '1.125rem', padding: '18px 28px', fontWeight: 600 }}
           >
             Get Your Free Trial
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-5 h-5" />
           </button>
 
           {/* JOURN3Y attribution */}
