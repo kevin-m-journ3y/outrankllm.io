@@ -613,9 +613,13 @@ USER QUESTION: ${query.prompt}`,
  * Now also checks for domain recognition
  */
 function checkEntityRecognized(response: string, entity: string, domain?: string): boolean {
+  // Normalize accents so "Ella Baché" matches "Ella Bache"
+  const normalizedResponse = stripAccents(response)
+  const normalizedEntity = stripAccents(entity)
+
   // Check for entity name or domain
-  const hasEntity = response.includes(entity)
-  const hasDomain = domain ? response.includes(domain.toLowerCase()) : false
+  const hasEntity = normalizedResponse.includes(normalizedEntity)
+  const hasDomain = domain ? normalizedResponse.includes(domain.toLowerCase()) : false
 
   // Must have at least one identifier present
   if (!hasEntity && !hasDomain) {
@@ -691,6 +695,14 @@ function calculateConfidence(
 }
 
 /**
+ * Strip diacritics/accents from text for fuzzy matching
+ * e.g. "Ella Baché" → "Ella Bache", "café" → "cafe"
+ */
+function stripAccents(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
+/**
  * Analyze competitive positioning from response
  */
 function analyzePositioning(
@@ -698,9 +710,10 @@ function analyzePositioning(
   entity: string,
   competitor: string
 ): 'stronger' | 'weaker' | 'equal' | 'not_compared' {
-  const lowerResponse = response.toLowerCase()
-  const lowerEntity = entity.toLowerCase()
-  const lowerCompetitor = competitor.toLowerCase()
+  // Normalize accents so "Ella Baché" matches "Ella Bache"
+  const lowerResponse = stripAccents(response.toLowerCase())
+  const lowerEntity = stripAccents(entity.toLowerCase())
+  const lowerCompetitor = stripAccents(competitor.toLowerCase())
 
   // Look for comparative language
   const strongerIndicators = [
@@ -844,9 +857,10 @@ function analyzePositioningFromText(
   brandName: string,
   competitor: string
 ): 'stronger' | 'weaker' | 'equal' {
-  const lowerText = text.toLowerCase()
-  const lowerBrand = brandName.toLowerCase()
-  const lowerComp = competitor.toLowerCase()
+  // Normalize accents so "Ella Baché" matches "Ella Bache"
+  const lowerText = stripAccents(text.toLowerCase())
+  const lowerBrand = stripAccents(brandName.toLowerCase())
+  const lowerComp = stripAccents(competitor.toLowerCase())
 
   // Keywords suggesting the brand is stronger
   const brandStrongerPhrases = [
