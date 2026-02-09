@@ -782,6 +782,7 @@ function generateSpacedVersions(domainWithoutTld: string): string[] {
     'ness', 'ful', 'less', 'ous', 'ive', 'al', 'ical', 'ology',
     'house', 'home', 'land', 'world', 'zone', 'spot', 'point',
     'direct', 'online', 'digital', 'media', 'group', 'team',
+    'company', 'solutions', 'services', 'partners', 'consulting',
   ]
 
   // Common word beginnings
@@ -808,6 +809,17 @@ function generateSpacedVersions(domainWithoutTld: string): string[] {
       const suffix = lower.slice(beginning.length)
       if (suffix.length >= 2) {
         versions.push(`${beginning} ${suffix}`)
+
+        // Recursively try splitting the suffix too
+        // e.g., "therecruitmentcompany" -> "the" + "recruitmentcompany" -> "the recruitment company"
+        for (const ending of commonEndings) {
+          if (suffix.endsWith(ending) && suffix.length > ending.length + 2) {
+            const middle = suffix.slice(0, -ending.length)
+            if (middle.length >= 2) {
+              versions.push(`${beginning} ${middle} ${ending}`)
+            }
+          }
+        }
       }
     }
   }
