@@ -57,6 +57,9 @@ interface UserInfo {
     completed_at: string | null
     status: string
     domain: string | null
+    url_token: string | null
+    visibility_score: number | null
+    platform_scores: Record<string, number> | null
   }[]
 }
 
@@ -457,37 +460,83 @@ export function AdminOverlay({ userInfo, reportToken, onRescanComplete }: AdminO
                   </p>
                 ) : (
                   <div style={{ display: 'grid', gap: '8px' }}>
-                    {userInfo.scanHistory.map((scan, index) => (
-                      <div
-                        key={scan.id}
-                        className="bg-[var(--bg)] border border-[var(--border)]"
-                        style={{ padding: '10px 12px' }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-xs text-[var(--text-dim)]">
-                            {index === 0 ? 'Current' : `Scan #${userInfo.scanHistory.length - index}`}
-                          </span>
-                          <span
-                            className="font-mono text-xs"
-                            style={{
-                              color: scan.status === 'complete'
-                                ? 'var(--green)'
-                                : scan.status === 'failed'
-                                  ? 'var(--red, #ef4444)'
-                                  : 'var(--gold)',
-                            }}
-                          >
-                            {scan.status}
-                          </span>
+                    {userInfo.scanHistory.map((scan, index) => {
+                      const scoreColor = scan.visibility_score !== null
+                        ? scan.visibility_score >= 70 ? 'var(--green)' : scan.visibility_score >= 40 ? 'var(--gold)' : 'var(--red, #ef4444)'
+                        : 'var(--text-dim)'
+
+                      const content = (
+                        <div
+                          className={`bg-[var(--bg)] border border-[var(--border)]${scan.url_token ? ' hover:border-[var(--green)] transition-colors cursor-pointer' : ''}`}
+                          style={{ padding: '10px 12px' }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-xs text-[var(--text-dim)]">
+                              {index === 0 ? 'Current' : `Scan #${userInfo.scanHistory.length - index}`}
+                            </span>
+                            <span
+                              className="font-mono text-xs"
+                              style={{
+                                color: scan.status === 'complete'
+                                  ? 'var(--green)'
+                                  : scan.status === 'failed'
+                                    ? 'var(--red, #ef4444)'
+                                    : 'var(--gold)',
+                              }}
+                            >
+                              {scan.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between" style={{ marginTop: '4px' }}>
+                            <p className="font-mono text-sm text-[var(--text)]">
+                              {scan.domain || 'Unknown domain'}
+                            </p>
+                            {scan.url_token && (
+                              <ExternalLink size={12} className="text-[var(--green)] flex-shrink-0" />
+                            )}
+                          </div>
+
+                          {/* Scores */}
+                          {scan.visibility_score !== null && (
+                            <div style={{ marginTop: '6px' }}>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs text-[var(--text-dim)]">Score:</span>
+                                <span className="font-mono text-sm font-medium" style={{ color: scoreColor }}>
+                                  {scan.visibility_score}%
+                                </span>
+                              </div>
+                              {scan.platform_scores && (
+                                <div className="flex items-center gap-3 font-mono text-[10px] text-[var(--text-dim)]" style={{ marginTop: '3px' }}>
+                                  {Object.entries(scan.platform_scores).map(([platform, score]) => (
+                                    <span key={platform}>
+                                      {platform.charAt(0).toUpperCase() + platform.slice(1, 3)}: <span style={{ color: score > 0 ? 'var(--text)' : 'var(--text-dim)' }}>{score}%</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <p className="font-mono text-xs text-[var(--text-dim)]" style={{ marginTop: '4px' }}>
+                            {formatRelativeTime(scan.created_at)}
+                          </p>
                         </div>
-                        <p className="font-mono text-sm text-[var(--text)]" style={{ marginTop: '4px' }}>
-                          {scan.domain || 'Unknown domain'}
-                        </p>
-                        <p className="font-mono text-xs text-[var(--text-dim)]" style={{ marginTop: '4px' }}>
-                          {formatRelativeTime(scan.created_at)}
-                        </p>
-                      </div>
-                    ))}
+                      )
+
+                      if (scan.url_token) {
+                        return (
+                          <a
+                            key={scan.id}
+                            href={`/j3y-internal/view?token=${scan.url_token}`}
+                            className="block no-underline"
+                          >
+                            {content}
+                          </a>
+                        )
+                      }
+
+                      return <div key={scan.id}>{content}</div>
+                    })}
                   </div>
                 )}
               </Section>

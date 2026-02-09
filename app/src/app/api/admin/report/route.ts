@@ -186,10 +186,10 @@ export async function GET(request: NextRequest) {
       .eq('url_token', token)
       .single()
 
-    // Get all scan runs for this lead to see history
+    // Get all scan runs for this lead to see history (include report scores)
     const { data: scanHistory } = await supabase
       .from('scan_runs')
-      .select('id, created_at, completed_at, status, domain')
+      .select('id, created_at, completed_at, status, domain, reports(url_token, visibility_score, platform_scores)')
       .eq('lead_id', lead.id)
       .order('created_at', { ascending: false })
       .limit(10)
@@ -228,8 +228,20 @@ export async function GET(request: NextRequest) {
       } : null,
       // Report viewing stats
       reportViews: viewStats?.verified_views || 0,
-      // Scan history
-      scanHistory: scanHistory || [],
+      // Scan history (flatten report data into each scan entry)
+      scanHistory: (scanHistory || []).map((scan: { id: string; created_at: string; completed_at: string | null; status: string; domain: string | null; reports: { url_token: string; visibility_score: number; platform_scores: Record<string, number> }[] | { url_token: string; visibility_score: number; platform_scores: Record<string, number> } | null }) => {
+        const report = Array.isArray(scan.reports) ? scan.reports[0] : scan.reports
+        return {
+          id: scan.id,
+          created_at: scan.created_at,
+          completed_at: scan.completed_at,
+          status: scan.status,
+          domain: scan.domain,
+          url_token: report?.url_token || null,
+          visibility_score: report?.visibility_score ?? null,
+          platform_scores: report?.platform_scores || null,
+        }
+      }),
     }
 
     // Build report data (same structure as normal report page)

@@ -135,6 +135,9 @@ interface UserInfo {
     completed_at: string | null
     status: string
     domain: string | null
+    url_token: string | null
+    visibility_score: number | null
+    platform_scores: Record<string, number> | null
   }[]
 }
 
