@@ -602,9 +602,9 @@ export const processScan = inngest.createFunction(
         domain
       )
 
-      // Set expiry for free reports
-      const expiresAt = new Date()
-      expiresAt.setDate(expiresAt.getDate() + FREE_REPORT_EXPIRY_DAYS)
+      // Subscriber reports never expire; free reports expire after 7 days
+      const isSubscriberScan = !!domainSubscriptionId
+      const expiresAt = isSubscriberScan ? null : new Date(Date.now() + FREE_REPORT_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
       // Check if report already exists for this run (from a retry)
       const { data: existingReport } = await supabase
@@ -625,7 +625,9 @@ export const processScan = inngest.createFunction(
             platform_scores: scores.platformScores,
             top_competitors: topCompetitors,
             summary,
-            expires_at: expiresAt.toISOString(),
+            expires_at: expiresAt,
+            subscriber_only: isSubscriberScan,
+            requires_verification: !isSubscriberScan,
           })
           .eq("id", existingReportData.id)
           .select("id, url_token")
@@ -648,8 +650,9 @@ export const processScan = inngest.createFunction(
             platform_scores: scores.platformScores,
             top_competitors: topCompetitors,
             summary,
-            requires_verification: true,
-            expires_at: expiresAt.toISOString(),
+            requires_verification: !isSubscriberScan,
+            subscriber_only: isSubscriberScan,
+            expires_at: expiresAt,
           })
           .select("id, url_token")
           .single()
