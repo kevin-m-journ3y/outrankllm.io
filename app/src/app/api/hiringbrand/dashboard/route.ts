@@ -32,7 +32,7 @@ export async function GET() {
         .from('monitored_domains')
         .select('*')
         .eq('organization_id', org.id)
-        .order('is_primary', { ascending: false })
+        .eq('is_primary', true)
         .order('created_at', { ascending: true })
 
       brands = await Promise.all(
