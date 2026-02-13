@@ -194,6 +194,7 @@ export async function middleware(request: NextRequest) {
     const isAllowed =
       pathname.startsWith('/hiringbrand') ||
       pathname.startsWith('/api/hiringbrand') ||
+      pathname.startsWith('/api/auth') ||
       pathname.startsWith('/api/inngest') ||
       pathname.startsWith('/api/stripe') ||
       pathname.startsWith('/_next') ||
