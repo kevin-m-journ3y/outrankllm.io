@@ -203,8 +203,22 @@ function BrandCard({ brand, onRescan }: { brand: Brand; onRescan?: (domain: stri
 
   const content = (
     <>
-      {/* Score ring */}
-      <ScoreRing score={brand.latestScore} />
+      {/* Score ring + label */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+        <ScoreRing score={brand.latestScore} />
+        <span
+          style={{
+            fontSize: '10px',
+            fontFamily: fonts.body,
+            color: hb.slateLight,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            fontWeight: 600,
+          }}
+        >
+          Desirability
+        </span>
+      </div>
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>

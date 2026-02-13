@@ -26,6 +26,7 @@ import {
   hbPlatformConfig,
   hbCategoryConfig,
   hbTabs,
+  getScoreColor,
 } from '../components/shared/constants'
 import type { HBReportData, HBTabId, HBPlatform, HBQuestionCategory, HBSentimentCategory, HBStrategicSummary, HBEffortLevel, HBImpactLevel, HBPriority, HBTrendsData } from '../components/shared/types'
 
@@ -919,7 +920,6 @@ export function ReportClient({ data, userRole = null }: ReportClientProps) {
                   size="md"
                   label="Desirability"
                   showLabel={false}
-                  color={hbColors.teal}
                 />
                 <h3
                   style={{
@@ -968,7 +968,7 @@ export function ReportClient({ data, userRole = null }: ReportClientProps) {
                     cursor: 'pointer',
                     fontFamily: hbFonts.body,
                     fontSize: '12px',
-                    color: hbColors.teal,
+                    color: getScoreColor(report.visibilityScore),
                     fontWeight: 500,
                   }}
                 >
@@ -993,7 +993,6 @@ export function ReportClient({ data, userRole = null }: ReportClientProps) {
                   size="md"
                   label="AI Awareness"
                   showLabel={false}
-                  color={hbColors.gold}
                 />
                 <h3
                   style={{
@@ -1042,7 +1041,7 @@ export function ReportClient({ data, userRole = null }: ReportClientProps) {
                     cursor: 'pointer',
                     fontFamily: hbFonts.body,
                     fontSize: '12px',
-                    color: hbColors.gold,
+                    color: getScoreColor(report.researchabilityScore ?? 50),
                     fontWeight: 500,
                   }}
                 >
@@ -1067,7 +1066,6 @@ export function ReportClient({ data, userRole = null }: ReportClientProps) {
                   size="md"
                   label="Differentiation"
                   showLabel={false}
-                  color="#8B5CF6"
                 />
                 <h3
                   style={{
@@ -1116,7 +1114,7 @@ export function ReportClient({ data, userRole = null }: ReportClientProps) {
                     cursor: 'pointer',
                     fontFamily: hbFonts.body,
                     fontSize: '12px',
-                    color: '#8B5CF6',
+                    color: getScoreColor(report.differentiationScore ?? 50),
                     fontWeight: 500,
                   }}
                 >
