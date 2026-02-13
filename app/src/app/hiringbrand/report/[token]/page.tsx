@@ -308,6 +308,7 @@ async function getHBReport(token: string): Promise<(HBReportData & { trends: HBT
       .from('monitored_domains')
       .select('domain, company_name')
       .eq('organization_id', orgId)
+      .eq('is_primary', true)
       .order('company_name', { ascending: true })
 
     navBrands = await Promise.all(
@@ -340,6 +341,8 @@ async function getHBReport(token: string): Promise<(HBReportData & { trends: HBT
         }
       })
     )
+    // Only show brands that have a report or are currently scanning
+    navBrands = navBrands.filter((b) => b.latestReportToken || b.isScanning)
   }
 
   // Extract company info - prefer monitored_domain name (set from domain) over extracted business_name
