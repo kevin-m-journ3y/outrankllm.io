@@ -115,7 +115,7 @@ function LeadForm() {
           Thanks, {name.split(' ')[0]}!
         </h3>
         <p style={{ fontSize: '15px', color: 'var(--hb-slate-mid)', lineHeight: 1.6 }}>
-          We&apos;ll be in touch within 24 hours to discuss your employer brand report.
+          One of our team will be in touch shortly to walk you through HiringBrand.
         </p>
       </div>
     )
@@ -342,7 +342,7 @@ function LeadForm() {
           </>
         ) : (
           <>
-            Request Your Free Report
+            Book a Demo
             <ArrowRight size={18} />
           </>
         )}
@@ -355,7 +355,7 @@ const PILLARS = [
   {
     icon: Heart,
     title: 'Desirability',
-    description: 'How positively AI describes your company as an employer',
+    description: 'How positively AI describes an employer',
     color: '#FC4A1A',
     bg: '#FFF0EC',
   },
@@ -502,7 +502,7 @@ export default function HiringBrandLandingPage() {
                 letterSpacing: '-0.5px',
               }}
             >
-              See how AI describes your company to{' '}
+              See how AI describes employers to{' '}
               <span style={{ color: 'var(--hb-teal)' }}>job seekers</span>
             </h1>
             <p
@@ -513,8 +513,8 @@ export default function HiringBrandLandingPage() {
                 fontFamily: "'Source Sans 3', sans-serif",
               }}
             >
-              Platforms like ChatGPT, Claude, and Gemini are shaping how candidates perceive your
-              employer brand. Find out what they&apos;re saying.
+              Platforms like ChatGPT, Claude, and Gemini are shaping how candidates perceive
+              employer brands. Find out what they&apos;re saying.
             </p>
           </div>
 
@@ -818,7 +818,7 @@ export default function HiringBrandLandingPage() {
                 e.currentTarget.style.boxShadow = 'none'
               }}
             >
-              Request Your Free Report
+              Book a Demo
               <TrendingUp size={18} />
             </a>
           </div>

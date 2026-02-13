@@ -95,7 +95,7 @@ function buildInviteEmailHtml(orgName: string, inviterEmail: string, inviteUrl: 
         <strong>${inviterEmail}</strong> has invited you to join <strong>${orgName}</strong> as ${roleLabel} on HiringBrand.
       </p>
       <p style="font-size:15px;color:#475569;line-height:1.6;margin:0 0 28px;">
-        HiringBrand monitors how AI platforms describe your company to job seekers. Accept the invite to see your employer brand reports.
+        HiringBrand tracks what AI platforms tell job seekers about employers. Accept the invite to access your reports and insights.
       </p>
 
       <!-- CTA -->
