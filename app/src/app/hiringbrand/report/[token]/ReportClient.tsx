@@ -231,7 +231,8 @@ export function ReportClient({ data, userRole = null }: ReportClientProps) {
   const [categoryFilter, setCategoryFilter] = useState<HBQuestionCategory | 'all'>('all')
   const tabContentRef = useRef<HTMLDivElement>(null)
 
-  const { report, company, organization, navBrands, responses, prompts, sentimentCounts } = data
+  const { report, company, organization, navBrands: initialNavBrands, responses, prompts, sentimentCounts } = data
+  const [navBrands, setNavBrands] = useState(initialNavBrands)
 
   const reportUrl = typeof window !== 'undefined' ? window.location.href : ''
 
@@ -2789,6 +2790,11 @@ export function ReportClient({ data, userRole = null }: ReportClientProps) {
           <HBSetup
             reportToken={report.urlToken}
             companyName={company.name}
+            onRescanTriggered={() => {
+              setNavBrands(prev => prev.map(b =>
+                b.domain === company.domain ? { ...b, isScanning: true } : b
+              ))
+            }}
           />
         )}
         </div>

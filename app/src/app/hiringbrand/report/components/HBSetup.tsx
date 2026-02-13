@@ -37,6 +37,7 @@ interface SetupData {
 interface HBSetupProps {
   reportToken: string
   companyName: string
+  onRescanTriggered?: () => void
 }
 
 // ============================================
@@ -283,7 +284,7 @@ function CompetitorRow({
 // MAIN COMPONENT
 // ============================================
 
-export function HBSetup({ reportToken, companyName }: HBSetupProps) {
+export function HBSetup({ reportToken, companyName, onRescanTriggered }: HBSetupProps) {
   const [data, setData] = useState<SetupData | null>(null)
   const [questions, setQuestions] = useState<EditableQuestion[]>([])
   const [competitors, setCompetitors] = useState<EditableCompetitor[]>([])
@@ -405,6 +406,7 @@ export function HBSetup({ reportToken, companyName }: HBSetupProps) {
           body: JSON.stringify({ action: 'rescan' }),
         })
         setSuccessMessage('Saved! A new scan has been triggered.')
+        onRescanTriggered?.()
       } else {
         setSuccessMessage('Changes saved. They will apply on the next scan.')
       }
