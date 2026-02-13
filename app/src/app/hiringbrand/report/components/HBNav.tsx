@@ -5,7 +5,7 @@
  * Teal sticky nav with logo, report switcher, and account dropdown
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { hbColors, hbFonts, hbShadows, getScoreColor } from './shared/constants'
 
@@ -22,14 +22,39 @@ interface HBNavProps {
   organizationName: string
   brands?: NavBrand[]
   currentReportToken?: string | null
+  companyName?: string
 }
 
-export function HBNav({ organizationName, brands, currentReportToken }: HBNavProps) {
+export function HBNav({ organizationName, brands, currentReportToken, companyName }: HBNavProps) {
   const router = useRouter()
   const [reportOpen, setReportOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [pptxState, setPptxState] = useState<'idle' | 'generating' | 'done' | 'error'>('idle')
   const reportRef = useRef<HTMLDivElement>(null)
   const accountRef = useRef<HTMLDivElement>(null)
+
+  const handleExportPptx = useCallback(async () => {
+    if (!currentReportToken || pptxState === 'generating') return
+    setPptxState('generating')
+    try {
+      const res = await fetch(`/api/hiringbrand/report/${currentReportToken}/export`, {
+        method: 'POST',
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${(companyName || 'report').replace(/\s+/g, '-')}-hiringbrand-report.pptx`
+      link.click()
+      URL.revokeObjectURL(url)
+      setPptxState('done')
+      setTimeout(() => setPptxState('idle'), 3000)
+    } catch {
+      setPptxState('error')
+      setTimeout(() => setPptxState('idle'), 3000)
+    }
+  }, [currentReportToken, companyName, pptxState])
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -230,7 +255,67 @@ export function HBNav({ organizationName, brands, currentReportToken }: HBNavPro
         )}
       </div>
 
-      {/* Right: Account dropdown */}
+      {/* Right: Export PPTX + Account dropdown */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {currentReportToken && (
+          <button
+            onClick={handleExportPptx}
+            disabled={pptxState === 'generating'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              background: pptxState === 'done' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '10px',
+              cursor: pptxState === 'generating' ? 'not-allowed' : 'pointer',
+              color: 'white',
+              fontSize: '13px',
+              fontWeight: 500,
+              fontFamily: hbFonts.body,
+              transition: 'all 0.15s',
+              opacity: pptxState === 'generating' ? 0.7 : 1,
+            }}
+            onMouseEnter={(e) => { if (pptxState === 'idle') e.currentTarget.style.background = 'rgba(255,255,255,0.18)' }}
+            onMouseLeave={(e) => { if (pptxState === 'idle') e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+            title="Export full report as PowerPoint"
+          >
+            {pptxState === 'generating' ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Generating...
+              </>
+            ) : pptxState === 'done' ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                Downloaded
+              </>
+            ) : pptxState === 'error' ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+                Failed
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Export PPTX
+              </>
+            )}
+          </button>
+        )}
       <div ref={accountRef} style={{ position: 'relative' }}>
         <button
           onClick={() => { setAccountOpen(!accountOpen); setReportOpen(false) }}
@@ -351,6 +436,7 @@ export function HBNav({ organizationName, brands, currentReportToken }: HBNavPro
             </button>
           </div>
         )}
+      </div>
       </div>
     </nav>
   )

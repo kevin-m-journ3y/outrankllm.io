@@ -415,8 +415,9 @@ export function ReportClient({ data, userRole = null, isSuperAdmin = false }: Re
         organizationName={organization?.name || 'Account'}
         brands={navBrands}
         currentReportToken={report.urlToken}
+        companyName={company.name}
       />
-      {isSuperAdmin && (
+      {isSuperAdmin && !userRole && (
         <div style={{
           background: `${hbColors.coral}12`,
           borderBottom: `2px solid ${hbColors.coral}`,
@@ -2203,6 +2204,7 @@ export function ReportClient({ data, userRole = null, isSuperAdmin = false }: Re
             <HBTrends
               trends={data.trends}
               companyName={company.name}
+              currentCompetitorNames={report.competitorAnalysis?.employers.filter(e => !e.isTarget).map(e => e.name)}
             />
             <HBTabFooter
               nextTab="actions"
@@ -2236,8 +2238,8 @@ export function ReportClient({ data, userRole = null, isSuperAdmin = false }: Re
                     boxShadow: hbShadows.sm,
                     borderTop: `4px solid ${
                       report.strategicSummary.scoreInterpretation.overallHealth === 'strong' ? hbColors.teal :
-                      report.strategicSummary.scoreInterpretation.overallHealth === 'moderate' ? hbColors.gold :
-                      hbColors.coral
+                      report.strategicSummary.scoreInterpretation.overallHealth === 'critical' ? hbColors.coral :
+                      hbColors.gold
                     }`,
                   }}
                 >
@@ -2251,14 +2253,19 @@ export function ReportClient({ data, userRole = null, isSuperAdmin = false }: Re
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
                         background: report.strategicSummary.scoreInterpretation.overallHealth === 'strong' ? hbColors.tealLight :
-                                    report.strategicSummary.scoreInterpretation.overallHealth === 'moderate' ? hbColors.goldLight :
-                                    hbColors.coralLight,
+                                    report.strategicSummary.scoreInterpretation.overallHealth === 'critical' ? hbColors.coralLight :
+                                    hbColors.goldLight,
                         color: report.strategicSummary.scoreInterpretation.overallHealth === 'strong' ? hbColors.tealDeep :
-                               report.strategicSummary.scoreInterpretation.overallHealth === 'moderate' ? '#92400E' :
-                               '#B91C1C',
+                               report.strategicSummary.scoreInterpretation.overallHealth === 'critical' ? '#B91C1C' :
+                               '#92400E',
                       }}
                     >
-                      {report.strategicSummary.scoreInterpretation.overallHealth.replace('_', ' ')}
+                      {{
+                        strong: 'Well Positioned',
+                        moderate: 'Solid Foundation',
+                        needs_attention: 'Growth Opportunity',
+                        critical: 'Significant Opportunity',
+                      }[report.strategicSummary.scoreInterpretation.overallHealth]}
                     </span>
                   </div>
                   <h2

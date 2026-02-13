@@ -17,6 +17,7 @@ import type { HBTrendsData, HBScoreHistoryEntry, HBCompetitorHistorySnapshot } f
 interface HBTrendsProps {
   trends: HBTrendsData
   companyName: string
+  currentCompetitorNames?: string[] // Names from current competitor analysis (frozen + researched)
 }
 
 // Format date for display
@@ -234,9 +235,11 @@ function CoreScoresChart({ history }: { history: HBScoreHistoryEntry[] }) {
 function CompetitiveRankingChart({
   history,
   companyName,
+  currentCompetitorNames,
 }: {
   history: HBCompetitorHistorySnapshot[]
   companyName: string
+  currentCompetitorNames?: string[]
 }) {
   const [selectedEmployers, setSelectedEmployers] = useState<Set<string>>(new Set())
   const [hoveredPoint, setHoveredPoint] = useState<{
@@ -248,7 +251,7 @@ function CompetitiveRankingChart({
     date: string
   } | null>(null)
 
-  // Get all unique employers across all snapshots
+  // Get unique employers across all snapshots, filtered to current competitor set
   const allEmployers = useMemo(() => {
     const employers = new Map<string, { isTarget: boolean; latestScore: number; latestRank: number }>()
     for (const snapshot of history) {
@@ -269,11 +272,26 @@ function CompetitiveRankingChart({
         }
       }
     }
-    // Sort by latest rank
-    return Array.from(employers.entries())
-      .sort((a, b) => a[1].latestRank - b[1].latestRank)
+
+    const all = Array.from(employers.entries())
       .map(([name, data]) => ({ name, ...data }))
-  }, [history])
+
+    // Filter to only employers in the current competitor analysis (frozen + researched)
+    // This ensures the chart matches what's shown on the Competitors tab
+    if (currentCompetitorNames && currentCompetitorNames.length > 0) {
+      const allowedNames = new Set(currentCompetitorNames.map(n => n.toLowerCase()))
+      const filtered = all.filter(
+        (e) => e.isTarget || allowedNames.has(e.name.toLowerCase())
+      )
+      return filtered.sort((a, b) => a.latestRank - b.latestRank)
+    }
+
+    // Fallback: target + top 5 by rank if no competitor list provided
+    const sorted = all.sort((a, b) => a.latestRank - b.latestRank)
+    const target = sorted.filter((e) => e.isTarget)
+    const competitors = sorted.filter((e) => !e.isTarget).slice(0, 5)
+    return [...target, ...competitors].sort((a, b) => a.latestRank - b.latestRank)
+  }, [history, currentCompetitorNames])
 
   // Initialize selection with target employer
   useState(() => {
@@ -530,7 +548,7 @@ function CompetitiveRankingChart({
 /**
  * Main Trends Component
  */
-export function HBTrends({ trends, companyName }: HBTrendsProps) {
+export function HBTrends({ trends, companyName, currentCompetitorNames }: HBTrendsProps) {
   if (!trends.hasTrends) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -627,7 +645,7 @@ export function HBTrends({ trends, companyName }: HBTrendsProps) {
         <p style={{ fontSize: '13px', color: hbColors.slateLight, marginBottom: '24px' }}>
           Compare how {companyName} ranks against competitors across all dimensions
         </p>
-        <CompetitiveRankingChart history={trends.competitorHistory} companyName={companyName} />
+        <CompetitiveRankingChart history={trends.competitorHistory} companyName={companyName} currentCompetitorNames={currentCompetitorNames} />
         <p style={{ fontSize: '12px', color: hbColors.slateLight, marginTop: '12px', fontStyle: 'italic' }}>
           The composite score averages your 7 employer dimension scores on a 0-10 scale.
         </p>

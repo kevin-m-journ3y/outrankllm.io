@@ -440,6 +440,31 @@ function BrandCard({
 }) {
   const isRefreshing = refreshingBrandId === brand.id
   const isScanning = brand.scanStatus && !['complete', 'failed'].includes(brand.scanStatus)
+  const [pptxState, setPptxState] = useState<'idle' | 'generating' | 'done' | 'error'>('idle')
+
+  const handleExportPptx = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!brand.latestReportToken || pptxState === 'generating') return
+    setPptxState('generating')
+    try {
+      const res = await fetch(`/api/hiringbrand/report/${brand.latestReportToken}/export`, {
+        method: 'POST',
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${(brand.companyName || brand.domain).replace(/\s+/g, '-')}-hiringbrand-report.pptx`
+      link.click()
+      URL.revokeObjectURL(url)
+      setPptxState('done')
+      setTimeout(() => setPptxState('idle'), 3000)
+    } catch {
+      setPptxState('error')
+      setTimeout(() => setPptxState('idle'), 3000)
+    }
+  }
 
   return (
     <div>
@@ -554,6 +579,53 @@ function BrandCard({
                 </svg>
                 Report
               </a>
+            )}
+            {brand.latestReportToken && (
+              <button
+                onClick={handleExportPptx}
+                disabled={pptxState === 'generating'}
+                style={{
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  fontFamily: fonts.display,
+                  background: pptxState === 'done' ? hb.teal : pptxState === 'error' ? hb.slateLight : 'transparent',
+                  color: pptxState === 'done' ? 'white' : pptxState === 'error' ? 'white' : hb.tealDeep,
+                  border: `1.5px solid ${pptxState === 'done' ? hb.teal : hb.tealDeep}`,
+                  borderRadius: '6px',
+                  cursor: pptxState === 'generating' ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                {pptxState === 'generating' ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    PPTX...
+                  </>
+                ) : pptxState === 'done' ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Done
+                  </>
+                ) : pptxState === 'error' ? (
+                  'Failed'
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={hb.tealDeep} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    PPTX
+                  </>
+                )}
+              </button>
             )}
             <button
               onClick={(e) => {
