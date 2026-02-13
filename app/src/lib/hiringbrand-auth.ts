@@ -67,3 +67,20 @@ export async function requireHBOwner(): Promise<HBSessionContext> {
 
   return ctx
 }
+
+/**
+ * Super-admin allowlist — platform-level access for managing all accounts.
+ * No org membership required.
+ */
+const SUPER_ADMIN_EMAILS = ['kevin.morrell@journ3y.com.au', 'adam.king@journ3y.com.au']
+
+export async function requireHBSuperAdmin(): Promise<Session> {
+  const session = await getSession()
+  if (!session) {
+    throw new Error('Unauthorized')
+  }
+  if (!SUPER_ADMIN_EMAILS.includes(session.email.toLowerCase())) {
+    throw new Error('Super admin access required')
+  }
+  return session
+}

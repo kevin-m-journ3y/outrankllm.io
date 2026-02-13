@@ -64,6 +64,11 @@ interface PendingInvite {
   expiresAt: string
 }
 
+interface LimitInfo {
+  current: number
+  max: number | null
+}
+
 interface DashboardData {
   organization: {
     id: string
@@ -81,6 +86,10 @@ interface DashboardData {
   role: 'owner' | 'admin' | 'viewer'
   canAddDomain: boolean
   email: string
+  limits?: {
+    brands: LimitInfo
+    users: LimitInfo
+  }
 }
 
 // ============================================
@@ -581,6 +590,7 @@ function TeamSection({
   onRemoveMember,
   onChangeRole,
   currentUserEmail,
+  maxUsers,
 }: {
   team: { members: TeamMember[]; pendingInvites: PendingInvite[] }
   callerRole: 'owner' | 'admin' | 'viewer'
@@ -589,6 +599,7 @@ function TeamSection({
   onRemoveMember: (leadId: string) => Promise<void>
   onChangeRole: (leadId: string, role: 'admin' | 'viewer') => Promise<void>
   currentUserEmail: string
+  maxUsers: number | null
 }) {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'admin' | 'viewer'>('viewer')
@@ -638,17 +649,29 @@ function TeamSection({
         border: `1px solid ${hb.slateLight}20`,
       }}
     >
-      <h2
-        style={{
-          fontSize: '18px',
-          fontWeight: 600,
-          color: hb.slate,
-          fontFamily: fonts.display,
-          marginBottom: '20px',
-        }}
-      >
-        Team
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '20px' }}>
+        <h2
+          style={{
+            fontSize: '18px',
+            fontWeight: 600,
+            color: hb.slate,
+            fontFamily: fonts.display,
+            margin: 0,
+          }}
+        >
+          Team
+        </h2>
+        {maxUsers != null && (
+          <span style={{ fontSize: '13px', color: hb.slateLight, fontFamily: fonts.body }}>
+            {(() => {
+              const used = team.members.length + team.pendingInvites.length
+              const remaining = maxUsers - used
+              if (remaining <= 0) return `${used} / ${maxUsers} seats used`
+              return `${remaining} seat${remaining !== 1 ? 's' : ''} remaining`
+            })()}
+          </span>
+        )}
+      </div>
 
       {/* Members list */}
       <div style={{ marginBottom: '24px' }}>
@@ -979,7 +1002,7 @@ export function DashboardClient() {
     )
   }
 
-  const { organization, brands, team, role, canAddDomain, email } = data
+  const { organization, brands, team, role, canAddDomain, email, limits } = data
 
   return (
     <div style={{ minHeight: '100vh', background: hb.surfaceDim }}>
@@ -1015,8 +1038,8 @@ export function DashboardClient() {
             >
               {organization.name}
             </h1>
-            <p style={{ fontSize: '14px', color: hb.slateLight }}>
-              {brands.length} of {organization.domainLimit} brand{organization.domainLimit !== 1 ? 's' : ''}
+            <p style={{ fontSize: '14px', color: hb.slateLight, margin: 0 }}>
+              {organization.tierName}
             </p>
           </div>
 
@@ -1055,6 +1078,84 @@ export function DashboardClient() {
             </button>
           )}
         </div>
+
+        {/* Account Limits */}
+        {limits && (role === 'owner' || role === 'admin') && (
+          <div
+            style={{
+              display: 'flex',
+              gap: '16px',
+              marginBottom: '28px',
+              flexWrap: 'wrap',
+            }}
+          >
+            {/* Brands usage */}
+            <div
+              style={{
+                flex: '1 1 200px',
+                background: hb.surface,
+                borderRadius: '12px',
+                padding: '16px 20px',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                border: `1px solid ${hb.slateLight}20`,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: hb.slateMid, fontFamily: fonts.body }}>
+                  Brands
+                </span>
+                <span style={{ fontSize: '13px', color: hb.slateLight, fontFamily: fonts.body }}>
+                  {limits.brands.current} / {limits.brands.max}
+                </span>
+              </div>
+              <div style={{ height: '6px', borderRadius: '3px', background: `${hb.teal}20`, overflow: 'hidden' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    borderRadius: '3px',
+                    background: hb.teal,
+                    width: `${limits.brands.max ? Math.min((limits.brands.current / limits.brands.max) * 100, 100) : 0}%`,
+                    transition: 'width 0.5s ease',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Users usage — only show if max_users is set */}
+            {limits.users.max != null && (
+              <div
+                style={{
+                  flex: '1 1 200px',
+                  background: hb.surface,
+                  borderRadius: '12px',
+                  padding: '16px 20px',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                  border: `1px solid ${hb.slateLight}20`,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: hb.slateMid, fontFamily: fonts.body }}>
+                    Team Members
+                  </span>
+                  <span style={{ fontSize: '13px', color: hb.slateLight, fontFamily: fonts.body }}>
+                    {limits.users.current} / {limits.users.max}
+                  </span>
+                </div>
+                <div style={{ height: '6px', borderRadius: '3px', background: `${hb.teal}20`, overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      borderRadius: '3px',
+                      background: hb.teal,
+                      width: `${Math.min((limits.users.current / limits.users.max) * 100, 100)}%`,
+                      transition: 'width 0.5s ease',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Brand cards */}
         {brands.length === 0 ? (
@@ -1112,6 +1213,7 @@ export function DashboardClient() {
               onRemoveMember={handleRemoveMember}
               onChangeRole={handleChangeRole}
               currentUserEmail={email}
+              maxUsers={limits?.users.max ?? null}
             />
           </div>
         )}

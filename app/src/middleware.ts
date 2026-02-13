@@ -39,6 +39,7 @@ const PUBLIC_PATHS = [
 const PROTECTED_PATHS = [
   '/dashboard',
   '/hiringbrand/account',
+  '/hiringbrand/admin',
 ]
 
 async function verifySession(token: string): Promise<boolean> {

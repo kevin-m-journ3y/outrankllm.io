@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireHBAdmin } from '@/lib/hiringbrand-auth'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getOrganizationById } from '@/lib/organization'
 
 interface RouteParams {
   params: Promise<{ token: string }>
@@ -47,8 +48,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!Array.isArray(questions) || questions.length === 0) {
       return NextResponse.json({ error: 'At least 1 question is required' }, { status: 400 })
     }
-    if (questions.length > 20) {
-      return NextResponse.json({ error: 'Maximum 20 questions allowed' }, { status: 400 })
+    const orgData = await getOrganizationById(run.organization_id)
+    const maxQuestions = orgData?.max_questions ?? 20
+    if (questions.length > maxQuestions) {
+      return NextResponse.json({ error: `Maximum ${maxQuestions} questions allowed` }, { status: 400 })
     }
     for (const q of questions) {
       if (!q.promptText?.trim() || !q.category?.trim()) {

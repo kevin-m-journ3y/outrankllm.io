@@ -102,6 +102,10 @@ export async function GET() {
     // Viewers cannot add domains
     const canAdd = role !== 'viewer' && await canAddPrimaryDomain(org.id)
 
+    // Build limits — use member/invite counts from team data if available
+    const memberCount = team?.members.length ?? 0
+    const inviteCount = team?.pendingInvites.length ?? 0
+
     return NextResponse.json({
       organization: {
         id: org.id,
@@ -116,6 +120,16 @@ export async function GET() {
       role,
       canAddDomain: canAdd,
       email: session.email,
+      limits: {
+        brands: {
+          current: (brands || []).length,
+          max: HB_DOMAIN_LIMITS[org.tier as OrganizationTier] || org.domain_limit,
+        },
+        users: {
+          current: memberCount + inviteCount,
+          max: org.max_users,
+        },
+      },
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'An error occurred'

@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requireHBAdmin } from '@/lib/hiringbrand-auth'
-import { createInvite } from '@/lib/organization'
+import { createInvite, getOrganizationMembers, getPendingInvites } from '@/lib/organization'
 import type { MemberRole } from '@/lib/organization'
 import { Resend } from 'resend'
 
@@ -33,6 +33,20 @@ export async function POST(request: NextRequest) {
         { error: 'You can only invite viewers. Contact the account owner to invite admins.' },
         { status: 403 }
       )
+    }
+
+    // Enforce max_users limit
+    if (org.max_users) {
+      const [members, pendingInvites] = await Promise.all([
+        getOrganizationMembers(org.id),
+        getPendingInvites(org.id),
+      ])
+      if (members.length + pendingInvites.length >= org.max_users) {
+        return NextResponse.json(
+          { error: `Team limit reached (${org.max_users} users). Contact support to increase your limit.` },
+          { status: 403 }
+        )
+      }
     }
 
     // Create invite record with role

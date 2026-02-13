@@ -26,6 +26,9 @@ export interface Organization {
   current_period_start: string | null
   current_period_end: string | null
   cancel_at_period_end: boolean
+  max_users: number | null
+  max_questions: number | null
+  max_competitors: number | null
   created_at: string
   updated_at: string
 }
@@ -78,6 +81,9 @@ export interface UpdateOrganizationInput {
   current_period_start?: string
   current_period_end?: string
   cancel_at_period_end?: boolean
+  max_users?: number | null
+  max_questions?: number | null
+  max_competitors?: number | null
 }
 
 // Tier to domain limit mapping

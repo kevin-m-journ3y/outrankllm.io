@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireHBAdmin } from '@/lib/hiringbrand-auth'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getOrganizationById } from '@/lib/organization'
 
 interface RouteParams {
   params: Promise<{ token: string }>
@@ -58,8 +59,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!Array.isArray(competitors)) {
       return NextResponse.json({ error: 'competitors must be an array' }, { status: 400 })
     }
-    if (competitors.length > 10) {
-      return NextResponse.json({ error: 'Maximum 10 competitors allowed' }, { status: 400 })
+    const orgData = await getOrganizationById(run.organization_id)
+    const maxCompetitors = orgData?.max_competitors ?? 10
+    if (competitors.length > maxCompetitors) {
+      return NextResponse.json({ error: `Maximum ${maxCompetitors} competitors allowed` }, { status: 400 })
     }
     for (const c of competitors) {
       if (!c.name?.trim()) {
