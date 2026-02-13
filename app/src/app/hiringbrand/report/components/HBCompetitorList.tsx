@@ -1548,11 +1548,17 @@ function DifferentiationView({
                 margin: 0,
               }}
             >
-              Differentiation measures how <strong>unique</strong> each employer's brand profile appears to AI.
-              A higher score means the employer stands out with distinctive strengths,
-              while a lower score suggests a more generic or similar-to-others profile.
-              This is calculated from profile distance from the group average, variance in dimension scores,
-              and count of above-average strengths.
+              Differentiation answers one question: <strong>what would a job seeker remember about this employer?</strong>
+              {' '}It measures how distinct your employer brand profile is compared to competitors across all 7 dimensions.
+              <br /><br />
+              A high score means you have <strong>standout strengths</strong> — dimensions where you clearly lead the pack.
+              A low score means your profile blends in with the group average, even if your scores are decent across the board.
+              Being &quot;good at everything but great at nothing&quot; is the fastest way to score low here.
+              <br /><br />
+              <span style={{ fontSize: '13px', color: hbColors.slateLight }}>
+                Calculated from: how far your scores are from the group average (40%), how varied your profile shape is (30%),
+                and how many dimensions you lead in (30%).
+              </span>
             </p>
           </div>
         </div>
