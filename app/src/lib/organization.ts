@@ -590,10 +590,14 @@ export async function acceptInvite(token: string, leadId: string): Promise<boole
     return false
   }
 
-  // Check if user is already in an org
-  const existingOrg = await getOrganizationForUser(leadId)
-  if (existingOrg) {
-    console.error('User already in an organization')
+  // Check if user is already a member of THIS specific org
+  const { count } = await supabase
+    .from('organization_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', invite.organization_id)
+    .eq('lead_id', leadId)
+  if (count && count > 0) {
+    console.error('User already a member of this organization')
     return false
   }
 
