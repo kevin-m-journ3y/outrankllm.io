@@ -64,12 +64,14 @@ The report reads as a consulting-style story, left to right:
 | 1 | Summary | "Here's where you stand" | 3 score rings, sentiment distribution, topic coverage, methodology |
 | 2 | AI Responses | "Here's what AI actually says" | Per-platform response cards with sentiment, category filters |
 | 3 | Competitors | "Here's how you compare" | Radar chart, dimension drill-downs (0-10 scale) |
-| 4 | Trends | "Here's where you're heading" | Score history charts, competitive position over time |
+| 4 | Trends | "Here's where you're heading" | Score history charts, competitive position over time (filtered to current frozen competitors) |
 | 5 | Action Plan | "Here's what to do about it" | Brand health, strengths/gaps, 90-day plan timeline |
 
 No premium/free tier distinction — all tabs are available to all users.
 
 Tab-to-tab `HBTabFooter` connectors guide users through the narrative. Summary has deep-link navigation (clicking sentiment segments, topic chips, platform cards navigates to AI Responses with pre-applied filters).
+
+**Super admin banner**: Only shown when `isSuperAdmin && !userRole` — if the user is a member of the org, they're viewing their own report, not admin-viewing.
 
 ### HiringBrand Design System
 Completely separate from outrankllm styling. All design tokens in `shared/constants.ts`:
@@ -79,15 +81,35 @@ Completely separate from outrankllm styling. All design tokens in `shared/consta
 - **Fonts**: Outfit (display), Source Sans 3 (body), JetBrains Mono (mono)
 - **All styling is inline** (no Tailwind) — consistent with the CSS v4 quirk
 
+### PPTX Export
+Branded PowerPoint export available from the nav bar and admin dashboard. Generates an 11-slide deck: title, executive summary, 3-pillar scores (SVG→PNG rings via `@resvg/resvg-js`), sentiment doughnut, competitor radar, strengths, gaps, AI quotes, action plan table, trends (conditional), and closing slide.
+
+- **Generator**: `src/lib/pptx/generate-presentation.ts` (uses `pptxgenjs`)
+- **Score rings**: `src/lib/pptx/render-score-ring.ts` (SVG→PNG via `@resvg/resvg-js`)
+- **API route**: `POST /api/hiringbrand/report/[token]/export`
+- **Button locations**: HBNav (report page), AdminClient (brand cards)
+- Requires `serverExternalPackages: ["@resvg/resvg-js"]` in `next.config.ts`
+
+### Strategic Summary Tone
+The AI prompt in `generate-strategic-summary.ts` uses **consultative language** — never alarmist. Key rules:
+- Executive summary follows a **strength → watch → opportunity** arc (3 sentences)
+- Banned words: "crisis", "critical", "invisible", "failing", "weak", "poor", "alarming", "concerning"
+- Replacement words: "developing", "emerging", "room to grow", "opportunity", "building"
+- Health display labels: strong → "Well Positioned", moderate → "Solid Foundation", needs_attention → "Growth Opportunity", critical → "Significant Opportunity"
+- Mid-range scores (30-60) are NORMAL — frame as a foundation to build on
+
 ### HiringBrand Key Files
 
 | Area | Files |
 |------|-------|
 | Report UI | `src/app/hiringbrand/report/[token]/ReportClient.tsx` (main report, all tabs) |
 | Report Page | `src/app/hiringbrand/report/[token]/page.tsx` (server component, data fetching) |
+| Report Data | `src/lib/hiringbrand-report-data.ts` (shared data fetcher used by page + export) |
 | Shared Types | `src/app/hiringbrand/report/components/shared/types.ts` |
 | Design Tokens | `src/app/hiringbrand/report/components/shared/constants.ts` |
 | Components | `src/app/hiringbrand/report/components/HB*.tsx` |
+| PPTX Export | `src/lib/pptx/generate-presentation.ts`, `src/lib/pptx/render-score-ring.ts` |
+| Export API | `src/app/api/hiringbrand/report/[token]/export/route.ts` |
 | Scan Processing | `src/inngest/functions/process-hiringbrand-scan.ts` |
 | AI Research | `src/lib/ai/employer-research.ts`, `src/lib/ai/compare-employers.ts` |
 | Strategic Summary | `src/lib/ai/generate-strategic-summary.ts` |
@@ -104,6 +126,7 @@ Completely separate from outrankllm styling. All design tokens in `shared/consta
 | `hb_reports` | Reports with url_token, 3 pillar scores, competitor/strategic analysis |
 | `hb_llm_responses` | AI responses with sentiment scores/phrases, researchability |
 | `hb_prompts` | Scan questions by category |
+| `hb_frozen_competitors` | Frozen competitor list per brand (source: `employer_research`, `user_custom`, `fallback`) |
 | `hb_score_history` | Pillar + dimension scores per scan for trends |
 | `hb_competitor_history` | Competitor scores per scan for competitive tracking |
 
