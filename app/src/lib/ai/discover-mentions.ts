@@ -330,21 +330,22 @@ async function searchTavily(
 function buildSearchQueries(
   companyName: string,
   domain: string,
-  industry: string | null,
-  location: string | null
+  industry: string | null
 ): string[] {
-  const loc = location ? ` ${location}` : ''
+  // NOTE: Location is NOT appended to queries — it makes results too narrow for
+  // smaller brands. Instead we use Tavily's `country` param for geographic boosting
+  // and AI classification to score wrong-location mentions lower.
   return [
-    `"${companyName}" employer reviews${loc}`,
-    `"working at ${companyName}" experience${loc}`,
-    `"${companyName}" company culture employees${loc}`,
-    `"${companyName}" glassdoor indeed reviews${loc}`,
-    `"${companyName}" employer hiring news 2025 2026${loc}`,
-    `"${companyName}" layoffs OR restructuring OR workplace${loc}`,
-    `"${companyName}" best employer award OR workplace recognition${loc}`,
-    `"${companyName}" careers jobs salary benefits${loc}`,
-    `site:${domain} careers OR "join us" OR "we're hiring"`, // Already domain-scoped
-    `"${companyName}" employer reddit OR linkedin${loc}`,
+    `"${companyName}" employer reviews`,
+    `"working at ${companyName}" experience`,
+    `"${companyName}" company culture employees`,
+    `"${companyName}" glassdoor indeed reviews`,
+    `"${companyName}" employer hiring news 2025 2026`,
+    `"${companyName}" layoffs OR restructuring OR workplace`,
+    `"${companyName}" best employer award OR workplace recognition`,
+    `"${companyName}" careers jobs salary benefits`,
+    `site:${domain} careers OR "join us" OR "we're hiring"`,
+    `"${companyName}" employer reddit OR linkedin`,
   ]
 }
 
@@ -356,7 +357,7 @@ export async function discoverWebMentions(params: {
   runId: string
 }): Promise<{ mentions: RawWebMention[]; searchCount: number }> {
   const { companyName, domain, runId, location } = params
-  const queries = buildSearchQueries(companyName, domain, params.industry, location)
+  const queries = buildSearchQueries(companyName, domain, params.industry)
   const country = extractCountryCode(location)
 
   if (country) {
