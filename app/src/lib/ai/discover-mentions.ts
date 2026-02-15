@@ -356,13 +356,13 @@ export async function discoverWebMentions(params: {
   location: string | null
   runId: string
 }): Promise<{ mentions: RawWebMention[]; searchCount: number }> {
-  const { companyName, domain, runId, location } = params
+  const { companyName, domain, runId } = params
   const queries = buildSearchQueries(companyName, domain, params.industry)
-  const country = extractCountryCode(location)
 
-  if (country) {
-    console.log(`[discover-mentions] Using country=${country} for Tavily (location: ${location})`)
-  }
+  // NOTE: We deliberately do NOT pass country to Tavily. Tavily's country param
+  // acts as a hard filter (not a boost) and drops all non-country results, which
+  // kills results for smaller brands. Geographic filtering is handled entirely by
+  // AI classification (scores wrong-location mentions lower) + relevance threshold.
 
   const seenHashes = new Set<string>()
   const mentions: RawWebMention[] = []
@@ -373,7 +373,7 @@ export async function discoverWebMentions(params: {
   for (let i = 0; i < queries.length; i += BATCH_SIZE) {
     const batch = queries.slice(i, i + BATCH_SIZE)
     const batchResults = await Promise.all(
-      batch.map(query => searchTavily(query, 8, country))
+      batch.map(query => searchTavily(query))
     )
     searchCount += batch.length
 
