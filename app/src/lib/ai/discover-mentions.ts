@@ -203,11 +203,79 @@ function classifySourceType(url: string, companyDomain: string): MentionSourceTy
   return 'other'
 }
 
+// --- Country Code Extraction ---
+
+/**
+ * Extract ISO 2-letter country code from a freeform location string.
+ * Used to pass Tavily's `country` param for geographic boosting.
+ */
+function extractCountryCode(location: string | null): string | undefined {
+  if (!location) return undefined
+  const loc = location.toLowerCase()
+  const countryMap: Record<string, string> = {
+    'australia': 'au',
+    'united states': 'us', 'usa': 'us', 'u.s.': 'us',
+    'united kingdom': 'gb', 'uk': 'gb', 'england': 'gb', 'scotland': 'gb', 'wales': 'gb',
+    'canada': 'ca',
+    'new zealand': 'nz',
+    'ireland': 'ie',
+    'germany': 'de',
+    'france': 'fr',
+    'singapore': 'sg',
+    'india': 'in',
+    'japan': 'jp',
+    'netherlands': 'nl', 'holland': 'nl',
+    'spain': 'es',
+    'italy': 'it',
+    'brazil': 'br',
+    'mexico': 'mx',
+    'south korea': 'kr', 'korea': 'kr',
+    'sweden': 'se',
+    'norway': 'no',
+    'denmark': 'dk',
+    'finland': 'fi',
+    'switzerland': 'ch',
+    'austria': 'at',
+    'belgium': 'be',
+    'portugal': 'pt',
+    'poland': 'pl',
+    'israel': 'il',
+    'south africa': 'za',
+    'philippines': 'ph',
+    'indonesia': 'id',
+    'malaysia': 'my',
+    'thailand': 'th',
+    'vietnam': 'vn',
+    'hong kong': 'hk',
+    'taiwan': 'tw',
+    'china': 'cn',
+    'uae': 'ae', 'united arab emirates': 'ae', 'dubai': 'ae',
+    'saudi arabia': 'sa',
+    'argentina': 'ar',
+    'chile': 'cl',
+    'colombia': 'co',
+    'czech republic': 'cz', 'czechia': 'cz',
+    'romania': 'ro',
+    'hungary': 'hu',
+    'ukraine': 'ua',
+    'nigeria': 'ng',
+    'kenya': 'ke',
+    'egypt': 'eg',
+    'pakistan': 'pk',
+    'bangladesh': 'bd',
+  }
+  for (const [name, code] of Object.entries(countryMap)) {
+    if (loc.includes(name)) return code
+  }
+  return undefined
+}
+
 // --- Tavily Search ---
 
 async function searchTavily(
   query: string,
-  maxResults: number = 8
+  maxResults: number = 8,
+  country?: string
 ): Promise<Array<{ url: string; title: string; content: string; published_date?: string }>> {
   const apiKey = process.env.TAVILY_API_KEY
   if (!apiKey) {
@@ -225,6 +293,7 @@ async function searchTavily(
         search_depth: 'advanced',
         include_answer: false,
         max_results: maxResults,
+        ...(country ? { country } : {}),
       }),
     })
 
@@ -261,19 +330,21 @@ async function searchTavily(
 function buildSearchQueries(
   companyName: string,
   domain: string,
-  industry: string | null
+  industry: string | null,
+  location: string | null
 ): string[] {
+  const loc = location ? ` ${location}` : ''
   return [
-    `"${companyName}" employer reviews`,
-    `"working at ${companyName}" experience`,
-    `"${companyName}" company culture employees`,
-    `"${companyName}" glassdoor indeed reviews`,
-    `"${companyName}" employer hiring news 2025 2026`,
-    `"${companyName}" layoffs OR restructuring OR workplace`,
-    `"${companyName}" best employer award OR workplace recognition`,
-    `"${companyName}" careers jobs salary benefits`,
-    `site:${domain} careers OR "join us" OR "we're hiring"`,
-    `"${companyName}" employer reddit OR linkedin`,
+    `"${companyName}" employer reviews${loc}`,
+    `"working at ${companyName}" experience${loc}`,
+    `"${companyName}" company culture employees${loc}`,
+    `"${companyName}" glassdoor indeed reviews${loc}`,
+    `"${companyName}" employer hiring news 2025 2026${loc}`,
+    `"${companyName}" layoffs OR restructuring OR workplace${loc}`,
+    `"${companyName}" best employer award OR workplace recognition${loc}`,
+    `"${companyName}" careers jobs salary benefits${loc}`,
+    `site:${domain} careers OR "join us" OR "we're hiring"`, // Already domain-scoped
+    `"${companyName}" employer reddit OR linkedin${loc}`,
   ]
 }
 
@@ -281,10 +352,16 @@ export async function discoverWebMentions(params: {
   companyName: string
   domain: string
   industry: string | null
+  location: string | null
   runId: string
 }): Promise<{ mentions: RawWebMention[]; searchCount: number }> {
-  const { companyName, domain, runId } = params
-  const queries = buildSearchQueries(companyName, domain, params.industry)
+  const { companyName, domain, runId, location } = params
+  const queries = buildSearchQueries(companyName, domain, params.industry, location)
+  const country = extractCountryCode(location)
+
+  if (country) {
+    console.log(`[discover-mentions] Using country=${country} for Tavily (location: ${location})`)
+  }
 
   const seenHashes = new Set<string>()
   const mentions: RawWebMention[] = []
@@ -295,7 +372,7 @@ export async function discoverWebMentions(params: {
   for (let i = 0; i < queries.length; i += BATCH_SIZE) {
     const batch = queries.slice(i, i + BATCH_SIZE)
     const batchResults = await Promise.all(
-      batch.map(query => searchTavily(query))
+      batch.map(query => searchTavily(query, 8, country))
     )
     searchCount += batch.length
 
@@ -342,7 +419,8 @@ export async function classifyMentions(
   mentions: RawWebMention[],
   companyName: string,
   companyDomain: string,
-  runId: string
+  runId: string,
+  location: string | null = null
 ): Promise<ClassifiedMention[]> {
   if (mentions.length === 0) return []
 
@@ -357,14 +435,18 @@ export async function classifyMentions(
     .map((m, i) => `[${i}] Title: "${m.title || 'N/A'}" | Source: ${m.domainName || 'unknown'} | Snippet: "${(m.snippet || '').slice(0, 200)}"`)
     .join('\n')
 
+  const locationContext = location
+    ? `\nIMPORTANT: ${companyName} is based in ${location}. Only score mentions as relevant if they are about ${companyName} in or near ${location}. If a mention is clearly about a different "${companyName}" in a different country or region, give it a LOW relevance score (1-3).`
+    : ''
+
   try {
     const result = await generateObject({
       model: openai('gpt-4o-mini'),
       schema: mentionClassificationSchema,
-      system: `You are classifying web mentions of "${companyName}" as an employer. For each mention:
+      system: `You are classifying web mentions of "${companyName}" as an employer.${locationContext} For each mention:
 - sentiment: Is this positive, negative, neutral, or mixed about ${companyName} as an employer?
 - sentimentScore: 1-10 (1=very negative about employer, 10=very positive about employer)
-- relevanceScore: 1-10 (1=not about employer brand at all, e.g. product review, 10=directly about working at ${companyName})
+- relevanceScore: 1-10 (1=not about employer brand at all OR about a different company/location with the same name, 10=directly about working at ${companyName}${location ? ` in ${location}` : ''})
 
 Be accurate. Job listings are neutral (5-6 sentiment). Reviews can be positive or negative. News about layoffs is negative. Awards are positive.`,
       prompt: `Classify these ${withSourceTypes.length} web mentions of ${companyName}:\n\n${mentionSummaries}`,

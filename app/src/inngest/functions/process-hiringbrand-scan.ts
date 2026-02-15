@@ -1517,6 +1517,7 @@ export const processHiringBrandScan = inngest.createFunction(
           companyName: reliableCompanyName,
           domain,
           industry: employerAnalysis.analysis.industry,
+          location: employerAnalysis.analysis.location,
           runId: scanId,
         })
 
@@ -1530,7 +1531,8 @@ export const processHiringBrandScan = inngest.createFunction(
           rawMentions,
           reliableCompanyName,
           domain,
-          scanId
+          scanId,
+          employerAnalysis.analysis.location
         )
 
         // 3. Compute aggregate stats

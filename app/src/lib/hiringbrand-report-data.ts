@@ -262,6 +262,7 @@ export async function fetchHBReportData(token: string): Promise<HBReportDataWith
     .from('hb_web_mentions')
     .select('id, url, title, snippet, published_date, source_type, sentiment, sentiment_score, relevance_score, domain_name')
     .eq('report_id', report.id)
+    .gte('relevance_score', 5) // Filter out low-relevance mentions (wrong company, wrong location, etc.)
     .order('relevance_score', { ascending: false, nullsFirst: false })
     .limit(100)
 
