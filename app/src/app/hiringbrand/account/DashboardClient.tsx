@@ -334,7 +334,7 @@ function BrandCard({ brand, onRescan }: { brand: Brand; onRescan?: (domain: stri
                 gap: '4px',
               }}
             >
-              View Report
+              View Latest Results
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={hb.tealDeep} strokeWidth="2">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
