@@ -111,7 +111,7 @@ export function HBDownloadBar({ activeTab, reportToken, companyName }: HBDownloa
               <line x1="12" y1="18" x2="12" y2="12" />
               <polyline points="9 15 12 18 15 15" />
             </svg>
-            Download PDF
+            Download Page PDF
           </>
         )}
       </button>

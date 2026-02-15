@@ -301,7 +301,7 @@ export function HBNav({ organizationName, brands, currentReportToken, companyNam
             }}
             onMouseEnter={(e) => { if (pdfState === 'idle') e.currentTarget.style.background = 'rgba(255,255,255,0.18)' }}
             onMouseLeave={(e) => { if (pdfState === 'idle') e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
-            title="Export full report as PDF"
+            title="Download full report as PDF"
           >
             {pdfState === 'generating' ? (
               <>
@@ -334,7 +334,7 @@ export function HBNav({ organizationName, brands, currentReportToken, companyNam
                   <line x1="12" y1="18" x2="12" y2="12" />
                   <polyline points="9 15 12 18 15 15" />
                 </svg>
-                Export PDF
+                Download Report PDF
               </>
             )}
           </button>
@@ -361,7 +361,7 @@ export function HBNav({ organizationName, brands, currentReportToken, companyNam
             }}
             onMouseEnter={(e) => { if (pptxState === 'idle') e.currentTarget.style.background = 'rgba(255,255,255,0.18)' }}
             onMouseLeave={(e) => { if (pptxState === 'idle') e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
-            title="Export full report as PowerPoint"
+            title="Download full report as PowerPoint"
           >
             {pptxState === 'generating' ? (
               <>
@@ -393,7 +393,7 @@ export function HBNav({ organizationName, brands, currentReportToken, companyNam
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                Export PPTX
+                Download PPTX
               </>
             )}
           </button>
