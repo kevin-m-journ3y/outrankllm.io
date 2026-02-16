@@ -2573,7 +2573,7 @@ export function ReportClient({ data, userRole = null, isSuperAdmin = false }: Re
               const roleFamilyData = (data.roleFamilies || []).find(rf => rf.family === actionPlanView)
               const roleFamilyConfig = roleFamilyData ? hbRoleFamilyConfig[roleFamilyData.family] : null
 
-              if (!roleFamilyConfig) return null
+              if (!roleFamilyData || !roleFamilyConfig) return null
 
               return (
                 <>
