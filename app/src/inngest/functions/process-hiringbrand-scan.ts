@@ -929,6 +929,53 @@ export const processHiringBrandScan = inngest.createFunction(
           }
         }
 
+        // Freeze role families if we have role-specific questions
+        const hasRoleQuestions = allQuestions.some((q: any) => q.job_family)
+        if (hasRoleQuestions) {
+          const { count: existingFrozenRF } = await supabase
+            .from('hb_frozen_role_families')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', organizationId)
+            .eq('monitored_domain_id', monitoredDomainId)
+            .eq('is_active', true)
+
+          if (!existingFrozenRF || existingFrozenRF === 0) {
+            // Extract unique role families from questions
+            const uniqueFamilies = Array.from(
+              new Set(
+                allQuestions
+                  .filter((q: any) => q.job_family)
+                  .map((q: any) => q.job_family as JobFamily)
+              )
+            )
+
+            if (uniqueFamilies.length > 0) {
+              log.info(scanId, `Freezing ${uniqueFamilies.length} role families for future scans`)
+
+              const familyDisplayNames: Record<JobFamily, { displayName: string; description: string }> = {
+                engineering: { displayName: 'Engineering & Tech', description: 'Software engineers, data scientists, DevOps, IT' },
+                business: { displayName: 'Sales & Business', description: 'Sales, marketing, product management, customer success' },
+                operations: { displayName: 'Operations & Supply Chain', description: 'Operations, logistics, supply chain, procurement' },
+                creative: { displayName: 'Creative & Design', description: 'Designers, content creators, UX/UI, brand' },
+                corporate: { displayName: 'Corporate Functions', description: 'Finance, HR, legal, administration' },
+                general: { displayName: 'General', description: 'General roles across all functions' },
+              }
+
+              await supabase.from('hb_frozen_role_families').insert(
+                uniqueFamilies.map((family, i) => ({
+                  organization_id: organizationId,
+                  monitored_domain_id: monitoredDomainId,
+                  family,
+                  display_name: familyDisplayNames[family].displayName,
+                  description: familyDisplayNames[family].description,
+                  source: 'employer_research',
+                  sort_order: i,
+                }))
+              )
+            }
+          }
+        }
+
         log.done(scanId, 'Research (frozen)', `${competitors.length} competitors, ${questionsWithPromptIds.length} questions (${frozenResult.questions.length} frozen + ${roleSpecificQuestions.length} role-specific)`)
 
         return {
@@ -1069,10 +1116,43 @@ export const processHiringBrandScan = inngest.createFunction(
         )
       }
 
+      // Freeze role families for future scans
+      const { count: existingFrozenRF } = await supabase
+        .from('hb_frozen_role_families')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('monitored_domain_id', monitoredDomainId)
+        .eq('is_active', true)
+
+      if (activeFamilies.length > 0 && (!existingFrozenRF || existingFrozenRF === 0)) {
+        log.info(scanId, 'Freezing role families for future scans')
+
+        const familyDisplayNames: Record<JobFamily, { displayName: string; description: string }> = {
+          engineering: { displayName: 'Engineering & Tech', description: 'Software engineers, data scientists, DevOps, IT' },
+          business: { displayName: 'Sales & Business', description: 'Sales, marketing, product management, customer success' },
+          operations: { displayName: 'Operations & Supply Chain', description: 'Operations, logistics, supply chain, procurement' },
+          creative: { displayName: 'Creative & Design', description: 'Designers, content creators, UX/UI, brand' },
+          corporate: { displayName: 'Corporate Functions', description: 'Finance, HR, legal, administration' },
+          general: { displayName: 'General', description: 'General roles across all functions' },
+        }
+
+        await supabase.from('hb_frozen_role_families').insert(
+          activeFamilies.map((family, i) => ({
+            organization_id: organizationId,
+            monitored_domain_id: monitoredDomainId,
+            family,
+            display_name: familyDisplayNames[family].displayName,
+            description: familyDisplayNames[family].description,
+            source: 'employer_research',
+            sort_order: i,
+          }))
+        )
+      }
+
       log.done(
         scanId,
         'Research',
-        `${result.competitors.length} competitors, ${result.questions.length} questions (frozen for future)`
+        `${result.competitors.length} competitors, ${result.questions.length} questions, ${activeFamilies.length} role families (frozen for future)`
       )
 
       return { ...result, questionsWithPromptIds, usedFrozenData: false }
