@@ -14,6 +14,7 @@ const tabNames: Record<HBTabId, string> = {
   overview: 'Summary',
   responses: 'AI Responses',
   clippings: 'Clippings',
+  roles: 'By Role',
   competitors: 'Competitors',
   trends: 'Trends',
   actions: 'Action Plan',

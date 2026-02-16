@@ -680,7 +680,8 @@ export const processHiringBrandScan = inngest.createFunction(
       const detectedFamilies = await classifyJobFamilies(
         analysis.commonRoles || [],
         analysis.industry,
-        maxFamilies
+        maxFamilies,
+        scanId
       )
 
       log.info(scanId, `Detected ${detectedFamilies.length} job families: ${detectedFamilies.map(f => f.family).join(', ')}`)

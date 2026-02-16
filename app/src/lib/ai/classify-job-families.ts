@@ -77,12 +77,14 @@ const classificationResultSchema = z.object({
  * @param commonRoles - Array of job titles extracted from employer site
  * @param industry - Industry context (optional, helps with classification)
  * @param maxFamilies - Maximum number of families to return
+ * @param runId - Scan run ID for cost tracking
  * @returns Array of detected job families sorted by relevance
  */
 export async function classifyJobFamilies(
   commonRoles: string[],
   industry: string | null,
-  maxFamilies: number = 5
+  maxFamilies: number = 5,
+  runId?: string
 ): Promise<DetectedJobFamily[]> {
   // Handle empty or missing roles
   if (!commonRoles || commonRoles.length === 0) {
@@ -125,31 +127,26 @@ EXAMPLES:
 Now classify the roles for this employer.`
 
   try {
-    const startTime = Date.now()
-
-    const { object: result } = await generateObject({
+    const { object: result, usage } = await generateObject({
       model: anthropic('claude-sonnet-4-20250514'),
       schema: classificationResultSchema,
       prompt,
       temperature: 0.3, // Lower temperature for consistent classifications
     })
 
-    const duration = Date.now() - startTime
-
-    // Track cost
-    await trackCost({
-      modelProvider: 'anthropic',
-      modelId: 'claude-sonnet-4-20250514',
-      operation: 'classify_job_families',
-      inputTokens: Math.ceil(prompt.length / 4), // Rough estimate
-      outputTokens: Math.ceil(JSON.stringify(result).length / 4),
-      duration,
-      metadata: {
-        industry: industry || 'unknown',
-        roleCount: commonRoles.length,
-        familiesDetected: result.families.length,
-      },
-    })
+    // Track cost if runId provided
+    if (runId && usage) {
+      await trackCost({
+        runId,
+        step: 'classify_job_families',
+        model: 'anthropic/claude-sonnet-4-20250514',
+        usage: {
+          inputTokens: usage.inputTokens || 0,
+          outputTokens: usage.outputTokens || 0,
+          totalTokens: (usage.inputTokens || 0) + (usage.outputTokens || 0),
+        },
+      })
+    }
 
     // Map to DetectedJobFamily interface with labels
     const detectedFamilies: DetectedJobFamily[] = result.families.map((f) => ({
