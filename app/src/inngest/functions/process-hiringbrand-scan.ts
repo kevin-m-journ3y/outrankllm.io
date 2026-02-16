@@ -1790,9 +1790,24 @@ export const processHiringBrandScan = inngest.createFunction(
       const supabase = createServiceClient()
 
       // Determine active families (frozen or detected)
-      const activeFamilies: JobFamily[] = frozenResult.roleFamilies && frozenResult.roleFamilies.length > 0
+      let activeFamilies: JobFamily[] = frozenResult.roleFamilies && frozenResult.roleFamilies.length > 0
         ? frozenResult.roleFamilies
         : employerAnalysis.detectedFamilies.map(f => f.family)
+
+      // Fallback: If no families detected (empty commonRoles), use industry-based defaults
+      if (activeFamilies.length === 0) {
+        const industry = employerAnalysis.analysis.industry?.toLowerCase() || ''
+        if (industry.includes('tech') || industry.includes('software')) {
+          activeFamilies = ['engineering', 'business', 'corporate']
+          log.info(scanId, 'No role families detected - using tech industry defaults for action plans: engineering, business, corporate')
+        } else if (industry.includes('retail') || industry.includes('consumer')) {
+          activeFamilies = ['operations', 'business', 'corporate']
+          log.info(scanId, 'No role families detected - using retail industry defaults for action plans: operations, business, corporate')
+        } else {
+          activeFamilies = ['business', 'operations', 'corporate']
+          log.info(scanId, 'No role families detected - using general defaults for action plans: business, operations, corporate')
+        }
+      }
 
       if (activeFamilies.length === 0) {
         log.info(scanId, 'No active job families, skipping role action plans')
@@ -1911,9 +1926,24 @@ export const processHiringBrandScan = inngest.createFunction(
       const scanDate = new Date().toISOString()
 
       // Calculate role family scores for trends
-      const activeFamilies: JobFamily[] = frozenResult.roleFamilies && frozenResult.roleFamilies.length > 0
+      let activeFamilies: JobFamily[] = frozenResult.roleFamilies && frozenResult.roleFamilies.length > 0
         ? frozenResult.roleFamilies
         : employerAnalysis.detectedFamilies.map(f => f.family)
+
+      // Fallback: If no families detected (empty commonRoles), use industry-based defaults
+      if (activeFamilies.length === 0) {
+        const industry = employerAnalysis.analysis.industry?.toLowerCase() || ''
+        if (industry.includes('tech') || industry.includes('software')) {
+          activeFamilies = ['engineering', 'business', 'corporate']
+          log.info(scanId, 'No role families detected - using tech industry defaults for score history')
+        } else if (industry.includes('retail') || industry.includes('consumer')) {
+          activeFamilies = ['operations', 'business', 'corporate']
+          log.info(scanId, 'No role families detected - using retail industry defaults for score history')
+        } else {
+          activeFamilies = ['business', 'operations', 'corporate']
+          log.info(scanId, 'No role families detected - using general defaults for score history')
+        }
+      }
 
       const { data: responsesForScoring } = await supabase
         .from('llm_responses')
