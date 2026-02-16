@@ -814,14 +814,14 @@ export const processHiringBrandScan = inngest.createFunction(
           if (activeFamilies.length === 0) {
             const industry = employerAnalysis.analysis.industry?.toLowerCase() || ''
             if (industry.includes('tech') || industry.includes('software')) {
-              activeFamilies = ['engineering', 'business']
-              log.info(scanId, 'No roles detected - using tech industry defaults: engineering, business')
+              activeFamilies = ['engineering', 'business', 'corporate']
+              log.info(scanId, 'No roles detected - using tech industry defaults: engineering, business, corporate')
             } else if (industry.includes('retail') || industry.includes('consumer')) {
-              activeFamilies = ['operations', 'business']
-              log.info(scanId, 'No roles detected - using retail industry defaults: operations, business')
+              activeFamilies = ['operations', 'business', 'corporate']
+              log.info(scanId, 'No roles detected - using retail industry defaults: operations, business, corporate')
             } else {
-              activeFamilies = ['business', 'operations']
-              log.info(scanId, 'No roles detected - using general defaults: business, operations')
+              activeFamilies = ['business', 'operations', 'corporate']
+              log.info(scanId, 'No roles detected - using general defaults: business, operations, corporate')
             }
           }
 
