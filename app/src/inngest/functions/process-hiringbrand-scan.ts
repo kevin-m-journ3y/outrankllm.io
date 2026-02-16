@@ -677,12 +677,38 @@ export const processHiringBrandScan = inngest.createFunction(
         .single()
 
       const maxFamilies = orgData?.max_role_families || 5
-      const detectedFamilies = await classifyJobFamilies(
+      let detectedFamilies = await classifyJobFamilies(
         analysis.commonRoles || [],
         analysis.industry,
         maxFamilies,
         scanId
       )
+
+      // Apply industry fallback if no families detected (empty commonRoles)
+      if (detectedFamilies.length === 0) {
+        const industry = analysis.industry?.toLowerCase() || ''
+        let fallbackFamilies: JobFamily[] = []
+
+        if (industry.includes('tech') || industry.includes('software')) {
+          fallbackFamilies = ['engineering', 'business', 'corporate']
+          log.info(scanId, 'No roles detected - using tech industry fallback: engineering, business, corporate')
+        } else if (industry.includes('retail') || industry.includes('consumer')) {
+          fallbackFamilies = ['operations', 'business', 'corporate']
+          log.info(scanId, 'No roles detected - using retail industry fallback: operations, business, corporate')
+        } else {
+          fallbackFamilies = ['business', 'operations', 'corporate']
+          log.info(scanId, 'No roles detected - using general industry fallback: business, operations, corporate')
+        }
+
+        // Convert to DetectedJobFamily format
+        const { hbRoleFamilyConfig } = await import('@/app/hiringbrand/report/components/shared/constants')
+        detectedFamilies = fallbackFamilies.map(family => ({
+          family,
+          label: hbRoleFamilyConfig[family].label,
+          roles: [],
+          relevance: 0.7, // Medium relevance for industry defaults
+        }))
+      }
 
       log.info(scanId, `Detected ${detectedFamilies.length} job families: ${detectedFamilies.map(f => f.family).join(', ')}`)
 

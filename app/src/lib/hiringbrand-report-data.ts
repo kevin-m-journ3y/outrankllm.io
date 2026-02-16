@@ -187,7 +187,7 @@ export async function fetchHBReportData(token: string): Promise<HBReportDataWith
 
   const { data: analysis } = await supabase
     .from('site_analyses')
-    .select('business_name, business_type, location, services, key_phrases')
+    .select('business_name, business_type, location, services, key_phrases, detected_job_families')
     .eq('run_id', run.id)
     .single()
 
@@ -320,16 +320,31 @@ export async function fetchHBReportData(token: string): Promise<HBReportDataWith
       .eq('is_active', true)
       .order('sort_order')
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    roleFamilies = (frozenFamilies || []).map((rf: any) => ({
-      id: rf.id,
-      family: rf.family as HBJobFamily,
-      displayName: rf.display_name,
-      description: rf.description || '',
-      source: rf.source as 'employer_research' | 'user_custom',
-      isActive: rf.is_active,
-      sortOrder: rf.sort_order,
-    }))
+    if (frozenFamilies && frozenFamilies.length > 0) {
+      // Use frozen families (user customizations or previous AI detections)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      roleFamilies = frozenFamilies.map((rf: any) => ({
+        id: rf.id,
+        family: rf.family as HBJobFamily,
+        displayName: rf.display_name,
+        description: rf.description || '',
+        source: rf.source as 'employer_research' | 'user_custom',
+        isActive: rf.is_active,
+        sortOrder: rf.sort_order,
+      }))
+    } else if (analysis?.detected_job_families) {
+      // Fallback: Use detected families from employer analysis
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const detectedFamilies = analysis.detected_job_families as any[]
+      roleFamilies = detectedFamilies.map((df, index) => ({
+        family: df.family as HBJobFamily,
+        displayName: df.label || df.family,
+        description: '',
+        source: 'employer_research' as const,
+        isActive: true,
+        sortOrder: index,
+      }))
+    }
 
     // Get latest role family scores from most recent score history
     if (trends.scoreHistory.length > 0) {
