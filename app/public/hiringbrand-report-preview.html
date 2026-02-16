@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Westpac - Employer Reputation Report | HiringBrand.io</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --hb-teal: #4ABDAC;
+      --hb-teal-dark: #3A9A8C;
+      --hb-teal-light: #E6F5F3;
+      --hb-vermillion: #FC4A1A;
+      --hb-vermillion-light: #FEE8E2;
+      --hb-sunshine: #F7B733;
+      --hb-sunshine-light: #FEF6E6;
+      --hb-clean: #DFDCE3;
+
+      --bg: #FFFFFF;
+      --bg-secondary: #F7F6F9;
+      --surface: #FFFFFF;
+      --border: #E2E8F0;
+
+      --primary: var(--hb-teal);
+      --accent: var(--hb-vermillion);
+      --highlight: var(--hb-sunshine);
+
+      --text: #2D3748;
+      --text-mid: #4A5568;
+      --text-dim: #718096;
+
+      --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--text);
+      background: var(--bg-secondary);
+      line-height: 1.6;
+    }
+
+    /* Navigation */
+    .nav {
+      background: var(--hb-teal);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .logo span { color: #FFFFFF; font-weight: 800; }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .nav-link {
+      color: rgba(255,255,255,0.9);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: white;
+      font-size: 14px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: white;
+      color: var(--hb-teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    /* Report Header */
+    .report-header {
+      background: white;
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .report-header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .company-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .company-logo {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #D5002B 0%, #8B001B 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 20px;
+    }
+
+    .company-name {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .company-meta {
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+
+    .report-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--hb-vermillion);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 4px 12px rgba(252, 74, 26, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--hb-teal-light);
+      color: var(--hb-teal-dark);
+    }
+
+    .btn-secondary:hover {
+      background: var(--hb-teal);
+      color: white;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--border);
+      color: var(--text-mid);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--hb-teal);
+      color: var(--hb-teal);
+    }
+
+    /* Tabs */
+    .tabs-container {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 56px;
+      z-index: 90;
+    }
+
+    .tabs {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      overflow-x: auto;
+      padding: 0 32px;
+    }
+
+    .tab {
+      padding: 16px 20px;
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab:hover { color: var(--text); }
+
+    .tab.active {
+      color: var(--hb-teal);
+      border-bottom-color: var(--hb-teal);
+    }
+
+    .tab-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .tab-badge-pro {
+      background: var(--hb-sunshine);
+      color: var(--text);
+    }
+
+    /* Main Content */
+    .main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+
+    /* Score Hero */
+    .score-hero {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    .main-score {
+      text-align: center;
+    }
+
+    .score-circle {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: conic-gradient(var(--hb-teal) 0% 68%, var(--hb-clean) 68% 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      position: relative;
+    }
+
+    .score-circle-inner {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-value {
+      font-family: var(--font-display);
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--hb-teal);
+    }
+
+    .score-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .score-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .score-subtitle {
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+
+    .platform-scores {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .platform-score {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .platform-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      color: white;
+    }
+
+    .platform-icon.chatgpt { background: #10A37F; }
+    .platform-icon.claude { background: #D97706; }
+    .platform-icon.gemini { background: #4285F4; }
+    .platform-icon.perplexity { background: #6366F1; }
+
+    .platform-name {
+      font-size: 13px;
+      color: var(--text-mid);
+      margin-bottom: 4px;
+    }
+
+    .platform-value {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .platform-value.good { color: var(--hb-teal); }
+    .platform-value.warning { color: #B8860B; }
+    .platform-value.bad { color: var(--hb-vermillion); }
+
+    .platform-detail {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Metric Cards Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      border-left: 4px solid var(--border);
+    }
+
+    .metric-card.good { border-left-color: var(--hb-teal); }
+    .metric-card.warning { border-left-color: var(--hb-sunshine); }
+    .metric-card.bad { border-left-color: var(--hb-vermillion); }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .metric-card.good .metric-value { color: var(--hb-teal-dark); }
+    .metric-card.warning .metric-value { color: #B8860B; }
+    .metric-card.bad .metric-value { color: var(--hb-vermillion); }
+
+    .metric-desc {
+      font-size: 13px;
+      color: var(--text-mid);
+    }
+
+    /* Section */
+    .section {
+      background: white;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .section-content {
+      padding: 24px;
+    }
+
+    /* Response Cards */
+    .response-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: box-shadow 0.2s;
+    }
+
+    .response-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .response-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .response-query {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .response-badges {
+      display: flex;
+      gap: 8px;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 500;
+      font-size: 11px;
+    }
+
+    .badge-platform {
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .badge-chatgpt { background: #D1FAE5; color: #065F46; }
+    .badge-claude { background: #FEF3C7; color: #92400E; }
+    .badge-gemini { background: #DBEAFE; color: #1E40AF; }
+    .badge-perplexity { background: #E0E7FF; color: #3730A3; }
+
+    .badge-mentioned { background: var(--hb-teal-light); color: var(--hb-teal-dark); }
+    .badge-not-mentioned { background: var(--hb-vermillion-light); color: var(--hb-vermillion); }
+    .badge-positive { background: var(--hb-teal-light); color: var(--hb-teal-dark); }
+    .badge-neutral { background: var(--hb-clean); color: var(--text-mid); }
+    .badge-negative { background: var(--hb-vermillion-light); color: var(--hb-vermillion); }
+
+    .response-body {
+      color: var(--text-mid);
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    .response-sources {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .response-sources a {
+      color: var(--hb-teal);
+      text-decoration: none;
+    }
+
+    /* Competitor Matrix */
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .matrix-table th,
+    .matrix-table td {
+      padding: 12px 16px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .matrix-table th {
+      background: var(--bg-secondary);
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-mid);
+    }
+
+    .matrix-table td:first-child {
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .matrix-cell {
+      font-size: 18px;
+    }
+
+    .matrix-cell.stronger { color: var(--hb-teal); }
+    .matrix-cell.equal { color: var(--text-dim); }
+    .matrix-cell.weaker { color: var(--hb-vermillion); }
+
+    /* Insight Box */
+    .insight-box {
+      background: var(--hb-teal-light);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 24px;
+    }
+
+    .insight-title {
+      font-weight: 600;
+      color: var(--hb-teal-dark);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .insight-list {
+      list-style: none;
+    }
+
+    .insight-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(74, 189, 172, 0.2);
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .insight-list li:last-child {
+      border-bottom: none;
+    }
+
+    .insight-list strong {
+      color: var(--hb-teal-dark);
+    }
+
+    /* Action Items */
+    .action-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .action-checkbox {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .action-checkbox:hover {
+      border-color: var(--hb-teal);
+    }
+
+    .action-content {
+      flex: 1;
+    }
+
+    .action-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .action-title {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .action-priority {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .action-priority.quick-win {
+      background: var(--hb-teal-light);
+      color: var(--hb-teal-dark);
+    }
+
+    .action-priority.strategic {
+      background: var(--hb-sunshine-light);
+      color: #92400E;
+    }
+
+    .action-desc {
+      font-size: 14px;
+      color: var(--text-mid);
+      margin-bottom: 8px;
+    }
+
+    .action-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .action-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Filter Bar */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text-mid);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--hb-teal);
+      color: var(--hb-teal);
+    }
+
+    .filter-btn.active {
+      background: var(--hb-teal);
+      color: white;
+      border-color: var(--hb-teal);
+    }
+
+    /* Design Note */
+    .design-note {
+      background: var(--hb-sunshine-light);
+      border: 1px solid var(--hb-sunshine);
+      border-radius: 8px;
+      padding: 12px 20px;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+
+    .design-note strong {
+      color: #92400E;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="logo">hiring<span>brand</span>.io</div>
+    <div class="nav-right">
+      <a href="#" class="nav-link">Dashboard</a>
+      <a href="#" class="nav-link">Help</a>
+      <div class="nav-user">
+        <div class="avatar">JD</div>
+        <span>Jane Doe</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Report Header -->
+  <header class="report-header">
+    <div class="report-header-content">
+      <div class="company-info">
+        <div class="company-logo">W</div>
+        <div>
+          <h1 class="company-name">Westpac</h1>
+          <div class="company-meta">Banking & Finance • Sydney, Australia • Last scanned 2 hours ago</div>
+        </div>
+      </div>
+      <div class="report-actions">
+        <button class="btn btn-outline">Export Report</button>
+        <button class="btn btn-secondary">Re-scan</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs-container">
+    <div class="tabs">
+      <div class="tab">Start Here</div>
+      <div class="tab">Company Profile</div>
+      <div class="tab">Careers Audit</div>
+      <div class="tab">AI Responses</div>
+      <div class="tab active">Reputation Score</div>
+      <div class="tab">Competitors</div>
+      <div class="tab">Recognition</div>
+      <div class="tab">Actions <span class="tab-badge tab-badge-pro">PRO</span></div>
+      <div class="tab">PRD <span class="tab-badge tab-badge-pro">PRO</span></div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <div class="design-note">
+      <strong>Design Preview:</strong> This mockup shows the "Reputation Score" tab for Westpac with HiringBrand styling applied.
+    </div>
+
+    <!-- Score Hero -->
+    <div class="score-hero">
+      <div class="main-score">
+        <div class="score-circle">
+          <div class="score-circle-inner">
+            <div class="score-value">68</div>
+            <div class="score-label">out of 100</div>
+          </div>
+        </div>
+        <div class="score-title">Employer Reputation Score</div>
+        <div class="score-subtitle">Above average for Banking & Finance</div>
+      </div>
+      <div class="platform-scores">
+        <div class="platform-score">
+          <div class="platform-icon chatgpt">GPT</div>
+          <div class="platform-name">ChatGPT</div>
+          <div class="platform-value good">82%</div>
+          <div class="platform-detail">9/11 mentions</div>
+        </div>
+        <div class="platform-score">
+          <div class="platform-icon perplexity">P</div>
+          <div class="platform-name">Perplexity</div>
+          <div class="platform-value good">73%</div>
+          <div class="platform-detail">8/11 mentions</div>
+        </div>
+        <div class="platform-score">
+          <div class="platform-icon gemini">G</div>
+          <div class="platform-name">Gemini</div>
+          <div class="platform-value warning">55%</div>
+          <div class="platform-detail">6/11 mentions</div>
+        </div>
+        <div class="platform-score">
+          <div class="platform-icon claude">C</div>
+          <div class="platform-name">Claude</div>
+          <div class="platform-value warning">45%</div>
+          <div class="platform-detail">5/11 mentions</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metric Cards -->
+    <div class="metrics-grid">
+      <div class="metric-card good">
+        <div class="metric-label">Brand Recall</div>
+        <div class="metric-value">75%</div>
+        <div class="metric-desc">3 of 4 platforms recognize you</div>
+      </div>
+      <div class="metric-card warning">
+        <div class="metric-label">Culture Awareness</div>
+        <div class="metric-value">52%</div>
+        <div class="metric-desc">AIs know some culture details</div>
+      </div>
+      <div class="metric-card bad">
+        <div class="metric-label">Benefits Knowledge</div>
+        <div class="metric-value">28%</div>
+        <div class="metric-desc">Most benefits are unknown to AI</div>
+      </div>
+      <div class="metric-card good">
+        <div class="metric-label">Competitor Win Rate</div>
+        <div class="metric-value">64%</div>
+        <div class="metric-desc">Often positioned favorably</div>
+      </div>
+    </div>
+
+    <!-- AI Responses Section -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Recent AI Responses</h2>
+        <div class="filter-bar">
+          <button class="filter-btn active">All</button>
+          <button class="filter-btn">ChatGPT</button>
+          <button class="filter-btn">Claude</button>
+          <button class="filter-btn">Gemini</button>
+          <button class="filter-btn">Perplexity</button>
+          <button class="btn btn-outline" style="margin-left: auto;">Export All</button>
+        </div>
+      </div>
+      <div class="section-content">
+        <div class="response-card">
+          <div class="response-header">
+            <div class="response-query">"What's it like to work at Westpac?"</div>
+            <div class="response-badges">
+              <span class="badge badge-platform badge-chatgpt">ChatGPT</span>
+              <span class="badge badge-mentioned">Mentioned</span>
+              <span class="badge badge-positive">Positive</span>
+            </div>
+          </div>
+          <div class="response-body">
+            Westpac is one of Australia's largest banks and offers a range of career opportunities across banking, technology, and corporate functions. Employee reviews often highlight the strong graduate program, competitive benefits including parental leave, and opportunities for internal mobility. The culture is generally described as professional with a focus on work-life balance, though experiences can vary by team. Recent initiatives around digital transformation have made it attractive for tech talent...
+          </div>
+          <div class="response-sources">
+            Sources: <a href="#">Glassdoor</a>, <a href="#">LinkedIn</a>, <a href="#">westpac.com.au/careers</a>
+          </div>
+        </div>
+
+        <div class="response-card">
+          <div class="response-header">
+            <div class="response-query">"Compare Westpac vs CBA as employers"</div>
+            <div class="response-badges">
+              <span class="badge badge-platform badge-claude">Claude</span>
+              <span class="badge badge-mentioned">Mentioned</span>
+              <span class="badge badge-neutral">Neutral</span>
+            </div>
+          </div>
+          <div class="response-body">
+            Both Westpac and Commonwealth Bank (CBA) are major Australian banks offering similar career paths and benefits. CBA is often cited as having more advanced technology initiatives and slightly higher Glassdoor ratings (3.8 vs 3.6). Westpac is known for its strong graduate development programs and has made significant investments in digital banking. Work culture varies significantly by department at both organizations...
+          </div>
+          <div class="response-sources">
+            Sources: <a href="#">Glassdoor comparison</a>, <a href="#">Indeed reviews</a>
+          </div>
+        </div>
+
+        <div class="response-card">
+          <div class="response-header">
+            <div class="response-query">"Does Westpac offer remote work?"</div>
+            <div class="response-badges">
+              <span class="badge badge-platform badge-gemini">Gemini</span>
+              <span class="badge badge-not-mentioned">Not Mentioned</span>
+            </div>
+          </div>
+          <div class="response-body">
+            I don't have specific information about Westpac's current remote work policies. Many Australian banks have adopted hybrid work arrangements since 2020. I'd recommend checking Westpac's careers page or recent job listings for their current flexible work policies...
+          </div>
+          <div class="response-sources">
+            Sources: General knowledge
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Competitor Matrix -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Competitive Positioning</h2>
+        <button class="btn btn-outline">Manage Competitors</button>
+      </div>
+      <div class="section-content">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>vs Competitor</th>
+              <th>ChatGPT</th>
+              <th>Claude</th>
+              <th>Gemini</th>
+              <th>Perplexity</th>
+              <th>Overall</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Commonwealth Bank</td>
+              <td class="matrix-cell weaker">▼</td>
+              <td class="matrix-cell equal">=</td>
+              <td class="matrix-cell weaker">▼</td>
+              <td class="matrix-cell equal">=</td>
+              <td class="matrix-cell weaker">Weaker</td>
+            </tr>
+            <tr>
+              <td>ANZ</td>
+              <td class="matrix-cell equal">=</td>
+              <td class="matrix-cell stronger">▲</td>
+              <td class="matrix-cell equal">=</td>
+              <td class="matrix-cell stronger">▲</td>
+              <td class="matrix-cell stronger">Stronger</td>
+            </tr>
+            <tr>
+              <td>NAB</td>
+              <td class="matrix-cell stronger">▲</td>
+              <td class="matrix-cell stronger">▲</td>
+              <td class="matrix-cell equal">=</td>
+              <td class="matrix-cell stronger">▲</td>
+              <td class="matrix-cell stronger">Stronger</td>
+            </tr>
+            <tr>
+              <td>Macquarie</td>
+              <td class="matrix-cell weaker">▼</td>
+              <td class="matrix-cell weaker">▼</td>
+              <td class="matrix-cell weaker">▼</td>
+              <td class="matrix-cell equal">=</td>
+              <td class="matrix-cell weaker">Weaker</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="insight-box">
+          <div class="insight-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            Competitive Intelligence Summary
+          </div>
+          <ul class="insight-list">
+            <li><strong>Your Strengths:</strong> AI assistants consistently highlight Westpac's graduate programs and technology investment</li>
+            <li><strong>Your Weaknesses:</strong> Less mention of work-life balance compared to ANZ; CBA perceived as more innovative</li>
+            <li><strong>Opportunities:</strong> No AI platform mentions your parental leave policy, but competitors' are frequently cited</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Preview -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Recommended Actions</h2>
+        <div class="filter-bar">
+          <button class="filter-btn active">All (12)</button>
+          <button class="filter-btn">Quick Wins (5)</button>
+          <button class="filter-btn">Strategic (4)</button>
+          <button class="filter-btn">Backlog (3)</button>
+        </div>
+      </div>
+      <div class="section-content">
+        <div class="action-item">
+          <div class="action-checkbox"></div>
+          <div class="action-content">
+            <div class="action-header">
+              <div class="action-title">Add EmployerAggregateRating schema to careers page</div>
+              <span class="action-priority quick-win">Quick Win</span>
+            </div>
+            <div class="action-desc">AI assistants can't find structured employer rating data for Westpac. Adding schema markup will help AI platforms surface your Glassdoor rating (3.6/5) when discussing you.</div>
+            <div class="action-meta">
+              <span>★★★ High Impact</span>
+              <span>Low Effort</span>
+              <span>Source: Benefits Knowledge Gap</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-item">
+          <div class="action-checkbox"></div>
+          <div class="action-content">
+            <div class="action-header">
+              <div class="action-title">Document remote/hybrid work policy on careers page</div>
+              <span class="action-priority quick-win">Quick Win</span>
+            </div>
+            <div class="action-desc">When asked about remote work, AI assistants say they don't have specific information. Adding clear flexible work policies will help AI recommend you to candidates seeking hybrid roles.</div>
+            <div class="action-meta">
+              <span>★★★ High Impact</span>
+              <span>Low Effort</span>
+              <span>Source: AI Response Gap</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-item">
+          <div class="action-checkbox"></div>
+          <div class="action-content">
+            <div class="action-header">
+              <div class="action-title">Create "Life at Westpac" culture page with employee stories</div>
+              <span class="action-priority strategic">Strategic</span>
+            </div>
+            <div class="action-desc">AI responses about your culture are generic. A dedicated culture page with authentic employee testimonials will give AI platforms specific content to cite.</div>
+            <div class="action-meta">
+              <span>★★★ High Impact</span>
+              <span>Medium Effort</span>
+              <span>Source: Culture Awareness Score</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+</body>
+</html>

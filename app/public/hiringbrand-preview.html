@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HiringBrand.io - Visual Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Brand colors */
+      --hb-teal: #4ABDAC;
+      --hb-teal-dark: #3A9A8C;
+      --hb-teal-light: #E6F5F3;
+      --hb-vermillion: #FC4A1A;
+      --hb-vermillion-light: #FEE8E2;
+      --hb-sunshine: #F7B733;
+      --hb-sunshine-light: #FEF6E6;
+      --hb-clean: #DFDCE3;
+
+      /* Semantic */
+      --bg: #FFFFFF;
+      --bg-secondary: #F7F6F9;
+      --surface: #FFFFFF;
+      --border: #E2E8F0;
+
+      --primary: var(--hb-teal);
+      --primary-hover: var(--hb-teal-dark);
+      --accent: var(--hb-vermillion);
+      --highlight: var(--hb-sunshine);
+
+      --text: #2D3748;
+      --text-mid: #4A5568;
+      --text-dim: #718096;
+      --text-on-primary: #FFFFFF;
+
+      /* Fonts */
+      --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--text);
+      background: var(--bg-secondary);
+      line-height: 1.6;
+    }
+
+    /* Navigation */
+    .nav {
+      background: var(--hb-teal);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .logo span {
+      color: #FFFFFF;
+      font-weight: 800;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+    }
+
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      opacity: 0.9;
+      transition: opacity 0.2s;
+    }
+
+    .nav-links a:hover {
+      opacity: 1;
+    }
+
+    .nav-cta {
+      background: white;
+      color: var(--hb-teal);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+
+    .nav-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    /* Hero Section */
+    .hero {
+      background: white;
+      padding: 80px 24px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+
+    .hero h1 span {
+      color: var(--hb-teal);
+    }
+
+    .hero p {
+      font-size: 20px;
+      color: var(--text-mid);
+      max-width: 600px;
+      margin: 0 auto 32px;
+    }
+
+    .btn-primary {
+      background: var(--hb-vermillion);
+      color: white;
+      padding: 16px 32px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 18px;
+      text-decoration: none;
+      display: inline-block;
+      transition: transform 0.1s, box-shadow 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(252, 74, 26, 0.35);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--hb-teal);
+      padding: 16px 32px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 18px;
+      text-decoration: none;
+      display: inline-block;
+      border: 2px solid var(--hb-teal);
+      margin-left: 16px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: var(--hb-teal);
+      color: white;
+    }
+
+    /* Section */
+    .section {
+      padding: 64px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .section-subtitle {
+      color: var(--text-dim);
+      margin-bottom: 32px;
+    }
+
+    /* Score Cards */
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+
+    .score-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--border);
+    }
+
+    .score-card.good {
+      border-left-color: var(--hb-teal);
+      background: linear-gradient(135deg, var(--hb-teal-light) 0%, white 100%);
+    }
+
+    .score-card.warning {
+      border-left-color: var(--hb-sunshine);
+      background: linear-gradient(135deg, var(--hb-sunshine-light) 0%, white 100%);
+    }
+
+    .score-card.bad {
+      border-left-color: var(--hb-vermillion);
+      background: linear-gradient(135deg, var(--hb-vermillion-light) 0%, white 100%);
+    }
+
+    .score-card-label {
+      font-size: 14px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .score-card-value {
+      font-family: var(--font-display);
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .score-card.good .score-card-value { color: var(--hb-teal-dark); }
+    .score-card.warning .score-card-value { color: #B8860B; }
+    .score-card.bad .score-card-value { color: var(--hb-vermillion); }
+
+    .score-card-desc {
+      font-size: 14px;
+      color: var(--text-mid);
+    }
+
+    /* Report Tabs Preview */
+    .tabs-container {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .tabs-header {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      background: var(--bg-secondary);
+    }
+
+    .tab {
+      padding: 16px 24px;
+      font-weight: 500;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .tab:hover {
+      color: var(--text);
+    }
+
+    .tab.active {
+      color: var(--hb-teal);
+      border-bottom-color: var(--hb-teal);
+      background: white;
+    }
+
+    .tabs-content {
+      padding: 32px;
+    }
+
+    /* Response Card */
+    .response-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .response-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .response-query {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .response-platform {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: var(--hb-teal-light);
+      color: var(--hb-teal-dark);
+    }
+
+    .response-body {
+      color: var(--text-mid);
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    .response-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 500;
+      font-size: 12px;
+    }
+
+    .badge-mentioned {
+      background: var(--hb-teal-light);
+      color: var(--hb-teal-dark);
+    }
+
+    .badge-not-mentioned {
+      background: var(--hb-vermillion-light);
+      color: var(--hb-vermillion);
+    }
+
+    .badge-positive {
+      background: var(--hb-teal-light);
+      color: var(--hb-teal-dark);
+    }
+
+    .badge-neutral {
+      background: var(--hb-clean);
+      color: var(--text-mid);
+    }
+
+    .badge-premium {
+      background: var(--hb-sunshine);
+      color: var(--text);
+    }
+
+    /* Pricing Cards */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .pricing-card {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 2px solid var(--border);
+      position: relative;
+    }
+
+    .pricing-card.featured {
+      border-color: var(--hb-teal);
+    }
+
+    .pricing-card.featured::before {
+      content: 'Most Popular';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--hb-teal);
+      color: white;
+      padding: 4px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .pricing-tier {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .pricing-price {
+      font-family: var(--font-display);
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--hb-teal);
+      margin-bottom: 8px;
+    }
+
+    .pricing-price span {
+      font-size: 18px;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .pricing-desc {
+      color: var(--text-mid);
+      margin-bottom: 24px;
+    }
+
+    .pricing-features {
+      list-style: none;
+      margin-bottom: 24px;
+    }
+
+    .pricing-features li {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pricing-features li::before {
+      content: '✓';
+      color: var(--hb-teal);
+      font-weight: bold;
+    }
+
+    .pricing-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-align: center;
+      text-decoration: none;
+      display: block;
+      transition: all 0.2s;
+    }
+
+    .pricing-btn-primary {
+      background: var(--hb-vermillion);
+      color: white;
+    }
+
+    .pricing-btn-primary:hover {
+      box-shadow: 0 4px 12px rgba(252, 74, 26, 0.3);
+    }
+
+    .pricing-btn-secondary {
+      background: var(--hb-teal-light);
+      color: var(--hb-teal-dark);
+    }
+
+    .pricing-btn-secondary:hover {
+      background: var(--hb-teal);
+      color: white;
+    }
+
+    /* Footer */
+    .footer {
+      background: var(--text);
+      color: white;
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .footer-logo {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .footer-logo span {
+      color: #FFFFFF;
+      font-weight: 800;
+    }
+
+    .footer-tagline {
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 24px;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+    }
+
+    .footer-links a {
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: white;
+    }
+
+    /* Typography Showcase */
+    .typography-showcase {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 48px;
+    }
+
+    .type-display {
+      font-family: var(--font-display);
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .type-heading {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .type-body {
+      font-family: var(--font-body);
+      font-size: 16px;
+      color: var(--text-mid);
+      margin-bottom: 16px;
+      max-width: 600px;
+    }
+
+    .type-mono {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      background: var(--bg-secondary);
+      padding: 12px 16px;
+      border-radius: 6px;
+      color: var(--text);
+    }
+
+    /* Color Swatches */
+    .color-swatches {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    .swatch {
+      width: 120px;
+      text-align: center;
+    }
+
+    .swatch-color {
+      width: 120px;
+      height: 80px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .swatch-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .swatch-hex {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Design Notes Banner */
+    .design-notes {
+      background: var(--hb-sunshine-light);
+      border: 1px solid var(--hb-sunshine);
+      border-radius: 8px;
+      padding: 16px 24px;
+      margin-bottom: 32px;
+    }
+
+    .design-notes strong {
+      color: #B8860B;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="logo">hiring<span>brand</span>.io</div>
+    <div class="nav-links">
+      <a href="#">Features</a>
+      <a href="#">Pricing</a>
+      <a href="#">About</a>
+    </div>
+    <a href="#" class="nav-cta">Get Started</a>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <h1>See how AI describes you<br><span>as an employer</span></h1>
+    <p>Discover what ChatGPT, Claude, and Gemini tell job seekers about your company. Get actionable insights to improve your employer reputation.</p>
+    <a href="#" class="btn-primary">Scan Your Employer Brand</a>
+    <a href="#" class="btn-secondary">View Sample Report</a>
+  </section>
+
+  <!-- Design System Showcase -->
+  <section class="section">
+    <div class="design-notes">
+      <strong>Design Preview:</strong> This is a standalone prototype for the HiringBrand visual identity. Review the colors, typography, and component styles below.
+    </div>
+
+    <h2 class="section-title">Color Palette</h2>
+    <p class="section-subtitle">Fresh, professional, and people-focused</p>
+
+    <div class="color-swatches">
+      <div class="swatch">
+        <div class="swatch-color" style="background: #4ABDAC;"></div>
+        <div class="swatch-name">Fresh Teal</div>
+        <div class="swatch-hex">#4ABDAC</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #FC4A1A;"></div>
+        <div class="swatch-name">Vermillion</div>
+        <div class="swatch-hex">#FC4A1A</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #F7B733;"></div>
+        <div class="swatch-name">Sunshine</div>
+        <div class="swatch-hex">#F7B733</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #DFDCE3;"></div>
+        <div class="swatch-name">Clean</div>
+        <div class="swatch-hex">#DFDCE3</div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background: #2D3748;"></div>
+        <div class="swatch-name">Dark</div>
+        <div class="swatch-hex">#2D3748</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Typography</h2>
+    <p class="section-subtitle">Plus Jakarta Sans + Inter + JetBrains Mono</p>
+
+    <div class="typography-showcase">
+      <div class="type-display">Display Heading</div>
+      <div class="type-heading">Section Heading</div>
+      <div class="type-body">Body text uses Inter for excellent readability. This font is clean, modern, and works well at all sizes. It pairs nicely with Plus Jakarta Sans for a professional yet approachable feel.</div>
+      <div class="type-mono">Monospace: scores, data, code snippets</div>
+    </div>
+
+    <h2 class="section-title">Score Cards</h2>
+    <p class="section-subtitle">Status indicators with color-coded borders</p>
+
+    <div class="score-grid">
+      <div class="score-card good">
+        <div class="score-card-label">Employer Visibility</div>
+        <div class="score-card-value">72%</div>
+        <div class="score-card-desc">Above industry average</div>
+      </div>
+      <div class="score-card warning">
+        <div class="score-card-label">Culture Recognition</div>
+        <div class="score-card-value">45%</div>
+        <div class="score-card-desc">Room for improvement</div>
+      </div>
+      <div class="score-card bad">
+        <div class="score-card-label">Benefits Knowledge</div>
+        <div class="score-card-value">23%</div>
+        <div class="score-card-desc">AI doesn't know your benefits</div>
+      </div>
+      <div class="score-card good">
+        <div class="score-card-label">Competitor Win Rate</div>
+        <div class="score-card-value">68%</div>
+        <div class="score-card-desc">Positioned favorably vs competitors</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Report Tabs</h2>
+    <p class="section-subtitle">Sample report interface</p>
+
+    <div class="tabs-container">
+      <div class="tabs-header">
+        <div class="tab">Start Here</div>
+        <div class="tab">Company Profile</div>
+        <div class="tab">Careers Audit</div>
+        <div class="tab active">AI Responses</div>
+        <div class="tab">Reputation Score</div>
+        <div class="tab">Competitors</div>
+        <div class="tab">Actions <span class="badge badge-premium">PRO</span></div>
+      </div>
+      <div class="tabs-content">
+        <div class="response-card">
+          <div class="response-header">
+            <div class="response-query">"What's it like to work at Westpac?"</div>
+            <div class="response-platform">ChatGPT</div>
+          </div>
+          <div class="response-body">
+            Westpac is one of Australia's largest banks with a strong graduate program and focus on technology innovation. Employee reviews mention good work-life balance in some teams, competitive benefits including parental leave, and opportunities for career development. The culture is described as professional and collaborative...
+          </div>
+          <div class="response-meta">
+            <span class="badge badge-mentioned">Mentioned</span>
+            <span class="badge badge-positive">Positive Sentiment</span>
+          </div>
+        </div>
+
+        <div class="response-card">
+          <div class="response-header">
+            <div class="response-query">"Compare Westpac vs CBA as employers"</div>
+            <div class="response-platform">Claude</div>
+          </div>
+          <div class="response-body">
+            Both are major Australian banks with similar benefits structures. CBA is often cited as having more modern technology initiatives, while Westpac is noted for its graduate development programs. Work culture varies significantly by department at both organizations...
+          </div>
+          <div class="response-meta">
+            <span class="badge badge-mentioned">Mentioned</span>
+            <span class="badge badge-neutral">Neutral Sentiment</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section class="section" style="background: white; max-width: 100%; padding: 64px 24px;">
+    <div style="max-width: 1200px; margin: 0 auto;">
+      <h2 class="section-title" style="text-align: center;">Simple, Transparent Pricing</h2>
+      <p class="section-subtitle" style="text-align: center;">Start free. Upgrade when you're ready.</p>
+
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="pricing-tier">Free</div>
+          <div class="pricing-price">$0</div>
+          <div class="pricing-desc">Try it out with one employer scan</div>
+          <ul class="pricing-features">
+            <li>1 employer reputation scan</li>
+            <li>7-day report access</li>
+            <li>Basic AI responses view</li>
+            <li>Email support</li>
+          </ul>
+          <a href="#" class="pricing-btn pricing-btn-secondary">Get Started Free</a>
+        </div>
+
+        <div class="pricing-card featured">
+          <div class="pricing-tier">Pro</div>
+          <div class="pricing-price">$39<span>/month</span></div>
+          <div class="pricing-desc">For talent acquisition teams</div>
+          <ul class="pricing-features">
+            <li>Weekly automated scans</li>
+            <li>Competitor employer tracking</li>
+            <li>Employer recognition analysis</li>
+            <li>AI-powered action plans</li>
+            <li>Export to PDF/Markdown</li>
+          </ul>
+          <a href="#" class="pricing-btn pricing-btn-primary">Start Pro Trial</a>
+        </div>
+
+        <div class="pricing-card">
+          <div class="pricing-tier">Agency</div>
+          <div class="pricing-price">$139<span>/month</span></div>
+          <div class="pricing-desc">For recruitment agencies</div>
+          <ul class="pricing-features">
+            <li>Multiple employer domains</li>
+            <li>Client report branding</li>
+            <li>Implementation PRDs</li>
+            <li>Priority support</li>
+            <li>API access</li>
+          </ul>
+          <a href="#" class="pricing-btn pricing-btn-secondary">Contact Sales</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-logo">hiring<span>brand</span>.io</div>
+    <div class="footer-tagline">AI Employer Reputation Reports</div>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Contact</a>
+    </div>
+  </footer>
+
+</body>
+</html>

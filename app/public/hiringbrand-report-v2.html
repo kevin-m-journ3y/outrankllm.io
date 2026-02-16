@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Westpac - Employer Reputation Report | HiringBrand.io</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Core brand palette */
+      --hb-teal: #4ABDAC;
+      --hb-teal-deep: #2D8A7C;
+      --hb-teal-light: #E8F7F5;
+      --hb-teal-glow: rgba(74, 189, 172, 0.15);
+
+      --hb-coral: #FC4A1A;
+      --hb-coral-light: #FFF0EC;
+
+      --hb-gold: #F7B733;
+      --hb-gold-light: #FEF9EC;
+
+      --hb-slate: #1E293B;
+      --hb-slate-mid: #475569;
+      --hb-slate-light: #94A3B8;
+
+      --surface: #FFFFFF;
+      --surface-raised: #FAFBFC;
+      --surface-dim: #F1F5F9;
+
+      /* Typography */
+      --font-display: 'Outfit', system-ui, sans-serif;
+      --font-body: 'Source Sans 3', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Spacing scale */
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 48px;
+      --space-3xl: 64px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--hb-slate);
+      background: var(--surface-dim);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Grain overlay for premium texture */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 1000;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+
+    /* ========================================
+       NAVIGATION
+       ======================================== */
+    .nav {
+      background: var(--hb-teal);
+      padding: 0 var(--space-xl);
+      height: 64px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(74, 189, 172, 0.25);
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: baseline;
+    }
+
+    .logo-accent {
+      font-weight: 700;
+      opacity: 0.95;
+    }
+
+    .logo-dot {
+      color: var(--hb-gold);
+      font-weight: 700;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+    }
+
+    .nav-link {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover { color: white; }
+
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: 6px 12px 6px 6px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 100px;
+      transition: background 0.2s;
+    }
+
+    .nav-user:hover { background: rgba(255,255,255,0.25); }
+
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: white;
+      color: var(--hb-teal-deep);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .nav-user span {
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* ========================================
+       REPORT HEADER - Editorial style
+       ======================================== */
+    .report-header {
+      background: white;
+      padding: var(--space-xl) var(--space-xl) var(--space-lg);
+      border-bottom: 1px solid var(--surface-dim);
+    }
+
+    .report-header-content {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: var(--space-lg);
+      align-items: center;
+    }
+
+    .company-logo {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(145deg, #D5002B 0%, #A80022 100%);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 28px;
+      box-shadow: 0 8px 24px rgba(213, 0, 43, 0.25);
+      animation: logoFloat 3s ease-in-out infinite;
+    }
+
+    @keyframes logoFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .company-details h1 {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      line-height: 1.2;
+    }
+
+    .company-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      margin-top: var(--space-xs);
+      color: var(--hb-slate-light);
+      font-size: 14px;
+    }
+
+    .company-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .meta-dot {
+      width: 4px;
+      height: 4px;
+      background: var(--hb-slate-light);
+      border-radius: 50%;
+    }
+
+    .scan-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--hb-teal-light);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--hb-teal-deep);
+    }
+
+    .scan-status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--hb-teal);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .report-actions {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--hb-coral);
+      color: white;
+      box-shadow: 0 4px 14px rgba(252, 74, 26, 0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(252, 74, 26, 0.35);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--hb-slate-mid);
+      border: 1.5px solid var(--surface-dim);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--hb-teal);
+      color: var(--hb-teal);
+    }
+
+    /* ========================================
+       STICKY TABS
+       ======================================== */
+    .tabs-container {
+      background: white;
+      border-bottom: 1px solid var(--surface-dim);
+      position: sticky;
+      top: 64px;
+      z-index: 90;
+    }
+
+    .tabs {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      overflow-x: auto;
+      padding: 0 var(--space-xl);
+      gap: var(--space-xs);
+    }
+
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      padding: var(--space-md) var(--space-md);
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--hb-slate-light);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+    }
+
+    .tab:hover { color: var(--hb-slate-mid); }
+
+    .tab.active {
+      color: var(--hb-teal-deep);
+      border-bottom-color: var(--hb-teal);
+    }
+
+    .tab-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tab-badge-pro {
+      background: linear-gradient(135deg, var(--hb-gold) 0%, #E5A72E 100%);
+      color: white;
+    }
+
+    /* ========================================
+       MAIN CONTENT AREA
+       ======================================== */
+    .main {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: var(--space-xl);
+    }
+
+    /* ========================================
+       SCORE HERO - The centerpiece
+       ======================================== */
+    .score-hero {
+      background: white;
+      border-radius: 24px;
+      padding: var(--space-2xl);
+      margin-bottom: var(--space-lg);
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: var(--space-3xl);
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative gradient orb */
+    .score-hero::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, var(--hb-teal-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .main-score {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .score-ring-container {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin: 0 auto var(--space-lg);
+    }
+
+    .score-ring {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      position: relative;
+      background: var(--surface-dim);
+    }
+
+    .score-ring-progress {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(
+        var(--hb-teal) 0%,
+        var(--hb-teal-deep) 68%,
+        var(--surface-dim) 68%,
+        var(--surface-dim) 100%
+      );
+      animation: scoreReveal 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes scoreReveal {
+      from {
+        background: conic-gradient(
+          var(--hb-teal) 0%,
+          var(--hb-teal-deep) 0%,
+          var(--surface-dim) 0%,
+          var(--surface-dim) 100%
+        );
+      }
+    }
+
+    .score-ring-inner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+
+    .score-number {
+      font-family: var(--font-display);
+      font-size: 64px;
+      font-weight: 700;
+      color: var(--hb-teal-deep);
+      line-height: 1;
+      animation: numberFadeIn 0.6s ease-out 0.8s both;
+    }
+
+    @keyframes numberFadeIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .score-max {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--hb-slate-light);
+      margin-top: 4px;
+    }
+
+    .score-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--hb-slate);
+    }
+
+    .score-context {
+      font-size: 14px;
+      color: var(--hb-slate-mid);
+      margin-top: 4px;
+    }
+
+    .score-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: var(--space-sm);
+      padding: 4px 10px;
+      background: var(--hb-teal-light);
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--hb-teal-deep);
+    }
+
+    /* Platform scores grid */
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-md);
+    }
+
+    .platform-card {
+      background: var(--surface-raised);
+      border-radius: 16px;
+      padding: var(--space-lg);
+      display: grid;
+      grid-template-columns: 48px 1fr auto;
+      gap: var(--space-md);
+      align-items: center;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      animation: cardSlideIn 0.5s ease-out backwards;
+    }
+
+    .platform-card:nth-child(1) { animation-delay: 0.1s; }
+    .platform-card:nth-child(2) { animation-delay: 0.2s; }
+    .platform-card:nth-child(3) { animation-delay: 0.3s; }
+    .platform-card:nth-child(4) { animation-delay: 0.4s; }
+
+    @keyframes cardSlideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .platform-card:hover {
+      border-color: var(--hb-teal);
+      box-shadow: 0 4px 12px var(--hb-teal-glow);
+    }
+
+    .platform-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: white;
+    }
+
+    .platform-icon.chatgpt { background: linear-gradient(145deg, #10A37F 0%, #0D8A6A 100%); }
+    .platform-icon.claude { background: linear-gradient(145deg, #D97706 0%, #B45309 100%); }
+    .platform-icon.gemini { background: linear-gradient(145deg, #4285F4 0%, #2563EB 100%); }
+    .platform-icon.perplexity { background: linear-gradient(145deg, #6366F1 0%, #4F46E5 100%); }
+
+    .platform-info h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--hb-slate);
+    }
+
+    .platform-info p {
+      font-size: 13px;
+      color: var(--hb-slate-light);
+      margin-top: 2px;
+    }
+
+    .platform-score-value {
+      font-family: var(--font-mono);
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .platform-score-value.excellent { color: var(--hb-teal-deep); }
+    .platform-score-value.good { color: var(--hb-teal); }
+    .platform-score-value.fair { color: var(--hb-gold); }
+    .platform-score-value.poor { color: var(--hb-coral); }
+
+    /* ========================================
+       METRICS STRIP
+       ======================================== */
+    .metrics-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+
+    .metric-card {
+      background: white;
+      border-radius: 16px;
+      padding: var(--space-lg);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s;
+      animation: metricFadeIn 0.5s ease-out backwards;
+    }
+
+    .metric-card:nth-child(1) { animation-delay: 0.2s; }
+    .metric-card:nth-child(2) { animation-delay: 0.3s; }
+    .metric-card:nth-child(3) { animation-delay: 0.4s; }
+    .metric-card:nth-child(4) { animation-delay: 0.5s; }
+
+    @keyframes metricFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .metric-card:hover { transform: translateY(-2px); }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+
+    .metric-card.status-good::before { background: var(--hb-teal); }
+    .metric-card.status-fair::before { background: var(--hb-gold); }
+    .metric-card.status-poor::before { background: var(--hb-coral); }
+
+    .metric-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--hb-slate-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: var(--space-sm);
+    }
+
+    .metric-value {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .metric-card.status-good .metric-value { color: var(--hb-teal-deep); }
+    .metric-card.status-fair .metric-value { color: #B8860B; }
+    .metric-card.status-poor .metric-value { color: var(--hb-coral); }
+
+    .metric-context {
+      font-size: 13px;
+      color: var(--hb-slate-mid);
+      margin-top: var(--space-xs);
+    }
+
+    /* ========================================
+       SECTIONS
+       ======================================== */
+    .section {
+      background: white;
+      border-radius: 20px;
+      margin-bottom: var(--space-lg);
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: var(--space-lg) var(--space-xl);
+      border-bottom: 1px solid var(--surface-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .section-content {
+      padding: var(--space-xl);
+    }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: var(--space-sm);
+      align-items: center;
+    }
+
+    .filter-pill {
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1.5px solid var(--surface-dim);
+      background: white;
+      color: var(--hb-slate-mid);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-pill:hover {
+      border-color: var(--hb-teal);
+      color: var(--hb-teal);
+    }
+
+    .filter-pill.active {
+      background: var(--hb-teal);
+      border-color: var(--hb-teal);
+      color: white;
+    }
+
+    /* ========================================
+       RESPONSE CARDS - Editorial style
+       ======================================== */
+    .response-card {
+      border: 1px solid var(--surface-dim);
+      border-radius: 16px;
+      padding: var(--space-lg);
+      margin-bottom: var(--space-md);
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .response-card:hover {
+      border-color: var(--hb-teal-light);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+    }
+
+    .response-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--space-md);
+    }
+
+    .response-query {
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 16px;
+      color: var(--hb-slate);
+      padding-right: var(--space-md);
+    }
+
+    .response-badges {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-platform {
+      font-family: var(--font-mono);
+    }
+
+    .badge-chatgpt { background: #D1FAE5; color: #065F46; }
+    .badge-claude { background: #FEF3C7; color: #92400E; }
+    .badge-gemini { background: #DBEAFE; color: #1E40AF; }
+    .badge-perplexity { background: #E0E7FF; color: #3730A3; }
+
+    .badge-mentioned { background: var(--hb-teal-light); color: var(--hb-teal-deep); }
+    .badge-not-mentioned { background: var(--hb-coral-light); color: var(--hb-coral); }
+    .badge-positive { background: var(--hb-teal-light); color: var(--hb-teal-deep); }
+    .badge-neutral { background: var(--surface-dim); color: var(--hb-slate-mid); }
+
+    .response-body {
+      color: var(--hb-slate-mid);
+      font-size: 15px;
+      line-height: 1.75;
+      margin-bottom: var(--space-md);
+    }
+
+    .response-sources {
+      font-size: 13px;
+      color: var(--hb-slate-light);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .response-sources a {
+      color: var(--hb-teal);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .response-sources a:hover { text-decoration: underline; }
+
+    /* ========================================
+       COMPETITOR MATRIX
+       ======================================== */
+    .matrix-wrapper {
+      overflow-x: auto;
+    }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .matrix-table th,
+    .matrix-table td {
+      padding: var(--space-md);
+      text-align: center;
+    }
+
+    .matrix-table th {
+      background: var(--surface-raised);
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--hb-slate-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .matrix-table th:first-child {
+      text-align: left;
+      border-radius: 8px 0 0 8px;
+    }
+
+    .matrix-table th:last-child {
+      border-radius: 0 8px 8px 0;
+    }
+
+    .matrix-table td {
+      border-bottom: 1px solid var(--surface-dim);
+    }
+
+    .matrix-table td:first-child {
+      text-align: left;
+      font-weight: 600;
+      color: var(--hb-slate);
+    }
+
+    .matrix-indicator {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .matrix-indicator.up { background: var(--hb-teal-light); color: var(--hb-teal-deep); }
+    .matrix-indicator.same { background: var(--surface-dim); color: var(--hb-slate-light); }
+    .matrix-indicator.down { background: var(--hb-coral-light); color: var(--hb-coral); }
+
+    .matrix-verdict {
+      font-weight: 600;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 100px;
+    }
+
+    .matrix-verdict.stronger { background: var(--hb-teal-light); color: var(--hb-teal-deep); }
+    .matrix-verdict.equal { background: var(--surface-dim); color: var(--hb-slate-mid); }
+    .matrix-verdict.weaker { background: var(--hb-coral-light); color: var(--hb-coral); }
+
+    /* ========================================
+       INSIGHT BOX
+       ======================================== */
+    .insight-box {
+      background: linear-gradient(135deg, var(--hb-teal-light) 0%, white 100%);
+      border: 1px solid var(--hb-teal-light);
+      border-radius: 16px;
+      padding: var(--space-lg);
+      margin-top: var(--space-lg);
+    }
+
+    .insight-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+
+    .insight-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--hb-teal);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .insight-title {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 16px;
+      color: var(--hb-teal-deep);
+    }
+
+    .insight-list {
+      list-style: none;
+    }
+
+    .insight-item {
+      padding: var(--space-md) 0;
+      border-bottom: 1px solid rgba(74, 189, 172, 0.15);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .insight-item:last-child { border-bottom: none; }
+
+    .insight-label {
+      font-weight: 700;
+      color: var(--hb-teal-deep);
+    }
+
+    /* ========================================
+       ACTION ITEMS
+       ======================================== */
+    .action-card {
+      border: 1px solid var(--surface-dim);
+      border-radius: 16px;
+      padding: var(--space-lg);
+      margin-bottom: var(--space-md);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--space-md);
+      transition: all 0.2s;
+    }
+
+    .action-card:hover {
+      border-color: var(--hb-teal);
+      box-shadow: 0 4px 16px var(--hb-teal-glow);
+    }
+
+    .action-check {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--surface-dim);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .action-check:hover {
+      border-color: var(--hb-teal);
+      background: var(--hb-teal-light);
+    }
+
+    .action-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--space-sm);
+    }
+
+    .action-title {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--hb-slate);
+    }
+
+    .action-priority {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .action-priority.quick-win {
+      background: var(--hb-teal-light);
+      color: var(--hb-teal-deep);
+    }
+
+    .action-priority.strategic {
+      background: var(--hb-gold-light);
+      color: #92400E;
+    }
+
+    .action-desc {
+      font-size: 14px;
+      color: var(--hb-slate-mid);
+      line-height: 1.6;
+      margin-bottom: var(--space-sm);
+    }
+
+    .action-meta {
+      display: flex;
+      gap: var(--space-lg);
+      font-size: 12px;
+      color: var(--hb-slate-light);
+    }
+
+    .action-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ========================================
+       FOOTER
+       ======================================== */
+    .page-footer {
+      text-align: center;
+      padding: var(--space-2xl) var(--space-xl);
+      color: var(--hb-slate-light);
+      font-size: 13px;
+    }
+
+    .page-footer a {
+      color: var(--hb-teal);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="logo">hiring<span class="logo-accent">brand</span><span class="logo-dot">.</span>io</div>
+    <div class="nav-right">
+      <a href="#" class="nav-link">Dashboard</a>
+      <a href="#" class="nav-link">Help</a>
+      <div class="nav-user">
+        <div class="avatar">JD</div>
+        <span>Jane Doe</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Report Header -->
+  <header class="report-header">
+    <div class="report-header-content">
+      <div class="company-logo">W</div>
+      <div class="company-details">
+        <h1>Westpac</h1>
+        <div class="company-meta">
+          <span class="company-meta-item">Banking & Finance</span>
+          <span class="meta-dot"></span>
+          <span class="company-meta-item">Sydney, Australia</span>
+          <span class="meta-dot"></span>
+          <span class="scan-status">Updated 2h ago</span>
+        </div>
+      </div>
+      <div class="report-actions">
+        <button class="btn btn-ghost">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          Export
+        </button>
+        <button class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          Re-scan
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs-container">
+    <div class="tabs">
+      <div class="tab">Start Here</div>
+      <div class="tab">Company Profile</div>
+      <div class="tab">Careers Audit</div>
+      <div class="tab">AI Responses</div>
+      <div class="tab active">Reputation Score</div>
+      <div class="tab">Competitors</div>
+      <div class="tab">Recognition</div>
+      <div class="tab">Actions <span class="tab-badge tab-badge-pro">PRO</span></div>
+      <div class="tab">PRD <span class="tab-badge tab-badge-pro">PRO</span></div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- Score Hero -->
+    <div class="score-hero">
+      <div class="main-score">
+        <div class="score-ring-container">
+          <div class="score-ring">
+            <div class="score-ring-progress"></div>
+            <div class="score-ring-inner">
+              <div class="score-number">68</div>
+              <div class="score-max">/ 100</div>
+            </div>
+          </div>
+        </div>
+        <div class="score-title">Employer Reputation Score</div>
+        <div class="score-context">Above average for Banking & Finance</div>
+        <div class="score-trend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+          +4 from last week
+        </div>
+      </div>
+
+      <div class="platform-grid">
+        <div class="platform-card">
+          <div class="platform-icon chatgpt">GPT</div>
+          <div class="platform-info">
+            <h3>ChatGPT</h3>
+            <p>9 of 11 mentions</p>
+          </div>
+          <div class="platform-score-value excellent">82%</div>
+        </div>
+
+        <div class="platform-card">
+          <div class="platform-icon perplexity">P</div>
+          <div class="platform-info">
+            <h3>Perplexity</h3>
+            <p>8 of 11 mentions</p>
+          </div>
+          <div class="platform-score-value good">73%</div>
+        </div>
+
+        <div class="platform-card">
+          <div class="platform-icon gemini">G</div>
+          <div class="platform-info">
+            <h3>Gemini</h3>
+            <p>6 of 11 mentions</p>
+          </div>
+          <div class="platform-score-value fair">55%</div>
+        </div>
+
+        <div class="platform-card">
+          <div class="platform-icon claude">C</div>
+          <div class="platform-info">
+            <h3>Claude</h3>
+            <p>5 of 11 mentions</p>
+          </div>
+          <div class="platform-score-value fair">45%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metrics Strip -->
+    <div class="metrics-strip">
+      <div class="metric-card status-good">
+        <div class="metric-label">Brand Recall</div>
+        <div class="metric-value">75%</div>
+        <div class="metric-context">3 of 4 platforms recognize you</div>
+      </div>
+      <div class="metric-card status-fair">
+        <div class="metric-label">Culture Awareness</div>
+        <div class="metric-value">52%</div>
+        <div class="metric-context">AIs know some culture details</div>
+      </div>
+      <div class="metric-card status-poor">
+        <div class="metric-label">Benefits Knowledge</div>
+        <div class="metric-value">28%</div>
+        <div class="metric-context">Most benefits unknown to AI</div>
+      </div>
+      <div class="metric-card status-good">
+        <div class="metric-label">Competitor Win Rate</div>
+        <div class="metric-value">64%</div>
+        <div class="metric-context">Often positioned favorably</div>
+      </div>
+    </div>
+
+    <!-- AI Responses Section -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">AI Responses</h2>
+        <div class="filter-bar">
+          <button class="filter-pill active">All</button>
+          <button class="filter-pill">ChatGPT</button>
+          <button class="filter-pill">Claude</button>
+          <button class="filter-pill">Gemini</button>
+          <button class="filter-pill">Perplexity</button>
+          <button class="btn btn-ghost" style="margin-left: var(--space-md);">Export All</button>
+        </div>
+      </div>
+      <div class="section-content">
+        <div class="response-card">
+          <div class="response-header">
+            <div class="response-query">"What's it like to work at Westpac?"</div>
+            <div class="response-badges">
+              <span class="badge badge-platform badge-chatgpt">ChatGPT</span>
+              <span class="badge badge-mentioned">Mentioned</span>
+              <span class="badge badge-positive">Positive</span>
+            </div>
+          </div>
+          <div class="response-body">
+            Westpac is one of Australia's largest banks and offers a range of career opportunities across banking, technology, and corporate functions. Employee reviews often highlight the strong graduate program, competitive benefits including parental leave, and opportunities for internal mobility. The culture is generally described as professional with a focus on work-life balance, though experiences can vary by team...
+          </div>
+          <div class="response-sources">
+            <span>Sources:</span>
+            <a href="#">Glassdoor</a>
+            <a href="#">LinkedIn</a>
+            <a href="#">westpac.com.au/careers</a>
+          </div>
+        </div>
+
+        <div class="response-card">
+          <div class="response-header">
+            <div class="response-query">"Compare Westpac vs CBA as employers"</div>
+            <div class="response-badges">
+              <span class="badge badge-platform badge-claude">Claude</span>
+              <span class="badge badge-mentioned">Mentioned</span>
+              <span class="badge badge-neutral">Neutral</span>
+            </div>
+          </div>
+          <div class="response-body">
+            Both Westpac and Commonwealth Bank (CBA) are major Australian banks offering similar career paths and benefits. CBA is often cited as having more advanced technology initiatives and slightly higher Glassdoor ratings (3.8 vs 3.6). Westpac is known for its strong graduate development programs and has made significant investments in digital banking...
+          </div>
+          <div class="response-sources">
+            <span>Sources:</span>
+            <a href="#">Glassdoor comparison</a>
+            <a href="#">Indeed reviews</a>
+          </div>
+        </div>
+
+        <div class="response-card">
+          <div class="response-header">
+            <div class="response-query">"Does Westpac offer remote work?"</div>
+            <div class="response-badges">
+              <span class="badge badge-platform badge-gemini">Gemini</span>
+              <span class="badge badge-not-mentioned">Not Mentioned</span>
+            </div>
+          </div>
+          <div class="response-body">
+            I don't have specific information about Westpac's current remote work policies. Many Australian banks have adopted hybrid work arrangements since 2020. I'd recommend checking Westpac's careers page or recent job listings for their current flexible work policies...
+          </div>
+          <div class="response-sources">
+            <span>Sources:</span> General knowledge
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Competitor Matrix -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Competitive Positioning</h2>
+        <button class="btn btn-ghost">Manage Competitors</button>
+      </div>
+      <div class="section-content">
+        <div class="matrix-wrapper">
+          <table class="matrix-table">
+            <thead>
+              <tr>
+                <th>vs Competitor</th>
+                <th>ChatGPT</th>
+                <th>Claude</th>
+                <th>Gemini</th>
+                <th>Perplexity</th>
+                <th>Overall</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Commonwealth Bank</td>
+                <td><span class="matrix-indicator down">▼</span></td>
+                <td><span class="matrix-indicator same">=</span></td>
+                <td><span class="matrix-indicator down">▼</span></td>
+                <td><span class="matrix-indicator same">=</span></td>
+                <td><span class="matrix-verdict weaker">Weaker</span></td>
+              </tr>
+              <tr>
+                <td>ANZ</td>
+                <td><span class="matrix-indicator same">=</span></td>
+                <td><span class="matrix-indicator up">▲</span></td>
+                <td><span class="matrix-indicator same">=</span></td>
+                <td><span class="matrix-indicator up">▲</span></td>
+                <td><span class="matrix-verdict stronger">Stronger</span></td>
+              </tr>
+              <tr>
+                <td>NAB</td>
+                <td><span class="matrix-indicator up">▲</span></td>
+                <td><span class="matrix-indicator up">▲</span></td>
+                <td><span class="matrix-indicator same">=</span></td>
+                <td><span class="matrix-indicator up">▲</span></td>
+                <td><span class="matrix-verdict stronger">Stronger</span></td>
+              </tr>
+              <tr>
+                <td>Macquarie</td>
+                <td><span class="matrix-indicator down">▼</span></td>
+                <td><span class="matrix-indicator down">▼</span></td>
+                <td><span class="matrix-indicator down">▼</span></td>
+                <td><span class="matrix-indicator same">=</span></td>
+                <td><span class="matrix-verdict weaker">Weaker</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="insight-box">
+          <div class="insight-header">
+            <div class="insight-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div class="insight-title">Competitive Intelligence Summary</div>
+          </div>
+          <ul class="insight-list">
+            <li class="insight-item"><span class="insight-label">Strengths:</span> AI assistants consistently highlight Westpac's graduate programs and technology investment</li>
+            <li class="insight-item"><span class="insight-label">Weaknesses:</span> Less mention of work-life balance compared to ANZ; CBA perceived as more innovative</li>
+            <li class="insight-item"><span class="insight-label">Opportunities:</span> No AI platform mentions your parental leave policy, but competitors' are frequently cited</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Preview -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">Recommended Actions</h2>
+        <div class="filter-bar">
+          <button class="filter-pill active">All (12)</button>
+          <button class="filter-pill">Quick Wins (5)</button>
+          <button class="filter-pill">Strategic (4)</button>
+          <button class="filter-pill">Backlog (3)</button>
+        </div>
+      </div>
+      <div class="section-content">
+        <div class="action-card">
+          <div class="action-check"></div>
+          <div class="action-body">
+            <div class="action-header">
+              <div class="action-title">Add EmployerAggregateRating schema to careers page</div>
+              <span class="action-priority quick-win">Quick Win</span>
+            </div>
+            <div class="action-desc">AI assistants can't find structured employer rating data for Westpac. Adding schema markup will help AI platforms surface your Glassdoor rating (3.6/5) when discussing you.</div>
+            <div class="action-meta">
+              <span class="action-meta-item">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                High Impact
+              </span>
+              <span class="action-meta-item">Low Effort</span>
+              <span class="action-meta-item">Source: Benefits Knowledge Gap</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-card">
+          <div class="action-check"></div>
+          <div class="action-body">
+            <div class="action-header">
+              <div class="action-title">Document remote/hybrid work policy on careers page</div>
+              <span class="action-priority quick-win">Quick Win</span>
+            </div>
+            <div class="action-desc">When asked about remote work, AI assistants say they don't have specific information. Adding clear flexible work policies will help AI recommend you to candidates seeking hybrid roles.</div>
+            <div class="action-meta">
+              <span class="action-meta-item">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                High Impact
+              </span>
+              <span class="action-meta-item">Low Effort</span>
+              <span class="action-meta-item">Source: AI Response Gap</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-card">
+          <div class="action-check"></div>
+          <div class="action-body">
+            <div class="action-header">
+              <div class="action-title">Create "Life at Westpac" culture page with employee stories</div>
+              <span class="action-priority strategic">Strategic</span>
+            </div>
+            <div class="action-desc">AI responses about your culture are generic. A dedicated culture page with authentic employee testimonials will give AI platforms specific content to cite.</div>
+            <div class="action-meta">
+              <span class="action-meta-item">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                High Impact
+              </span>
+              <span class="action-meta-item">Medium Effort</span>
+              <span class="action-meta-item">Source: Culture Awareness Score</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="page-footer">
+    <p>Powered by <a href="#">HiringBrand.io</a> - AI Employer Reputation Intelligence</p>
+  </footer>
+
+</body>
+</html>

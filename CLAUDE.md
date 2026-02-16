@@ -143,26 +143,6 @@ The AI prompt in `generate-strategic-summary.ts` uses **consultative language** 
 | `hb_score_history` | Pillar + dimension scores per scan for trends |
 | `hb_competitor_history` | Competitor scores per scan for competitive tracking |
 
-### Recent Fixes & Updates (Feb 2026)
-
-**Differentiation Score Consistency** (commit `fd6ddd2`):
-- Fixed discrepancy where Summary page showed different differentiation score than Competitors page
-- Root cause: Two different calculations with different "strength" thresholds (0.5 vs 1.5)
-- Now uses consistent 0.5 threshold from `calculateEmployerDifferentiation()` in `compare-employers.ts`
-- Removed redundant `calculateEnhancedDifferentiation()` function from scan process
-- Updated all 29 existing reports in production database via SQL
-- Also updated strategic_summary text to match corrected scores via regex replacement
-
-**Trends Data Deduplication** (commit `1843d9b`):
-- Trends charts now show one data point per day (most recent scan)
-- Prevents duplicate/repetitive days from cluttering the charts
-- Implemented in `getTrendsData()` in `hiringbrand-report-data.ts`
-- Applies to both score history and competitor ranking charts
-
-**UI Updates**:
-- Consolidated "Download Report PDF" and "Download Report PPTX" buttons into single dropdown (commit `1c5d540`)
-- Changed account page button label from "View Report" to "View Latest Results" (commit `b3f8678`)
-
 ### Platforms Scanned
 ChatGPT (weight 10), Perplexity (weight 4), Gemini (weight 2), Claude (weight 1) — weighted by AI market share for job seekers.
 

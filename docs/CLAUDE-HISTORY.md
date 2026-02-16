@@ -4,6 +4,63 @@ Reference documentation for past bug fixes and important migrations. Read this f
 
 ---
 
+## 2026-02-16: HiringBrand Differentiation Score & UI Updates
+
+### Differentiation Score Consistency Fix (commit fd6ddd2)
+
+**Problem:**
+Summary page showed differentiation = 6, but Competitors page showed 17 for the same employer.
+
+**Root Cause:**
+Two different differentiation calculations with different "strength" thresholds:
+- `calculateEmployerDifferentiation()` in `compare-employers.ts`: counted dimension as strength if >0.5 above average
+- `calculateEnhancedDifferentiation()` in `process-hiringbrand-scan.ts`: counted dimension as strength if ≥1.5 above average
+
+The 1.5 threshold was too strict, resulting in lower scores (6 vs 17).
+
+**Fix:**
+- Removed `calculateEnhancedDifferentiation()` function entirely
+- Now uses target employer's `differentiationScore` directly from competitive analysis (0.5 threshold)
+- Updated all 29 existing reports via SQL: `UPDATE reports SET differentiation_score = (SELECT differentiation score from competitor_analysis)`
+- Fixed strategic summary text via regex replacement to match corrected scores
+
+**Files Modified:**
+- `src/inngest/functions/process-hiringbrand-scan.ts`
+
+---
+
+### Trends Data Deduplication (commit 1843d9b)
+
+**Problem:**
+Multiple scans on the same day showed as separate data points on trends charts, creating cluttered/repetitive visualizations.
+
+**Fix:**
+- Modified `getTrendsData()` in `hiringbrand-report-data.ts` to deduplicate by day
+- Keeps only the most recent scan per day (based on timestamp)
+- Applies to both score history and competitor ranking charts
+- Groups by YYYY-MM-DD date key, retains entry with latest timestamp
+
+**Files Modified:**
+- `src/lib/hiringbrand-report-data.ts`
+
+---
+
+### UI Updates
+
+**Download Button Consolidation (commit 1c5d540):**
+- Replaced separate "Download Report PDF" and "Download Report PPTX" buttons with single dropdown menu
+- Dropdown shows both format options with descriptive labels
+- Saves nav bar space, cleaner UI
+
+**Account Page Label (commit b3f8678):**
+- Changed "View Report" → "View Latest Results" for clarity
+
+**Files Modified:**
+- `src/app/hiringbrand/report/components/HBNav.tsx`
+- `src/app/hiringbrand/account/DashboardClient.tsx`
+
+---
+
 ## 2025-01-12: Multi-Domain Data Isolation Fix
 
 ### Problem

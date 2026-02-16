@@ -1,0 +1,1029 @@
+/**
+ * ============================================
+ * HIRINGBRAND.IO DESIGN SYSTEM
+ * ============================================
+ *
+ * Reference CSS for the HiringBrand visual identity.
+ * Extract from prototype: app/public/hiringbrand-report-v2.html
+ *
+ * Usage: Import these variables and patterns into globals.css
+ * when BRAND_ID=hiringbrand environment variable is set.
+ */
+
+
+/* ============================================
+   1. DESIGN TOKENS
+   ============================================ */
+
+:root {
+  /* ----------------------------------------
+     1.1 COLOR PALETTE
+     ---------------------------------------- */
+
+  /* Primary - Fresh Teal */
+  --hb-teal: #4ABDAC;
+  --hb-teal-deep: #2D8A7C;        /* Hover states, emphasized text */
+  --hb-teal-light: #E8F7F5;       /* Backgrounds, badges */
+  --hb-teal-glow: rgba(74, 189, 172, 0.15);  /* Box shadows, overlays */
+
+  /* Accent - Coral/Vermillion (CTAs, alerts) */
+  --hb-coral: #FC4A1A;
+  --hb-coral-light: #FFF0EC;
+
+  /* Highlight - Sunshine/Gold (Premium, warnings) */
+  --hb-gold: #F7B733;
+  --hb-gold-light: #FEF9EC;
+
+  /* Neutrals */
+  --hb-slate: #1E293B;            /* Primary text */
+  --hb-slate-mid: #475569;        /* Secondary text */
+  --hb-slate-light: #94A3B8;      /* Tertiary text, labels */
+
+  /* Surfaces */
+  --surface: #FFFFFF;
+  --surface-raised: #FAFBFC;      /* Slightly elevated cards */
+  --surface-dim: #F1F5F9;         /* Page background, borders */
+
+  /* ----------------------------------------
+     1.2 TYPOGRAPHY
+     ---------------------------------------- */
+
+  /* Font Families */
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Source Sans 3', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Font Sizes */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
+  --text-4xl: 48px;
+  --text-5xl: 64px;
+
+  /* Font Weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Line Heights */
+  --leading-tight: 1.1;
+  --leading-snug: 1.2;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.75;
+
+  /* ----------------------------------------
+     1.3 SPACING SCALE
+     ---------------------------------------- */
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* ----------------------------------------
+     1.4 BORDER RADIUS
+     ---------------------------------------- */
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-full: 100px;
+
+  /* ----------------------------------------
+     1.5 SHADOWS
+     ---------------------------------------- */
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.04);
+  --shadow-teal: 0 4px 12px var(--hb-teal-glow);
+  --shadow-teal-lg: 0 4px 20px rgba(74, 189, 172, 0.25);
+  --shadow-coral: 0 4px 14px rgba(252, 74, 26, 0.25);
+  --shadow-coral-lg: 0 8px 20px rgba(252, 74, 26, 0.35);
+
+  /* ----------------------------------------
+     1.6 TRANSITIONS
+     ---------------------------------------- */
+
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-smooth: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* ============================================
+   2. BASE STYLES
+   ============================================ */
+
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Reset */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--hb-slate);
+  background: var(--surface-dim);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Premium grain texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 1000;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+
+/* ============================================
+   3. TYPOGRAPHY CLASSES
+   ============================================ */
+
+/* Display headings (page titles, hero text) */
+.hb-display {
+  font-family: var(--font-display);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-snug);
+  letter-spacing: -0.2px;
+}
+
+.hb-display-xl {
+  font-size: var(--text-5xl);  /* 64px - Score numbers */
+}
+
+.hb-display-lg {
+  font-size: var(--text-3xl);  /* 32px - Company names, page titles */
+}
+
+.hb-display-md {
+  font-size: var(--text-xl);   /* 20px - Section titles */
+  font-weight: var(--font-semibold);
+}
+
+/* Body text */
+.hb-body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);  /* 15px */
+  line-height: var(--leading-relaxed);
+  color: var(--hb-slate-mid);
+}
+
+.hb-body-sm {
+  font-size: var(--text-sm);    /* 13px */
+}
+
+/* Labels and captions */
+.hb-label {
+  font-size: 12px;
+  font-weight: var(--font-semibold);
+  color: var(--hb-slate-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Monospace (data, scores) */
+.hb-mono {
+  font-family: var(--font-mono);
+}
+
+.hb-mono-lg {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: var(--font-semibold);
+}
+
+
+/* ============================================
+   4. NAVIGATION
+   ============================================ */
+
+.hb-nav {
+  background: var(--hb-teal);
+  padding: 0 var(--space-xl);
+  height: 64px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-teal-lg);
+}
+
+.hb-logo {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: white;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: baseline;
+}
+
+.hb-logo-accent {
+  font-weight: var(--font-bold);
+  opacity: 0.95;
+}
+
+.hb-logo-dot {
+  color: var(--hb-gold);
+  font-weight: var(--font-bold);
+}
+
+.hb-nav-link {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-weight: var(--font-medium);
+  font-size: 14px;
+  transition: color var(--transition-base);
+}
+
+.hb-nav-link:hover {
+  color: white;
+}
+
+.hb-nav-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 6px 12px 6px 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-base);
+}
+
+.hb-nav-user:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.hb-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: white;
+  color: var(--hb-teal-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-semibold);
+  font-size: var(--text-xs);
+}
+
+
+/* ============================================
+   5. BUTTONS
+   ============================================ */
+
+.hb-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: var(--font-semibold);
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Primary - Coral CTA */
+.hb-btn-primary {
+  background: var(--hb-coral);
+  color: white;
+  box-shadow: var(--shadow-coral);
+}
+
+.hb-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-coral-lg);
+}
+
+/* Secondary - Teal filled */
+.hb-btn-secondary {
+  background: var(--hb-teal);
+  color: white;
+}
+
+.hb-btn-secondary:hover {
+  background: var(--hb-teal-deep);
+}
+
+/* Ghost - Transparent with border */
+.hb-btn-ghost {
+  background: transparent;
+  color: var(--hb-slate-mid);
+  border: 1.5px solid var(--surface-dim);
+}
+
+.hb-btn-ghost:hover {
+  border-color: var(--hb-teal);
+  color: var(--hb-teal);
+}
+
+
+/* ============================================
+   6. CARDS & SURFACES
+   ============================================ */
+
+/* Base card */
+.hb-card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Section container */
+.hb-section {
+  background: var(--surface);
+  border-radius: var(--radius-2xl);
+  margin-bottom: var(--space-lg);
+  overflow: hidden;
+}
+
+.hb-section-header {
+  padding: var(--space-lg) var(--space-xl);
+  border-bottom: 1px solid var(--surface-dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hb-section-content {
+  padding: var(--space-xl);
+}
+
+/* Platform card */
+.hb-platform-card {
+  background: var(--surface-raised);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: var(--space-md);
+  align-items: center;
+  transition: all var(--transition-base);
+  border: 1px solid transparent;
+}
+
+.hb-platform-card:hover {
+  border-color: var(--hb-teal);
+  box-shadow: var(--shadow-teal);
+}
+
+/* Metric card with status indicator */
+.hb-metric-card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.hb-metric-card:hover {
+  transform: translateY(-2px);
+}
+
+.hb-metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+}
+
+.hb-metric-card.status-good::before { background: var(--hb-teal); }
+.hb-metric-card.status-fair::before { background: var(--hb-gold); }
+.hb-metric-card.status-poor::before { background: var(--hb-coral); }
+
+/* Response card */
+.hb-response-card {
+  border: 1px solid var(--surface-dim);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  transition: all var(--transition-base);
+}
+
+.hb-response-card:hover {
+  border-color: var(--hb-teal-light);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Action card */
+.hb-action-card {
+  border: 1px solid var(--surface-dim);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-md);
+  transition: all var(--transition-base);
+}
+
+.hb-action-card:hover {
+  border-color: var(--hb-teal);
+  box-shadow: var(--shadow-teal);
+}
+
+
+/* ============================================
+   7. BADGES & PILLS
+   ============================================ */
+
+.hb-badge {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-xs);
+  letter-spacing: 0.3px;
+}
+
+/* Platform badges */
+.hb-badge-chatgpt { background: #D1FAE5; color: #065F46; }
+.hb-badge-claude { background: #FEF3C7; color: #92400E; }
+.hb-badge-gemini { background: #DBEAFE; color: #1E40AF; }
+.hb-badge-perplexity { background: #E0E7FF; color: #3730A3; }
+
+/* Status badges */
+.hb-badge-mentioned { background: var(--hb-teal-light); color: var(--hb-teal-deep); }
+.hb-badge-not-mentioned { background: var(--hb-coral-light); color: var(--hb-coral); }
+.hb-badge-positive { background: var(--hb-teal-light); color: var(--hb-teal-deep); }
+.hb-badge-neutral { background: var(--surface-dim); color: var(--hb-slate-mid); }
+.hb-badge-negative { background: var(--hb-coral-light); color: var(--hb-coral); }
+
+/* Pro badge (gradient) */
+.hb-badge-pro {
+  background: linear-gradient(135deg, var(--hb-gold) 0%, #E5A72E 100%);
+  color: white;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Filter pills */
+.hb-filter-pill {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  border: 1.5px solid var(--surface-dim);
+  background: var(--surface);
+  color: var(--hb-slate-mid);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.hb-filter-pill:hover {
+  border-color: var(--hb-teal);
+  color: var(--hb-teal);
+}
+
+.hb-filter-pill.active {
+  background: var(--hb-teal);
+  border-color: var(--hb-teal);
+  color: white;
+}
+
+/* Priority badges */
+.hb-priority-quick-win {
+  background: var(--hb-teal-light);
+  color: var(--hb-teal-deep);
+}
+
+.hb-priority-strategic {
+  background: var(--hb-gold-light);
+  color: #92400E;
+}
+
+
+/* ============================================
+   8. PLATFORM ICONS
+   ============================================ */
+
+.hb-platform-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-bold);
+  font-size: 14px;
+  color: white;
+}
+
+/* Gradient backgrounds for each platform */
+.hb-platform-icon.chatgpt {
+  background: linear-gradient(145deg, #10A37F 0%, #0D8A6A 100%);
+}
+
+.hb-platform-icon.claude {
+  background: linear-gradient(145deg, #D97706 0%, #B45309 100%);
+}
+
+.hb-platform-icon.gemini {
+  background: linear-gradient(145deg, #4285F4 0%, #2563EB 100%);
+}
+
+.hb-platform-icon.perplexity {
+  background: linear-gradient(145deg, #6366F1 0%, #4F46E5 100%);
+}
+
+
+/* ============================================
+   9. SCORE DISPLAY
+   ============================================ */
+
+/* Circular score ring */
+.hb-score-ring-container {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto var(--space-lg);
+}
+
+.hb-score-ring {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: relative;
+  background: var(--surface-dim);
+}
+
+/* Dynamic conic-gradient - set percentage via inline style or JS */
+.hb-score-ring-progress {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  /* Example for 68%: */
+  background: conic-gradient(
+    var(--hb-teal) 0%,
+    var(--hb-teal-deep) 68%,
+    var(--surface-dim) 68%,
+    var(--surface-dim) 100%
+  );
+  animation: hb-score-reveal 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.hb-score-ring-inner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.hb-score-number {
+  font-family: var(--font-display);
+  font-size: var(--text-5xl);
+  font-weight: var(--font-bold);
+  color: var(--hb-teal-deep);
+  line-height: 1;
+  animation: hb-number-fade-in 0.6s ease-out 0.8s both;
+}
+
+.hb-score-max {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--hb-slate-light);
+  margin-top: 4px;
+}
+
+/* Score value colors based on status */
+.hb-score-excellent { color: var(--hb-teal-deep); }
+.hb-score-good { color: var(--hb-teal); }
+.hb-score-fair { color: var(--hb-gold); }
+.hb-score-poor { color: var(--hb-coral); }
+
+/* Trend indicator */
+.hb-score-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--space-sm);
+  padding: 4px 10px;
+  background: var(--hb-teal-light);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--hb-teal-deep);
+}
+
+
+/* ============================================
+   10. TABLES (Competitor Matrix)
+   ============================================ */
+
+.hb-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.hb-matrix-table th,
+.hb-matrix-table td {
+  padding: var(--space-md);
+  text-align: center;
+}
+
+.hb-matrix-table th {
+  background: var(--surface-raised);
+  font-weight: var(--font-semibold);
+  font-size: 12px;
+  color: var(--hb-slate-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hb-matrix-table th:first-child {
+  text-align: left;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.hb-matrix-table th:last-child {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.hb-matrix-table td {
+  border-bottom: 1px solid var(--surface-dim);
+}
+
+.hb-matrix-table td:first-child {
+  text-align: left;
+  font-weight: var(--font-semibold);
+  color: var(--hb-slate);
+}
+
+/* Matrix indicators */
+.hb-matrix-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-bold);
+  font-size: 16px;
+}
+
+.hb-matrix-indicator.up { background: var(--hb-teal-light); color: var(--hb-teal-deep); }
+.hb-matrix-indicator.same { background: var(--surface-dim); color: var(--hb-slate-light); }
+.hb-matrix-indicator.down { background: var(--hb-coral-light); color: var(--hb-coral); }
+
+/* Verdict pills */
+.hb-matrix-verdict {
+  font-weight: var(--font-semibold);
+  font-size: var(--text-sm);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+}
+
+.hb-matrix-verdict.stronger { background: var(--hb-teal-light); color: var(--hb-teal-deep); }
+.hb-matrix-verdict.equal { background: var(--surface-dim); color: var(--hb-slate-mid); }
+.hb-matrix-verdict.weaker { background: var(--hb-coral-light); color: var(--hb-coral); }
+
+
+/* ============================================
+   11. INSIGHT BOX
+   ============================================ */
+
+.hb-insight-box {
+  background: linear-gradient(135deg, var(--hb-teal-light) 0%, white 100%);
+  border: 1px solid var(--hb-teal-light);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  margin-top: var(--space-lg);
+}
+
+.hb-insight-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.hb-insight-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--hb-teal);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.hb-insight-title {
+  font-family: var(--font-display);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-lg);
+  color: var(--hb-teal-deep);
+}
+
+.hb-insight-list {
+  list-style: none;
+}
+
+.hb-insight-item {
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid rgba(74, 189, 172, 0.15);
+  font-size: 14px;
+  line-height: var(--leading-normal);
+}
+
+.hb-insight-item:last-child {
+  border-bottom: none;
+}
+
+.hb-insight-label {
+  font-weight: var(--font-bold);
+  color: var(--hb-teal-deep);
+}
+
+
+/* ============================================
+   12. TABS
+   ============================================ */
+
+.hb-tabs-container {
+  background: var(--surface);
+  border-bottom: 1px solid var(--surface-dim);
+  position: sticky;
+  top: 64px;  /* Below nav */
+  z-index: 90;
+}
+
+.hb-tabs {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: flex;
+  overflow-x: auto;
+  padding: 0 var(--space-xl);
+  gap: var(--space-xs);
+}
+
+.hb-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.hb-tab {
+  padding: var(--space-md);
+  font-weight: var(--font-medium);
+  font-size: 14px;
+  color: var(--hb-slate-light);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hb-tab:hover {
+  color: var(--hb-slate-mid);
+}
+
+.hb-tab.active {
+  color: var(--hb-teal-deep);
+  border-bottom-color: var(--hb-teal);
+}
+
+
+/* ============================================
+   13. FORM ELEMENTS
+   ============================================ */
+
+/* Checkbox */
+.hb-checkbox {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--surface-dim);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hb-checkbox:hover {
+  border-color: var(--hb-teal);
+  background: var(--hb-teal-light);
+}
+
+.hb-checkbox.checked {
+  background: var(--hb-teal);
+  border-color: var(--hb-teal);
+  color: white;
+}
+
+
+/* ============================================
+   14. ANIMATIONS
+   ============================================ */
+
+/* Score ring reveal */
+@keyframes hb-score-reveal {
+  from {
+    background: conic-gradient(
+      var(--hb-teal) 0%,
+      var(--hb-teal-deep) 0%,
+      var(--surface-dim) 0%,
+      var(--surface-dim) 100%
+    );
+  }
+}
+
+/* Number fade in */
+@keyframes hb-number-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Card slide in (staggered) */
+@keyframes hb-card-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Metric fade in */
+@keyframes hb-metric-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Floating effect (company logo) */
+@keyframes hb-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Pulse (status indicator) */
+@keyframes hb-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Animation utility classes */
+.hb-animate-slide-in {
+  animation: hb-card-slide-in 0.5s ease-out backwards;
+}
+
+.hb-animate-fade-in {
+  animation: hb-metric-fade-in 0.5s ease-out backwards;
+}
+
+.hb-animate-float {
+  animation: hb-float 3s ease-in-out infinite;
+}
+
+.hb-animate-pulse {
+  animation: hb-pulse 2s infinite;
+}
+
+/* Stagger delays */
+.hb-delay-1 { animation-delay: 0.1s; }
+.hb-delay-2 { animation-delay: 0.2s; }
+.hb-delay-3 { animation-delay: 0.3s; }
+.hb-delay-4 { animation-delay: 0.4s; }
+.hb-delay-5 { animation-delay: 0.5s; }
+
+
+/* ============================================
+   15. UTILITY CLASSES
+   ============================================ */
+
+/* Text colors */
+.hb-text-primary { color: var(--hb-slate); }
+.hb-text-secondary { color: var(--hb-slate-mid); }
+.hb-text-tertiary { color: var(--hb-slate-light); }
+.hb-text-teal { color: var(--hb-teal); }
+.hb-text-teal-deep { color: var(--hb-teal-deep); }
+.hb-text-coral { color: var(--hb-coral); }
+.hb-text-gold { color: var(--hb-gold); }
+
+/* Background colors */
+.hb-bg-surface { background: var(--surface); }
+.hb-bg-raised { background: var(--surface-raised); }
+.hb-bg-dim { background: var(--surface-dim); }
+.hb-bg-teal { background: var(--hb-teal); }
+.hb-bg-teal-light { background: var(--hb-teal-light); }
+
+/* Decorative gradient orb (for hero sections) */
+.hb-gradient-orb::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--hb-teal-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+
+/* ============================================
+   16. RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/*
+ * Mobile: < 640px
+ * Tablet: 640px - 1024px
+ * Desktop: > 1024px
+ * Wide: > 1440px
+ */
+
+@media (max-width: 1024px) {
+  .hb-score-hero {
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
+  }
+
+  .hb-platform-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hb-metrics-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .hb-nav {
+    padding: 0 var(--space-md);
+  }
+
+  .hb-metrics-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .hb-section-header {
+    flex-direction: column;
+    gap: var(--space-md);
+    align-items: flex-start;
+  }
+
+  .hb-filter-bar {
+    flex-wrap: wrap;
+  }
+}
