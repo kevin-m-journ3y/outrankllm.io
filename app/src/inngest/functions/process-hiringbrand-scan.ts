@@ -855,7 +855,10 @@ export const processHiringBrandScan = inngest.createFunction(
             }
           }
 
-          if (activeFamilies.length > 0) {
+          // Check if frozen questions already include role-specific questions
+          const hasFrozenRoleQuestions = frozenResult.questions.some((q: any) => q.job_family)
+
+          if (activeFamilies.length > 0 && !hasFrozenRoleQuestions) {
             log.info(scanId, `Generating role-specific questions for: ${activeFamilies.join(', ')}`)
 
             // Generate 1-2 role-specific questions per family
@@ -875,6 +878,10 @@ export const processHiringBrandScan = inngest.createFunction(
 
             allQuestions = [...frozenResult.questions, ...roleSpecificQuestions]
             log.info(scanId, `Added ${roleSpecificQuestions.length} role-specific questions to ${frozenResult.questions.length} frozen questions`)
+          } else if (hasFrozenRoleQuestions) {
+            // Frozen questions already contain role-specific questions - use them as-is
+            allQuestions = frozenResult.questions
+            log.info(scanId, `Using ${frozenResult.questions.length} frozen questions (including role-specific questions)`)
           }
         }
 
