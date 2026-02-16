@@ -671,7 +671,7 @@ export const processHiringBrandScan = inngest.createFunction(
       // Classify job families from commonRoles
       log.step(scanId, 'Classifying job families')
       const { data: orgData } = await supabase
-        .from('hb_organizations')
+        .from('organizations')
         .select('max_role_families')
         .eq('id', organizationId)
         .single()
@@ -1260,7 +1260,7 @@ export const processHiringBrandScan = inngest.createFunction(
     // Step 6: Calculate scores and generate report
     const report = await step.run('finalize-report', async () => {
       const supabase = createServiceClient()
-      await updateScanStatus(supabase, scanId, 'complete', 95)
+      await updateScanStatus(supabase, scanId, 'analyzing', 70)
 
       log.step(scanId, 'Calculating employer reputation scores (sentiment-based)')
 
@@ -1954,6 +1954,14 @@ export const processHiringBrandScan = inngest.createFunction(
       }
 
       return { recorded: true }
+    })
+
+    // Step 10: Mark scan as complete
+    await step.run('mark-complete', async () => {
+      const supabase = createServiceClient()
+      await updateScanStatus(supabase, scanId, 'complete', 100)
+      log.done(scanId, 'Complete', 'Scan finished successfully')
+      return { complete: true }
     })
 
     log.end(scanId, true)
