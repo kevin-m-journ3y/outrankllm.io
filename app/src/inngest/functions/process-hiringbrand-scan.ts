@@ -827,9 +827,13 @@ export const processHiringBrandScan = inngest.createFunction(
         let allQuestions = [...frozenResult.questions]
         let roleSpecificQuestions: any[] = []
 
-        // If frozen questions are legacy (no job_family), generate role-specific questions to supplement
-        if (hasLegacyQuestions) {
-          log.info(scanId, 'Frozen questions are legacy (no job_family) - generating role-specific questions')
+        // If there are no frozen questions OR frozen questions are legacy (no job_family), generate role-specific questions
+        if (frozenResult.questions.length === 0 || hasLegacyQuestions) {
+          if (frozenResult.questions.length === 0) {
+            log.info(scanId, 'No frozen questions found - generating role-specific questions')
+          } else {
+            log.info(scanId, 'Frozen questions are legacy (no job_family) - generating role-specific questions')
+          }
 
           // Determine active job families
           let activeFamilies: JobFamily[] = frozenResult.roleFamilies && frozenResult.roleFamilies.length > 0
@@ -878,7 +882,7 @@ export const processHiringBrandScan = inngest.createFunction(
         // Check if prompts already exist for this run (Inngest step retries can cause duplicates)
         const { data: existingPrompts } = await supabase
           .from('scan_prompts')
-          .select('id, prompt_text, category')
+          .select('id, prompt_text, category, job_family')
           .eq('run_id', scanId)
 
         const questionsWithPromptIds: Array<{ question: string; category: string; promptId: string; jobFamily?: string | null }> = []
@@ -890,6 +894,7 @@ export const processHiringBrandScan = inngest.createFunction(
               question: ep.prompt_text,
               category: ep.category,
               promptId: ep.id,
+              jobFamily: (ep as any).job_family || null,
             })
           }
         } else {
@@ -973,10 +978,10 @@ export const processHiringBrandScan = inngest.createFunction(
       // Check if prompts already exist for this run (Inngest step retries can cause duplicates)
       const { data: existingResearchPrompts } = await supabase
         .from('scan_prompts')
-        .select('id, prompt_text, category')
+        .select('id, prompt_text, category, job_family')
         .eq('run_id', scanId)
 
-      const questionsWithPromptIds: Array<{ question: string; category: string; promptId: string }> = []
+      const questionsWithPromptIds: Array<{ question: string; category: string; promptId: string; jobFamily?: string | null }> = []
 
       if (existingResearchPrompts && existingResearchPrompts.length > 0) {
         for (const ep of existingResearchPrompts) {
@@ -984,6 +989,7 @@ export const processHiringBrandScan = inngest.createFunction(
             question: ep.prompt_text,
             category: ep.category,
             promptId: ep.id,
+            jobFamily: (ep as any).job_family || null,
           })
         }
       } else {
@@ -995,6 +1001,7 @@ export const processHiringBrandScan = inngest.createFunction(
               prompt_text: q.question,
               category: q.category,
               source: 'employer_research',
+              job_family: (q as any).jobFamily || null,
             })
             .select('id')
             .single()
@@ -1004,6 +1011,7 @@ export const processHiringBrandScan = inngest.createFunction(
               question: q.question,
               category: q.category,
               promptId: insertedPrompt.id,
+              jobFamily: (q as any).jobFamily || null,
             })
           }
         }
@@ -1026,6 +1034,7 @@ export const processHiringBrandScan = inngest.createFunction(
             monitored_domain_id: monitoredDomainId,
             prompt_text: q.question,
             category: q.category,
+            job_family: (q as any).jobFamily || null,
             source: 'employer_research',
             sort_order: i,
           }))
@@ -1072,14 +1081,15 @@ export const processHiringBrandScan = inngest.createFunction(
       const supabase = createServiceClient()
       const { data: existingFallbackPrompts } = await supabase
         .from('scan_prompts')
-        .select('id, prompt_text, category')
+        .select('id, prompt_text, category, job_family')
         .eq('run_id', scanId)
 
       if (existingFallbackPrompts && existingFallbackPrompts.length > 0) {
-        questions = existingFallbackPrompts.map((ep: { id: string; prompt_text: string; category: string }) => ({
+        questions = existingFallbackPrompts.map((ep: { id: string; prompt_text: string; category: string; job_family?: string | null }) => ({
           question: ep.prompt_text,
           category: ep.category,
           promptId: ep.id,
+          jobFamily: ep.job_family || null,
         }))
       } else {
         // Get job families for fallback questions
@@ -1123,6 +1133,7 @@ export const processHiringBrandScan = inngest.createFunction(
               monitored_domain_id: monitoredDomainId,
               prompt_text: q.question,
               category: q.category,
+              job_family: q.jobFamily || null,
               source: 'fallback',
               sort_order: i,
             }))
