@@ -806,9 +806,24 @@ export const processHiringBrandScan = inngest.createFunction(
           log.info(scanId, 'Frozen questions are legacy (no job_family) - generating role-specific questions')
 
           // Determine active job families
-          const activeFamilies: JobFamily[] = frozenResult.roleFamilies && frozenResult.roleFamilies.length > 0
+          let activeFamilies: JobFamily[] = frozenResult.roleFamilies && frozenResult.roleFamilies.length > 0
             ? frozenResult.roleFamilies
             : employerAnalysis.detectedFamilies.map(f => f.family)
+
+          // Fallback: If no families detected (empty commonRoles), use industry-based defaults
+          if (activeFamilies.length === 0) {
+            const industry = employerAnalysis.analysis.industry?.toLowerCase() || ''
+            if (industry.includes('tech') || industry.includes('software')) {
+              activeFamilies = ['engineering', 'business']
+              log.info(scanId, 'No roles detected - using tech industry defaults: engineering, business')
+            } else if (industry.includes('retail') || industry.includes('consumer')) {
+              activeFamilies = ['operations', 'business']
+              log.info(scanId, 'No roles detected - using retail industry defaults: operations, business')
+            } else {
+              activeFamilies = ['business', 'operations']
+              log.info(scanId, 'No roles detected - using general defaults: business, operations')
+            }
+          }
 
           if (activeFamilies.length > 0) {
             log.info(scanId, `Generating role-specific questions for: ${activeFamilies.join(', ')}`)
