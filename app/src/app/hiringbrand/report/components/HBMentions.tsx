@@ -1,5 +1,5 @@
 /**
- * HBMentions - Employer Brand Clippings Tab
+ * HBMentions - EVP Clippings Tab
  * Shows web articles, reviews, and discussions grouped by sentiment:
  * "Positive coverage" vs "Coverage to watch" with AI coverage briefing
  */
@@ -147,7 +147,7 @@ export function HBMentions({ mentions, mentionStats, companyName, onNavigate }: 
             color: hbColors.slate,
             marginBottom: '8px',
           }}>
-            Your employer brand clippings
+            Your Employee Value Proposition clippings
           </h2>
           <p style={{
             fontFamily: hbFonts.body,
@@ -187,8 +187,8 @@ export function HBMentions({ mentions, mentionStats, companyName, onNavigate }: 
             lineHeight: 1.6,
           }}>
             We searched for mentions of {companyName} as an employer but didn&apos;t find
-            any significant results. This could mean your employer brand has
-            limited online presence — which is itself valuable information.
+            any significant results. This could mean your Employee Value Proposition has
+            limited online visibility — which is itself valuable information.
           </p>
           <p style={{
             fontFamily: hbFonts.body,
@@ -203,9 +203,9 @@ export function HBMentions({ mentions, mentionStats, companyName, onNavigate }: 
         </div>
 
         <HBTabFooter
-          nextTab="competitors"
-          nextLabel="Competitors"
-          previewText={`Now see how ${companyName}'s brand compares to competitors.`}
+          nextTab="roles"
+          nextLabel="Role Insights"
+          previewText={`See how AI describes ${companyName} for specific job families.`}
           onNavigate={onNavigate}
         />
       </div>
@@ -551,9 +551,9 @@ export function HBMentions({ mentions, mentionStats, companyName, onNavigate }: 
 
       {/* Tab Footer */}
       <HBTabFooter
-        nextTab="competitors"
-        nextLabel="Competitors"
-        previewText={`Now see how ${companyName}'s brand compares to competitors.`}
+        nextTab="roles"
+        nextLabel="Role Insights"
+        previewText={`See how AI describes ${companyName} for specific job families.`}
         onNavigate={onNavigate}
       />
     </div>

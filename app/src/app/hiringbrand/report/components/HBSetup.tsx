@@ -671,7 +671,7 @@ export function HBSetup({ reportToken, companyName, onRescanTriggered }: HBSetup
             lineHeight: 1.5,
           }}
         >
-          Configure the questions AI platforms will be asked about your employer brand,
+          Configure the questions AI platforms will be asked about your Employee Value Proposition,
           and the competitors you want to benchmark against.
           Changes apply on the next scan.
         </p>
@@ -811,7 +811,7 @@ export function HBSetup({ reportToken, companyName, onRescanTriggered }: HBSetup
               fontFamily: hbFonts.body,
             }}
           >
-            No competitors configured. Add competitors to benchmark your employer brand against.
+            No competitors configured. Add competitors to benchmark your Employee Value Proposition against.
           </p>
         )}
 

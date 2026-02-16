@@ -1294,7 +1294,7 @@ export function HBCompetitorList({
                 marginBottom: '4px',
               }}
             >
-              Employer Brand Comparison
+              Employee Value Proposition Comparison
             </h3>
             <p style={{ fontSize: '12px', color: hbColors.slateLight, marginBottom: '24px' }}>
               AI&apos;s perception of each employer across 7 key dimensions (0-10 scale)
@@ -1549,7 +1549,7 @@ function DifferentiationView({
               }}
             >
               Differentiation answers one question: <strong>what would a job seeker remember about this employer?</strong>
-              {' '}It measures how distinct your employer brand profile is compared to competitors across all 7 dimensions.
+              {' '}It measures how distinct your Employee Value Proposition is compared to competitors across all 7 dimensions.
               <br /><br />
               A high score means you have <strong>standout strengths</strong> — dimensions where you clearly lead the pack.
               A low score means your profile blends in with the group average, even if your scores are decent across the board.
@@ -1660,7 +1660,7 @@ function DifferentiationView({
           Employer Uniqueness Ranking
         </h3>
         <p style={{ fontSize: '12px', color: hbColors.slateLight, marginBottom: '20px' }}>
-          Ranked by how distinctive each employer brand appears to AI (avg: {avgDifferentiation})
+          Ranked by how distinctive each Employee Value Proposition appears to AI (avg: {avgDifferentiation})
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1921,13 +1921,13 @@ function DifferentiationView({
                 const gaps = targetEmployer.weaknessCount
 
                 if (score >= 70) {
-                  return `${companyName} has a highly differentiated employer brand (${score}/100). With ${strengths} distinct strengths, your profile stands out clearly to AI assistants. Focus on amplifying these unique qualities in your employer content.`
+                  return `${companyName} has a highly differentiated Employee Value Proposition (${score}/100). With ${strengths} distinct strengths, your profile stands out clearly to AI assistants. Focus on amplifying these unique qualities in your employer content.`
                 } else if (score >= 50) {
-                  return `${companyName}'s employer brand is moderately differentiated (${score}/100). You have ${strengths} areas of strength. To increase differentiation, develop stronger positioning in your weaker dimensions or double down on what makes you unique.`
+                  return `${companyName}'s Employee Value Proposition is moderately differentiated (${score}/100). You have ${strengths} areas of strength. To increase differentiation, develop stronger positioning in your weaker dimensions or double down on what makes you unique.`
                 } else if (score >= 30) {
-                  return `${companyName}'s employer brand appears somewhat generic (${score}/100). With only ${strengths} above-average dimensions and ${gaps} gaps, AI may not distinguish you clearly from competitors. Consider developing distinctive messaging around specific employer value propositions.`
+                  return `${companyName}'s Employee Value Proposition appears somewhat generic (${score}/100). With only ${strengths} above-average dimensions and ${gaps} gaps, AI may not distinguish you clearly from competitors. Consider developing distinctive messaging around your unique EVP attributes.`
                 } else {
-                  return `${companyName}'s employer brand lacks differentiation (${score}/100). Your profile is similar to many competitors, making it hard for AI to recommend you specifically. Prioritize building unique, memorable employer content that highlights what truly sets you apart.`
+                  return `${companyName}'s Employee Value Proposition lacks differentiation (${score}/100). Your profile is similar to many competitors, making it hard for AI to recommend you specifically. Prioritize building unique, memorable employer content that highlights what truly sets you apart.`
                 }
               })()}
             </p>
@@ -2270,7 +2270,7 @@ function MentionsView({
                 } else if (yourPosition <= 3) {
                   return `${companyName} ranks #${yourPosition} of ${rankedList.length} with ${yourMetrics.favorablePct}% favorability. ${betterThanYou.length > 0 ? `${bestEntry.name} leads at ${bestEntry.favorablePct}% - review their employer content to understand what resonates with AI.` : ''}`
                 } else {
-                  return `${companyName} ranks #${yourPosition} of ${rankedList.length} with ${yourMetrics.favorablePct}% favorability. ${betterThanYou.length} competitors score higher. ${bestEntry.name} leads at ${bestEntry.favorablePct}% - study their employer branding to improve your AI perception.`
+                  return `${companyName} ranks #${yourPosition} of ${rankedList.length} with ${yourMetrics.favorablePct}% favorability. ${betterThanYou.length} competitors score higher. ${bestEntry.name} leads at ${bestEntry.favorablePct}% - study how they communicate their EVP to improve your AI perception.`
                 }
               })()}
             </p>

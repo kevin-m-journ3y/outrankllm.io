@@ -267,11 +267,11 @@ export function ReportClient({ data, userRole = null, isSuperAdmin = false }: Re
             {/* Welcome header */}
             <div>
               <h2 style={{ fontFamily: hbFonts.display, fontSize: '22px', fontWeight: 700, color: hbColors.slate, margin: '0 0 12px 0' }}>
-                Welcome to your Employer Brand Report
+                Welcome to your Employee Value Proposition Report
               </h2>
               <p style={{ fontFamily: hbFonts.body, fontSize: '15px', color: hbColors.slateMid, lineHeight: 1.7, margin: 0 }}>
                 When candidates research {company.name}, many now turn to AI assistants instead of traditional search engines.
-                This report shows you exactly what those AI tools are telling people about working at your company — and what you can do to improve it.
+                This report shows you exactly how AI platforms describe your Employee Value Proposition — the unique benefits and culture you offer to employees — and what you can do to improve it.
               </p>
             </div>
 
@@ -478,7 +478,7 @@ export function ReportClient({ data, userRole = null, isSuperAdmin = false }: Re
                   {
                     icon: '📊',
                     title: 'Summary',
-                    desc: 'Three headline scores that show how desirable, well-known, and distinctive your employer brand appears to AI. This is your at-a-glance health check.',
+                    desc: 'Three headline scores that show how desirable, well-known, and distinctive your Employee Value Proposition appears to AI. This is your at-a-glance health check.',
                   },
                   {
                     icon: '💬',
@@ -493,12 +493,12 @@ export function ReportClient({ data, userRole = null, isSuperAdmin = false }: Re
                   {
                     icon: '📈',
                     title: 'Trends',
-                    desc: 'Track how your scores change over time. Each new scan adds a data point so you can measure whether your employer branding efforts are working.',
+                    desc: 'Track how your scores change over time. Each new scan adds a data point so you can measure whether your EVP communication efforts are working.',
                   },
                   {
                     icon: '🎯',
                     title: 'Action Plan',
-                    desc: 'A prioritised 90-day plan of specific actions — from quick wins you can do this week to strategic initiatives that build lasting brand advantage.',
+                    desc: 'A prioritised 90-day plan of specific actions — from quick wins you can do this week to strategic initiatives that strengthen how AI communicates your EVP to candidates.',
                   },
                 ].map((item, idx) => (
                   <div
@@ -543,12 +543,12 @@ export function ReportClient({ data, userRole = null, isSuperAdmin = false }: Re
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {[
-                  { action: 'Create or update your careers page', detail: 'Fill in the topics AI doesn\'t know about — like compensation philosophy, remote policy, or growth paths — so AI can learn from your content.' },
-                  { action: 'Publish employee stories and blog posts', detail: 'AI assistants pull from publicly available content. The more specific, credible information about your culture and values that exists online, the better AI can represent you.' },
-                  { action: 'Update your company profiles', detail: 'Sites like Glassdoor, LinkedIn, and Indeed feed into AI training data. Make sure these profiles are current and reflect your real employer brand.' },
+                  { action: 'Create or update your careers page', detail: 'Fill in the topics AI doesn\'t know about — like compensation philosophy, remote policy, or growth paths — so AI can accurately describe your complete Employee Value Proposition.' },
+                  { action: 'Publish employee stories and blog posts', detail: 'AI assistants pull from publicly available content. The more specific, credible information about your culture and values that exists online, the better AI can represent your EVP to candidates.' },
+                  { action: 'Update your company profiles', detail: 'Sites like Glassdoor, LinkedIn, and Indeed feed into AI training data. Make sure these profiles are current and reflect your actual Employee Value Proposition.' },
                   { action: 'Address negative perceptions head-on', detail: 'If AI is flagging concerns (like work-life balance or management), create content that honestly addresses these topics. Transparency builds trust.' },
                   { action: 'Brief your leadership team', detail: 'Use the copy and export features on each tab to share findings with your CEO or hiring managers. The Action Plan tab gives you a ready-made 90-day roadmap.' },
-                  { action: 'Re-scan regularly to track progress', detail: 'Each scan creates a new data point on the Trends tab. Running monthly scans lets you measure the impact of your employer branding work.' },
+                  { action: 'Re-scan regularly to track progress', detail: 'Each scan creates a new data point on the Trends tab. Running monthly scans lets you measure how effectively AI platforms are communicating your EVP to job seekers.' },
                 ].map((item, idx) => (
                   <div
                     key={idx}
@@ -1859,6 +1859,7 @@ export function ReportClient({ data, userRole = null, isSuperAdmin = false }: Re
             roleFamilies={data.roleFamilies || []}
             roleFamilyScores={data.roleFamilyScores || {}}
             companyName={company.name}
+            onNavigate={setActiveTab}
           />
         )}
 

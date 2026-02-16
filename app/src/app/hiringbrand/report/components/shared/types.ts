@@ -39,7 +39,7 @@ export interface HBReportData {
     urlToken: string
     visibilityScore: number // Desirability score (sentiment-based)
     researchabilityScore: number | null // AI Awareness - how much AI knows
-    differentiationScore: number | null // How unique the employer brand appears
+    differentiationScore: number | null // How unique the Employee Value Proposition appears
     platformScores: Record<string, number>
     topCompetitors: Array<{ name: string; count: number }>
     topicsCovered: HBEmployerTopic[] // Topics AI knows about
@@ -227,7 +227,7 @@ export interface HBStrengthInsight {
   score: number
   competitorAvg: number
   headline: string // e.g., "Industry-leading work-life balance"
-  leverageStrategy: string // How to amplify this in employer branding
+  leverageStrategy: string // How to amplify this in EVP communication
 }
 
 export interface HBGapInsight {

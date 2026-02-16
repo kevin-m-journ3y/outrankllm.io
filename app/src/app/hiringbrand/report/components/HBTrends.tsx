@@ -777,7 +777,7 @@ export function HBTrends({ trends, companyName, currentCompetitorNames, roleFami
           <div
             style={{ fontFamily: hbFonts.body, fontSize: '15px', color: hbColors.slateMid, maxWidth: '400px', margin: '0 auto', lineHeight: 1.6 }}
           >
-            After your second scan, you'll see how your employer brand scores change over time and compare to competitors.
+            After your second scan, you'll see how your EVP scores change over time and compare to competitors.
           </div>
           <div
             style={{
@@ -791,7 +791,7 @@ export function HBTrends({ trends, companyName, currentCompetitorNames, roleFami
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '24px' }}>💡</span>
               <span style={{ fontSize: '14px', color: hbColors.slateMid, textAlign: 'left' }}>
-                <strong style={{ color: hbColors.slate }}>Tip:</strong> Set up weekly scans to track your employer brand health over time.
+                <strong style={{ color: hbColors.slate }}>Tip:</strong> Set up weekly scans to track how AI describes your EVP over time.
               </span>
             </div>
           </div>

@@ -7,9 +7,10 @@
 
 import { useState } from 'react'
 import { hbColors, hbFonts, hbRadii, hbShadows, hbRoleFamilyConfig } from './shared/constants'
-import type { HBJobFamily, HBResponse, HBSentimentCategory, HBRoleFamilyScores } from './shared/types'
+import type { HBJobFamily, HBResponse, HBSentimentCategory, HBRoleFamilyScores, HBTabId } from './shared/types'
 import { HBResponseCard } from './HBResponseCard'
 import { HBScoreRing } from './HBScoreRing'
+import { HBTabFooter } from './HBTabFooter'
 
 interface HBRolesProps {
   responses: HBResponse[]
@@ -20,9 +21,10 @@ interface HBRolesProps {
   }>
   roleFamilyScores: HBRoleFamilyScores
   companyName: string
+  onNavigate: (tab: HBTabId) => void
 }
 
-export function HBRoles({ responses, roleFamilies, roleFamilyScores, companyName }: HBRolesProps) {
+export function HBRoles({ responses, roleFamilies, roleFamilyScores, companyName, onNavigate }: HBRolesProps) {
   const [selectedFamily, setSelectedFamily] = useState<HBJobFamily | null>(
     roleFamilies.length > 0 ? roleFamilies[0].family : null
   )
@@ -82,7 +84,7 @@ export function HBRoles({ responses, roleFamilies, roleFamilyScores, companyName
               lineHeight: 1.6,
             }}
           >
-            Role families allow you to see how AI platforms describe your employer brand for specific job types.
+            Role families allow you to see how AI platforms describe your Employee Value Proposition for specific job types.
             <br />
             Configure role families on the Setup tab to see role-specific analysis here.
           </p>
@@ -135,7 +137,7 @@ export function HBRoles({ responses, roleFamilies, roleFamilyScores, companyName
             lineHeight: 1.6,
           }}
         >
-          Employer brand perception varies by role type. Engineering talent may value different factors than sales or operations professionals. Compare how AI describes {companyName} across job families to tailor your recruitment messaging.
+          Your Employee Value Proposition resonates differently with different roles. Engineering talent may value different factors than sales or operations professionals. Compare how AI describes {companyName} across job families to tailor your recruitment messaging.
         </p>
       </div>
 
@@ -463,6 +465,14 @@ export function HBRoles({ responses, roleFamilies, roleFamilyScores, companyName
           </div>
         </div>
       )}
+
+      {/* Tab Footer */}
+      <HBTabFooter
+        nextTab="competitors"
+        nextLabel="Competitors"
+        previewText={`Now see how ${companyName}'s brand compares to competitors.`}
+        onNavigate={onNavigate}
+      />
     </div>
   )
 }
