@@ -12,6 +12,13 @@ ADD COLUMN detected_job_families JSONB DEFAULT '[]';
 
 COMMENT ON COLUMN site_analyses.detected_job_families IS 'AI-classified job families: [{ family: "engineering", roles: ["Software Engineer"], relevance: 0.9 }]';
 
+-- Add job_family column to scan_prompts
+-- Tags each question with the relevant job family
+ALTER TABLE scan_prompts
+ADD COLUMN job_family TEXT CHECK (job_family IN ('engineering', 'business', 'operations', 'creative', 'corporate', 'general'));
+
+COMMENT ON COLUMN scan_prompts.job_family IS 'Job family this question is about (null for general questions)';
+
 -- Add job_family column to llm_responses
 -- Tags each response with the relevant job family for filtering
 ALTER TABLE llm_responses
