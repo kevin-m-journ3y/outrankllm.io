@@ -732,10 +732,10 @@ export const processHiringBrandScan = inngest.createFunction(
     const frozenResult = await step.run('check-frozen-data', async () => {
       const supabase = createServiceClient()
 
-      // Check for frozen questions
+      // Check for frozen questions (include job_family for legacy compatibility)
       const { data: frozenQuestions } = await supabase
         .from('hb_frozen_questions')
-        .select('id, prompt_text, category')
+        .select('id, prompt_text, category, job_family')
         .eq('organization_id', organizationId)
         .eq('monitored_domain_id', monitoredDomainId)
         .eq('is_active', true)
@@ -784,7 +784,7 @@ export const processHiringBrandScan = inngest.createFunction(
       const supabase = createServiceClient()
       await updateScanStatus(supabase, scanId, 'researching', 35)
 
-      // If we have frozen data, use it instead of researching
+      // If we have frozen data, use it (and supplement with role-specific questions if needed)
       if (frozenResult.hasFrozenData) {
         log.step(scanId, 'Using frozen questions and competitors')
 
@@ -795,14 +795,52 @@ export const processHiringBrandScan = inngest.createFunction(
           reason: c.reason,
         }))
 
-        // Save frozen questions to scan_prompts and capture IDs
+        // Check if frozen questions have NULL job_family (legacy questions from before role family support)
+        const hasLegacyQuestions = frozenResult.questions.some((q: any) => q.job_family === null || q.job_family === undefined)
+
+        let allQuestions = [...frozenResult.questions]
+        let roleSpecificQuestions: any[] = []
+
+        // If frozen questions are legacy (no job_family), generate role-specific questions to supplement
+        if (hasLegacyQuestions) {
+          log.info(scanId, 'Frozen questions are legacy (no job_family) - generating role-specific questions')
+
+          // Determine active job families
+          const activeFamilies: JobFamily[] = frozenResult.roleFamilies && frozenResult.roleFamilies.length > 0
+            ? frozenResult.roleFamilies
+            : employerAnalysis.detectedFamilies.map(f => f.family)
+
+          if (activeFamilies.length > 0) {
+            log.info(scanId, `Generating role-specific questions for: ${activeFamilies.join(', ')}`)
+
+            // Generate 1-2 role-specific questions per family
+            const { generateRoleFamilyQuestions } = await import('@/lib/ai/employer-research')
+            const generatedQuestions = generateRoleFamilyQuestions(
+              { ...employerAnalysis.analysis, companyName: reliableCompanyName },
+              activeFamilies,
+              competitors
+            )
+
+            // Convert to frozen question format
+            roleSpecificQuestions = generatedQuestions.map((q: any) => ({
+              prompt_text: q.question,
+              category: q.category,
+              job_family: q.jobFamily,
+            }))
+
+            allQuestions = [...frozenResult.questions, ...roleSpecificQuestions]
+            log.info(scanId, `Added ${roleSpecificQuestions.length} role-specific questions to ${frozenResult.questions.length} frozen questions`)
+          }
+        }
+
+        // Save questions to scan_prompts and capture IDs
         // Check if prompts already exist for this run (Inngest step retries can cause duplicates)
         const { data: existingPrompts } = await supabase
           .from('scan_prompts')
           .select('id, prompt_text, category')
           .eq('run_id', scanId)
 
-        const questionsWithPromptIds: Array<{ question: string; category: string; promptId: string }> = []
+        const questionsWithPromptIds: Array<{ question: string; category: string; promptId: string; jobFamily?: string | null }> = []
 
         if (existingPrompts && existingPrompts.length > 0) {
           // Prompts already exist from a previous attempt — reuse them
@@ -814,7 +852,7 @@ export const processHiringBrandScan = inngest.createFunction(
             })
           }
         } else {
-          for (const q of frozenResult.questions) {
+          for (const q of allQuestions) {
             const { data: insertedPrompt } = await supabase
               .from('scan_prompts')
               .insert({
@@ -831,20 +869,22 @@ export const processHiringBrandScan = inngest.createFunction(
                 question: q.prompt_text,
                 category: q.category,
                 promptId: insertedPrompt.id,
+                jobFamily: (q as any).job_family || null,
               })
             }
           }
         }
 
-        log.done(scanId, 'Research (frozen)', `${competitors.length} competitors, ${questionsWithPromptIds.length} questions`)
+        log.done(scanId, 'Research (frozen)', `${competitors.length} competitors, ${questionsWithPromptIds.length} questions (${frozenResult.questions.length} frozen + ${roleSpecificQuestions.length} role-specific)`)
 
         return {
           competitors,
-          questions: frozenResult.questions.map((q: { prompt_text: string; category: string }) => ({
+          questions: allQuestions.map((q: { prompt_text: string; category: string; job_family?: string | null }) => ({
             question: q.prompt_text,
             category: q.category,
             suggestedBy: [] as ('chatgpt' | 'claude' | 'gemini')[],
             relevanceScore: 10,
+            jobFamily: (q as any).job_family || null,
           })),
           questionsWithPromptIds,
           usedFrozenData: true,
