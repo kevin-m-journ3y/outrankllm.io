@@ -81,14 +81,27 @@ Completely separate from outrankllm styling. All design tokens in `shared/consta
 - **Fonts**: Outfit (display), Source Sans 3 (body), JetBrains Mono (mono)
 - **All styling is inline** (no Tailwind) — consistent with the CSS v4 quirk
 
-### PPTX Export
-Branded PowerPoint export available from the nav bar and admin dashboard. Generates an 11-slide deck: title, executive summary, 3-pillar scores (SVG→PNG rings via `@resvg/resvg-js`), sentiment doughnut, competitor radar, strengths, gaps, AI quotes, action plan table, trends (conditional), and closing slide.
+### Download Options
+Reports can be downloaded in two formats via a single dropdown menu in the nav bar:
 
+**PDF Export** (full multi-page report):
+- **Generator**: `src/lib/pdf/generate-tab-pdf.ts` (uses `jspdf`)
+- **Tab generators**: `src/lib/pdf/tabs/pdf-*.ts` (one per tab)
+- **Layout helpers**: `src/lib/pdf/pdf-layout.ts` (shared design tokens, layout functions)
+- **Charts**: SVG→PNG conversion via `@resvg/resvg-js` for score rings, radar charts, line charts
+- **Fonts**: Embedded TTF files in `src/lib/pdf/fonts/`, registered with jsPDF and resvg-js
+- **API routes**:
+  - `GET /api/hiringbrand/report/[token]/pdf` - Full report (all 6 tabs)
+  - `POST /api/hiringbrand/report/[token]/pdf` - Single tab (from HBDownloadBar)
+- **Button locations**: HBNav dropdown (full report), HBDownloadBar (per-tab)
+
+**PPTX Export**:
 - **Generator**: `src/lib/pptx/generate-presentation.ts` (uses `pptxgenjs`)
 - **Score rings**: `src/lib/pptx/render-score-ring.ts` (SVG→PNG via `@resvg/resvg-js`)
 - **API route**: `POST /api/hiringbrand/report/[token]/export`
-- **Button locations**: HBNav (report page), AdminClient (brand cards)
-- Requires `serverExternalPackages: ["@resvg/resvg-js"]` in `next.config.ts`
+- **Button locations**: HBNav dropdown, AdminClient (brand cards)
+
+Both formats require `serverExternalPackages: ["@resvg/resvg-js"]` in `next.config.ts` for SVG rendering on Vercel.
 
 ### Strategic Summary Tone
 The AI prompt in `generate-strategic-summary.ts` uses **consultative language** — never alarmist. Key rules:
@@ -129,6 +142,26 @@ The AI prompt in `generate-strategic-summary.ts` uses **consultative language** 
 | `hb_frozen_competitors` | Frozen competitor list per brand (source: `employer_research`, `user_custom`, `fallback`) |
 | `hb_score_history` | Pillar + dimension scores per scan for trends |
 | `hb_competitor_history` | Competitor scores per scan for competitive tracking |
+
+### Recent Fixes & Updates (Feb 2026)
+
+**Differentiation Score Consistency** (commit `fd6ddd2`):
+- Fixed discrepancy where Summary page showed different differentiation score than Competitors page
+- Root cause: Two different calculations with different "strength" thresholds (0.5 vs 1.5)
+- Now uses consistent 0.5 threshold from `calculateEmployerDifferentiation()` in `compare-employers.ts`
+- Removed redundant `calculateEnhancedDifferentiation()` function from scan process
+- Updated all 29 existing reports in production database via SQL
+- Also updated strategic_summary text to match corrected scores via regex replacement
+
+**Trends Data Deduplication** (commit `1843d9b`):
+- Trends charts now show one data point per day (most recent scan)
+- Prevents duplicate/repetitive days from cluttering the charts
+- Implemented in `getTrendsData()` in `hiringbrand-report-data.ts`
+- Applies to both score history and competitor ranking charts
+
+**UI Updates**:
+- Consolidated "Download Report PDF" and "Download Report PPTX" buttons into single dropdown (commit `1c5d540`)
+- Changed account page button label from "View Report" to "View Latest Results" (commit `b3f8678`)
 
 ### Platforms Scanned
 ChatGPT (weight 10), Perplexity (weight 4), Gemini (weight 2), Claude (weight 1) — weighted by AI market share for job seekers.
