@@ -369,6 +369,15 @@ export function HBRoles({ responses, roleFamilies, roleFamilyScores, companyName
                 showLabel={true}
                 animated={true}
               />
+              {familyScores.differentiation !== undefined && (
+                <HBScoreRing
+                  score={familyScores.differentiation}
+                  size="md"
+                  label="Differentiation"
+                  showLabel={true}
+                  animated={true}
+                />
+              )}
             </div>
           )}
 

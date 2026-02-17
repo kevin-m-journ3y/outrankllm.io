@@ -1,10 +1,10 @@
 /**
  * Calculate role-level differentiation scores using pure mathematics (no API calls)
  *
- * Formula components:
- * 1. Profile Distance (50%): Euclidean distance from competitor average
+ * Formula components (aligned with overall differentiation):
+ * 1. Profile Distance (40%): Euclidean distance from competitor average
  * 2. Strength Bonus (30%): Count of dimensions 5+ points above average
- * 3. Variance (20%): Specialization vs flat profile
+ * 3. Variance (30%): Specialization vs flat profile
  */
 
 import type { HBEmployerDimension } from '@/app/hiringbrand/report/components/shared/types'
@@ -82,7 +82,7 @@ export function calculateRoleDifferentiation(
     }
   }
 
-  // Component 1: Profile Distance (50%)
+  // Component 1: Profile Distance (40%)
   // Measures Euclidean distance from competitor average in 2D space (desirability, awareness)
   const avgCompetitorDesirability = mean(competitorScores.map(c => c.desirability))
   const avgCompetitorAwareness = mean(competitorScores.map(c => c.awareness))
@@ -94,9 +94,10 @@ export function calculateRoleDifferentiation(
     Math.pow(desirabilityGap, 2) + Math.pow(awarenessGap, 2)
   )
 
-  // Normalize to 0-50 scale (50% of final score)
-  // Distance of 50+ points gets max score
-  const profileDistanceScore = Math.min(distance, 50)
+  // Normalize to 0-40 scale (40% of final score)
+  // Max possible distance is ~141 (sqrt(100^2 + 100^2)), normalize proportionally
+  const maxDistance = 141.42 // sqrt(2) * 100
+  const profileDistanceScore = (distance / maxDistance) * 40
 
   // Component 2: Strength Bonus (30%)
   // Count how many dimensions are 5+ points above competitor average
@@ -132,13 +133,14 @@ export function calculateRoleDifferentiation(
     // Fallback: If no dimension scores, estimate from overall gaps
     // Strong positive gaps in both desirability and awareness get partial bonus
     if (desirabilityGap >= 10 && awarenessGap >= 10) {
-      strengthBonus = 20 // Strong on both dimensions
+      strengthBonus = 20 // Strong on both pillars (out of 30 max)
     } else if (desirabilityGap >= 10 || awarenessGap >= 10) {
-      strengthBonus = 10 // Strong on one dimension
+      strengthBonus = 10 // Strong on one pillar (out of 30 max)
     }
+    // Note: This is a fallback heuristic. With dimension scores, we get more accurate measurement
   }
 
-  // Component 3: Variance (20%)
+  // Component 3: Variance (30%)
   // Measures specialization (high variance = spiky profile = more unique)
   let varianceScore = 0
   let uniquenessIndex = 0
@@ -147,14 +149,14 @@ export function calculateRoleDifferentiation(
     const variance = calculateVariance(targetDimensionScores)
     uniquenessIndex = variance
 
-    // Normalize to 0-20 scale (20% of final score)
+    // Normalize to 0-30 scale (30% of final score)
     // Variance of 10+ gets max score
-    varianceScore = Math.min((variance / 10) * 20, 20)
+    varianceScore = Math.min((variance / 10) * 30, 30)
   } else {
     // Fallback: If no dimension scores, estimate from gap patterns
     // Large gap in one dimension but not the other = specialized = higher variance
     const gapDifference = Math.abs(Math.abs(desirabilityGap) - Math.abs(awarenessGap))
-    varianceScore = Math.min((gapDifference / 20) * 20, 20)
+    varianceScore = Math.min((gapDifference / 20) * 30, 30)
   }
 
   // Final Score (0-100)
