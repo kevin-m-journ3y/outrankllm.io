@@ -825,6 +825,7 @@ function generateSpacedVersions(domainWithoutTld: string): string[] {
     'house', 'home', 'land', 'world', 'zone', 'spot', 'point',
     'direct', 'online', 'digital', 'media', 'group', 'team',
     'company', 'solutions', 'services', 'partners', 'consulting',
+    'auto', 'motors', 'finance',
   ]
 
   // Common word beginnings
